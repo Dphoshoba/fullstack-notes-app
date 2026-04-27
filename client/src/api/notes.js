@@ -1,6 +1,6 @@
 import { apiRequest } from "./http.js";
 
-export async function fetchNotes({ search = "", page = 1, limit = 12 } = {}) {
+export async function fetchNotes({ search = "", page = 1, limit = 12, category = "" } = {}) {
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit)
@@ -8,6 +8,10 @@ export async function fetchNotes({ search = "", page = 1, limit = 12 } = {}) {
 
   if (search.trim()) {
     params.set("search", search.trim());
+  }
+
+  if (category.trim()) {
+    params.set("category", category.trim());
   }
 
   const data = await apiRequest(`/api/notes?${params.toString()}`);

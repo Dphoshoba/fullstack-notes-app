@@ -18,6 +18,7 @@ const noteToForm = (note) => ({
   title: note.title || "",
   body: note.body || "",
   tags: note.tags?.join(", ") || "",
+  category: note.category || "General",
   pinned: Boolean(note.pinned)
 });
 
@@ -65,6 +66,7 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
         title: form.title,
         body: form.body,
         tags: parseTags(form.tags),
+        category: form.category,
         pinned: form.pinned
       });
       setForm(noteToForm(updatedNote));
@@ -146,6 +148,14 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
             placeholder={t("body")}
           />
           <input
+            name="category"
+            value={form.category}
+            onChange={updateField}
+            required
+            className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+            placeholder={t("category")}
+          />
+          <input
             name="tags"
             value={form.tags}
             onChange={updateField}
@@ -190,6 +200,12 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
           <p className="mt-4 line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-slate-700">
             {note.body}
           </p>
+
+          <div className="mt-5">
+            <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+              {note.category || "General"}
+            </span>
+          </div>
 
           {note.tags?.length ? (
             <div className="mt-5 flex flex-wrap gap-2">

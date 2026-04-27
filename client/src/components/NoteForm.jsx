@@ -8,6 +8,7 @@ const initialValues = {
   title: "",
   body: "",
   tags: "",
+  category: "General",
   pinned: false
 };
 
@@ -34,6 +35,7 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
       const note = await onCreate({
         title: values.title,
         body: values.body,
+        category: values.category,
         pinned: values.pinned,
         tags: values.tags
           .split(",")
@@ -80,6 +82,21 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
           rows="5"
           className="mt-2 w-full resize-none rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
           placeholder={t("body")}
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-slate-700" htmlFor="category">
+          {t("category")}
+        </label>
+        <input
+          id="category"
+          name="category"
+          value={values.category}
+          onChange={updateField}
+          required
+          className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          placeholder={t("category")}
         />
       </div>
 

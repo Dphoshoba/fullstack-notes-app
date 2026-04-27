@@ -25,6 +25,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
 const NOTES_LIMIT = 12;
+const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
 
 export default function DashboardPage() {
   const { user, logout, updateProfile } = useAuth();
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -60,6 +62,11 @@ export default function DashboardPage() {
   const canEditRoles = user?.role === "superadmin";
   const pinnedNotesCount = notes.filter((note) => note.pinned).length;
   const totalPages = Math.max(pagination.pages, 1);
+  const categoryOptions = Array.from(
+    new Set([...DEFAULT_CATEGORIES, categoryFilter, ...notes.map((note) => note.category || "General")])
+  )
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -71,7 +78,11 @@ export default function DashboardPage() {
   };
 
   const loadNotes = useCallback(
-    async ({ nextPage = page, nextSearch = searchTerm } = {}) => {
+    async ({
+      nextPage = page,
+      nextSearch = searchTerm,
+      nextCategory = categoryFilter
+    } = {}) => {
     setError("");
     setLoading(true);
 
@@ -79,7 +90,8 @@ export default function DashboardPage() {
       const result = await fetchNotes({
         page: nextPage,
         limit: NOTES_LIMIT,
-        search: nextSearch
+        search: nextSearch,
+        category: nextCategory
       });
       setNotes(result.notes);
       setPagination(result.pagination);
@@ -89,7 +101,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     },
-    [page, searchTerm]
+    [categoryFilter, page, searchTerm]
   );
 
   useEffect(() => {
@@ -332,6 +344,25 @@ export default function DashboardPage() {
                 placeholder={t("searchNotes")}
                 aria-label={t("searchNotes")}
               />
+            </label>
+            <label className="w-full sm:max-w-xs">
+              <span className="sr-only">{t("categoryFilter")}</span>
+              <select
+                value={categoryFilter}
+                onChange={(event) => {
+                  setCategoryFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                aria-label={t("categoryFilter")}
+              >
+                <option value="">{t("allCategories")}</option>
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
 

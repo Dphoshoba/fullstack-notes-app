@@ -25,6 +25,14 @@ const noteSchema = new mongoose.Schema(
       type: [String],
       default: []
     },
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 60,
+      default: "General",
+      index: true
+    },
     pinned: {
       type: Boolean,
       default: false
@@ -43,6 +51,6 @@ const noteSchema = new mongoose.Schema(
   }
 );
 
-noteSchema.index({ title: "text", body: "text", tags: "text" });
+noteSchema.index({ title: "text", body: "text", tags: "text", category: "text" });
 
 export const Note = mongoose.model("Note", noteSchema);

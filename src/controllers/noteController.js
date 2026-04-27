@@ -13,6 +13,11 @@ const buildNoteFilter = (userId, query) => {
     filter.$or = [{ title: searchRegex }, { body: searchRegex }, { tags: searchRegex }];
   }
 
+  if (query.category) {
+    filter.category =
+      query.category === "General" ? { $in: ["General", null, ""] } : query.category;
+  }
+
   if (typeof query.pinned === "boolean") {
     filter.pinned = query.pinned;
   }

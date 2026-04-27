@@ -14,7 +14,7 @@ import {
   Users,
   X
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsers, updateUserRole } from "../api/users.js";
@@ -24,6 +24,8 @@ import { NoteList } from "../components/NoteList.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
+const NOTES_LIMIT = 12;
+
 export default function DashboardPage() {
   const { user, logout, updateProfile } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
@@ -32,6 +34,13 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: NOTES_LIMIT,
+    total: 0,
+    pages: 0
+  });
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileName, setProfileName] = useState("");
@@ -46,25 +55,11 @@ export default function DashboardPage() {
   const [updatingRoleId, setUpdatingRoleId] = useState("");
   const [toasts, setToasts] = useState([]);
 
-  const filteredNotes = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-
-    if (!term) {
-      return notes;
-    }
-
-    return notes.filter((note) => {
-      const title = note.title?.toLowerCase() || "";
-      const body = note.body?.toLowerCase() || "";
-      const tags = note.tags?.join(" ").toLowerCase() || "";
-      return title.includes(term) || body.includes(term) || tags.includes(term);
-    });
-  }, [notes, searchTerm]);
-
   const isSearching = Boolean(searchTerm.trim());
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const canEditRoles = user?.role === "superadmin";
   const pinnedNotesCount = notes.filter((note) => note.pinned).length;
+  const totalPages = Math.max(pagination.pages, 1);
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -75,27 +70,36 @@ export default function DashboardPage() {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   };
 
-  const loadNotes = async () => {
+  const loadNotes = useCallback(
+    async ({ nextPage = page, nextSearch = searchTerm } = {}) => {
     setError("");
     setLoading(true);
 
     try {
-      const nextNotes = await fetchNotes();
-      setNotes(nextNotes);
+      const result = await fetchNotes({
+        page: nextPage,
+        limit: NOTES_LIMIT,
+        search: nextSearch
+      });
+      setNotes(result.notes);
+      setPagination(result.pagination);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+    },
+    [page, searchTerm]
+  );
 
   useEffect(() => {
     loadNotes();
-  }, []);
+  }, [loadNotes]);
 
   const handleCreate = async (input) => {
     const note = await createNote(input);
-    setNotes((current) => [note, ...current]);
+    setPage(1);
+    await loadNotes({ nextPage: 1 });
     return note;
   };
 
@@ -104,7 +108,9 @@ export default function DashboardPage() {
 
     try {
       await deleteNote(id);
-      setNotes((current) => current.filter((note) => note.id !== id));
+      const nextPage = notes.length === 1 && page > 1 ? page - 1 : page;
+      setPage(nextPage);
+      await loadNotes({ nextPage });
       addToast("success", t("noteDeleted"));
     } catch (err) {
       setError(err.message);
@@ -117,6 +123,7 @@ export default function DashboardPage() {
   const handleUpdate = async (id, input) => {
     const updatedNote = await updateNote(id, input);
     setNotes((current) => current.map((note) => (note.id === id ? updatedNote : note)));
+    await loadNotes();
     return updatedNote;
   };
 
@@ -268,7 +275,7 @@ export default function DashboardPage() {
               <p className="text-sm font-medium text-slate-600">{t("totalNotes")}</p>
               <FileText className="h-5 w-5 text-emerald-700" />
             </div>
-            <p className="mt-3 text-2xl font-bold text-slate-950">{notes.length}</p>
+            <p className="mt-3 text-2xl font-bold text-slate-950">{pagination.total}</p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -309,7 +316,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
               <p className="text-sm text-slate-500">
-                {t("shownCount", { shown: filteredNotes.length, total: notes.length })}
+                {t("shownCount", { shown: notes.length, total: pagination.total })}
               </p>
             </div>
             <label className="relative w-full sm:max-w-xs">
@@ -317,7 +324,10 @@ export default function DashboardPage() {
               <input
                 type="search"
                 value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setPage(1);
+                }}
                 className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
                 placeholder={t("searchNotes")}
                 aria-label={t("searchNotes")}
@@ -335,7 +345,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <NoteList
-              notes={filteredNotes}
+              notes={notes}
               onDelete={handleDelete}
               onUpdate={handleUpdate}
               deletingId={deletingId}
@@ -350,6 +360,31 @@ export default function DashboardPage() {
               onUpdateError={(err) => addToast("error", err.message)}
             />
           )}
+          {!loading && pagination.total > 0 ? (
+            <div className="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-slate-600">
+                {t("pageStatus", { page: pagination.page, pages: totalPages })}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(current - 1, 1))}
+                  disabled={pagination.page <= 1}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("previous")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(current + 1, totalPages))}
+                  disabled={pagination.page >= totalPages}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("next")}
+                </button>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
 

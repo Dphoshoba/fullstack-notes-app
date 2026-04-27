@@ -3,11 +3,14 @@ import { StatusCodes } from "http-status-codes";
 import { Note } from "../models/Note.js";
 import { ApiError } from "../utils/ApiError.js";
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const buildNoteFilter = (userId, query) => {
   const filter = { owner: userId };
 
   if (query.search) {
-    filter.$text = { $search: query.search };
+    const searchRegex = new RegExp(escapeRegex(query.search), "i");
+    filter.$or = [{ title: searchRegex }, { body: searchRegex }, { tags: searchRegex }];
   }
 
   if (typeof query.pinned === "boolean") {

@@ -1,8 +1,20 @@
 import { apiRequest } from "./http.js";
 
-export async function fetchNotes() {
-  const data = await apiRequest("/api/notes?limit=50");
-  return data.data;
+export async function fetchNotes({ search = "", page = 1, limit = 12 } = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit)
+  });
+
+  if (search.trim()) {
+    params.set("search", search.trim());
+  }
+
+  const data = await apiRequest(`/api/notes?${params.toString()}`);
+  return {
+    notes: data.data,
+    pagination: data.pagination
+  };
 }
 
 export async function createNote(input) {

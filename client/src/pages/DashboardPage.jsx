@@ -2,6 +2,7 @@ import {
   AlertCircle,
   AlertTriangle,
   BarChart3,
+  Bot,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
 import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsers, updateUserRole } from "../api/users.js";
 import { Button } from "../components/Button.jsx";
@@ -137,6 +139,10 @@ export default function DashboardPage() {
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
   const [updatingRoleId, setUpdatingRoleId] = useState("");
+  const [selectedAiNoteId, setSelectedAiNoteId] = useState("");
+  const [aiLoadingAction, setAiLoadingAction] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [aiResult, setAiResult] = useState(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
@@ -213,6 +219,7 @@ export default function DashboardPage() {
       detail: t("account")
     }
   ];
+  const selectedAiNote = notes.find((note) => note.id === selectedAiNoteId) || notes[0];
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -333,6 +340,32 @@ export default function DashboardPage() {
     }
 
     setExportOpen(false);
+  };
+
+  const runAiAction = async (action) => {
+    setAiError("");
+    setAiLoadingAction(action);
+
+    try {
+      if ((action === "summary" || action === "tags") && !selectedAiNote) {
+        throw new Error(t("aiSelectNoteRequired"));
+      }
+
+      const result =
+        action === "summary"
+          ? await summarizeNote(selectedAiNote.id)
+          : action === "tags"
+            ? await suggestTags(selectedAiNote.id)
+            : await generateSmartInsights();
+
+      setAiResult(result);
+      addToast("success", t("aiResultReady"));
+    } catch (err) {
+      setAiError(err.message);
+      addToast("error", t("aiRequestError", { message: err.message }));
+    } finally {
+      setAiLoadingAction("");
+    }
   };
 
   const openProfile = () => {
@@ -636,6 +669,123 @@ export default function DashboardPage() {
         </aside>
 
         <section>
+          <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-emerald-700" />
+                  <h2 className="text-lg font-semibold text-slate-950">{t("aiTools")}</h2>
+                </div>
+                <p className="mt-1 text-sm text-slate-500">{t("aiToolsDescription")}</p>
+              </div>
+              <label className="w-full lg:max-w-sm">
+                <span className="text-sm font-medium text-slate-700">{t("selectNoteForAi")}</span>
+                <select
+                  value={selectedAiNote?.id || ""}
+                  onChange={(event) => setSelectedAiNoteId(event.target.value)}
+                  className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  disabled={!notes.length}
+                >
+                  {notes.length ? null : <option value="">{t("noInsightYet")}</option>}
+                  {notes.map((note) => (
+                    <option key={note.id} value={note.id}>
+                      {note.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => runAiAction("summary")}
+                disabled={Boolean(aiLoadingAction) || !notes.length}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "summary" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                {t("summarizeSelectedNote")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("tags")}
+                disabled={Boolean(aiLoadingAction) || !notes.length}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "tags" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                {t("suggestTags")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("insights")}
+                disabled={Boolean(aiLoadingAction)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "insights" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+                {t("generateSmartInsights")}
+              </button>
+            </div>
+            {aiError ? (
+              <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                {aiError}
+              </p>
+            ) : null}
+            {aiResult ? (
+              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900">{t("aiResult")}</p>
+                    <p className="mt-1 text-xs font-medium text-emerald-800">
+                      {t("aiPlaceholderNotice")}
+                    </p>
+                  </div>
+                  <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                    {aiResult.provider}
+                  </span>
+                </div>
+                {aiResult.summary ? (
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                    {aiResult.summary}
+                  </p>
+                ) : null}
+                {aiResult.suggestedTags ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {aiResult.suggestedTags.length ? (
+                      aiResult.suggestedTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200"
+                        >
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-600">{t("noSuggestedTags")}</p>
+                    )}
+                  </div>
+                ) : null}
+                {aiResult.insights ? (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                      {t("totalNotes")}: <strong>{aiResult.insights.totalNotes}</strong>
+                    </p>
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                      {t("mostUsedCategory")}: <strong>{aiResult.insights.topCategory}</strong>
+                    </p>
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                      {t("pinnedNotes")}: <strong>{aiResult.insights.pinnedCount}</strong>
+                    </p>
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                      {t("starredNotes")}: <strong>{aiResult.insights.starredCount}</strong>
+                    </p>
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700 sm:col-span-2">
+                      {aiResult.insights.suggestedFocus}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>

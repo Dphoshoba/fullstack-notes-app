@@ -1,0 +1,328 @@
+# Express MongoDB Auth API
+
+A complete Node.js REST API using Express, MongoDB, Mongoose, JWT access tokens, refresh tokens, cookies, validation, rate limiting, and protected CRUD routes.
+
+## Quick Start
+
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
+
+The API defaults to `http://localhost:4000`.
+
+## Environment
+
+Set these values in `.env`:
+
+```bash
+NODE_ENV=development
+PORT=4000
+MONGODB_URI=mongodb://127.0.0.1:27017/express_auth_api
+JWT_ACCESS_SECRET=replace-with-a-long-random-access-secret
+JWT_REFRESH_SECRET=replace-with-a-long-random-refresh-secret
+ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_EXPIRES_IN=7d
+CLIENT_ORIGIN=http://localhost:5173
+COOKIE_SECURE=false
+```
+
+## Auth Flow
+
+- Register or log in to receive an access token in the JSON response.
+- A refresh token is also stored in an HTTP-only cookie.
+- Send the access token as `Authorization: Bearer <token>` for protected routes.
+- Call `/api/auth/refresh` to rotate the refresh token and get a new access token.
+- Call `/api/auth/logout` to revoke the active refresh token.
+
+## Routes
+
+### Health
+
+```http
+GET /api/health
+```
+
+### Auth
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET  /api/auth/me
+```
+
+Register body:
+
+```json
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "Password123!"
+}
+```
+
+Login body:
+
+```json
+{
+  "email": "ada@example.com",
+  "password": "Password123!"
+}
+```
+
+### Notes
+
+All note routes require `Authorization: Bearer <token>`.
+
+```http
+GET    /api/notes
+POST   /api/notes
+GET    /api/notes/:id
+PATCH  /api/notes/:id
+DELETE /api/notes/:id
+```
+
+Create note body:
+
+```json
+{
+  "title": "Build API",
+  "body": "Finish auth and CRUD routes.",
+  "tags": ["node", "express"],
+  "pinned": true
+}
+```
+
+### Users
+
+User administration routes require `Authorization: Bearer <token>`.
+
+```http
+GET   /api/users
+PATCH /api/users/:id/role
+```
+
+- `GET /api/users` requires role `admin` or `superadmin`.
+- `PATCH /api/users/:id/role` requires role `superadmin`.
+- Valid roles are `user`, `admin`, and `superadmin`.
+- Register/login/profile routes do not accept role updates; role changes only happen through the protected superadmin route.
+
+Update role body:
+
+```json
+{
+  "role": "admin"
+}
+```
+
+## Seed Demo User
+
+```bash
+npm run seed
+```
+
+Demo credentials:
+
+```text
+Demo user: demo@example.com / Password123!
+Admin user: admin@example.com / Password123!
+Super admin: superadmin@example.com / Password123!
+```
+
+## Testing Admin Routes
+
+Seed the database, log in as the admin or superadmin user, then use the returned `accessToken`.
+
+```bash
+npm run seed
+```
+
+List users as admin or superadmin:
+
+```bash
+curl http://localhost:4000/api/users \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Update a user role as superadmin:
+
+```bash
+curl -X PATCH http://localhost:4000/api/users/USER_ID/role \
+  -H "Authorization: Bearer YOUR_SUPERADMIN_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"role\":\"admin\"}"
+```
+
+## React Frontend
+
+The frontend lives in `client/` and calls the backend at `http://localhost:4000`.
+
+```bash
+cd client
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
+
+From the project root, you can also run:
+
+```bash
+npm run dev:api
+npm run dev:client
+npm run dev:full
+```
+
+## Production Readiness
+
+Use this section before deploying the app outside your local machine.
+
+### Environment Validation Checklist
+
+Backend environment variables:
+
+- `NODE_ENV=production`
+- `PORT` is set by your host, or defaults to `4000` locally.
+- `MONGODB_URI` points to your MongoDB Atlas connection string.
+- `JWT_ACCESS_SECRET` is a long random secret, not the example value.
+- `JWT_REFRESH_SECRET` is a different long random secret, not the example value.
+- `ACCESS_TOKEN_EXPIRES_IN=15m` or another short access-token lifetime.
+- `REFRESH_TOKEN_EXPIRES_IN=7d` or your chosen refresh-token lifetime.
+- `CLIENT_ORIGIN` is your deployed frontend URL, for example `https://your-app.netlify.app`.
+- `COOKIE_SECURE=true` in production.
+
+Frontend environment variables:
+
+- `VITE_API_BASE_URL` is your deployed backend URL, for example `https://your-api.onrender.com`.
+- Do not include a trailing slash in `VITE_API_BASE_URL`.
+
+Before deploying:
+
+```bash
+npm run lint
+cd client
+npm run lint
+npm run build
+```
+
+### MongoDB Atlas Setup
+
+1. Create a free MongoDB Atlas account.
+2. Create a new project and a free cluster.
+3. Create a database user with a strong password.
+4. In Network Access, add the IP addresses allowed to connect.
+5. For Render, you can start with `0.0.0.0/0` if needed, but restrict this later when possible.
+6. Copy the connection string from Atlas.
+7. Replace `<password>` and database name in the string.
+8. Use that full string as `MONGODB_URI`.
+
+Example:
+
+```bash
+MONGODB_URI=mongodb+srv://app_user:YOUR_PASSWORD@cluster0.example.mongodb.net/express_auth_api
+```
+
+### Backend Deployment on Render
+
+1. Push the project to GitHub.
+2. In Render, create a new Web Service.
+3. Connect your GitHub repository.
+4. Set the root directory to the project root.
+5. Set the runtime to Node.
+6. Use this build command:
+
+```bash
+npm install
+```
+
+7. Use this start command:
+
+```bash
+npm start
+```
+
+8. Add the backend environment variables from the checklist.
+9. Set `NODE_ENV=production`.
+10. Set `COOKIE_SECURE=true`.
+11. Set `CLIENT_ORIGIN` to your Netlify frontend URL after the frontend is deployed.
+12. Deploy the service.
+13. Test the health route:
+
+```http
+GET https://your-api.onrender.com/api/health
+```
+
+### Frontend Deployment on Netlify
+
+1. In Netlify, create a new site from Git.
+2. Connect the same GitHub repository.
+3. Set the base directory to:
+
+```text
+client
+```
+
+4. Set the build command to:
+
+```bash
+npm run build
+```
+
+5. Set the publish directory to:
+
+```text
+client/dist
+```
+
+6. Add this environment variable:
+
+```bash
+VITE_API_BASE_URL=https://your-api.onrender.com
+```
+
+7. Deploy the site.
+8. Copy the Netlify URL.
+9. Go back to Render and set backend `CLIENT_ORIGIN` to that Netlify URL.
+10. Redeploy the Render backend after changing `CLIENT_ORIGIN`.
+
+### Production CORS Notes
+
+The backend only allows requests from `CLIENT_ORIGIN`.
+
+For local development:
+
+```bash
+CLIENT_ORIGIN=http://localhost:5173
+COOKIE_SECURE=false
+```
+
+For production:
+
+```bash
+CLIENT_ORIGIN=https://your-app.netlify.app
+COOKIE_SECURE=true
+```
+
+If login works but refresh/logout cookies do not behave correctly, check:
+
+- The frontend is calling the exact backend URL in `VITE_API_BASE_URL`.
+- The backend `CLIENT_ORIGIN` exactly matches the frontend origin.
+- `COOKIE_SECURE=true` is set for HTTPS production deployments.
+- The browser is not blocking third-party cookies for your deployment setup.
+
+### Security Checklist
+
+- Use strong, unique values for `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET`.
+- Never commit `.env` files to Git.
+- Keep `COOKIE_SECURE=true` in production.
+- Keep refresh tokens in HTTP-only cookies.
+- Keep access tokens short-lived.
+- Restrict MongoDB Atlas network access as much as your host allows.
+- Use a database user with only the permissions the app needs.
+- Store all production secrets in Render and Netlify environment settings.
+- Rotate secrets if they are exposed.
+- Do not use demo seed accounts in a real production database.

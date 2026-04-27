@@ -9,6 +9,7 @@ const initialValues = {
   body: "",
   tags: "",
   category: "General",
+  starred: false,
   pinned: false
 };
 
@@ -36,6 +37,7 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
         title: values.title,
         body: values.body,
         category: values.category,
+        starred: values.starred,
         pinned: values.pinned,
         tags: values.tags
           .split(",")
@@ -113,6 +115,17 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
           placeholder={t("tags")}
         />
       </div>
+
+      <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+        <input
+          type="checkbox"
+          name="starred"
+          checked={values.starred}
+          onChange={updateField}
+          className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+        />
+        {t("starred")}
+      </label>
 
       <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
         <input

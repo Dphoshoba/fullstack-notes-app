@@ -1,4 +1,4 @@
-import { FileText, SearchX, Edit3, Pin, Save, Trash2, X } from "lucide-react";
+import { FileText, SearchX, Edit3, Pin, Save, Star, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "../context/I18nContext.jsx";
@@ -19,6 +19,7 @@ const noteToForm = (note) => ({
   body: note.body || "",
   tags: note.tags?.join(", ") || "",
   category: note.category || "General",
+  starred: Boolean(note.starred),
   pinned: Boolean(note.pinned)
 });
 
@@ -67,10 +68,27 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
         body: form.body,
         tags: parseTags(form.tags),
         category: form.category,
+        starred: form.starred,
         pinned: form.pinned
       });
       setForm(noteToForm(updatedNote));
       setIsEditing(false);
+      onUpdateSuccess?.(updatedNote);
+    } catch (err) {
+      setError(err.message);
+      onUpdateError?.(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStarred = async () => {
+    setSaving(true);
+    setError("");
+
+    try {
+      const updatedNote = await onUpdate(note.id, { starred: !note.starred });
+      setForm(noteToForm(updatedNote));
       onUpdateSuccess?.(updatedNote);
     } catch (err) {
       setError(err.message);
@@ -104,6 +122,22 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={toggleStarred}
+              disabled={saving}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition disabled:opacity-50 ${
+                note.starred
+                  ? "bg-amber-50 text-amber-600 hover:bg-amber-100"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-amber-600"
+              }`}
+              aria-label={`${t("favorite")}: ${note.title}`}
+              title={t("favorite")}
+            >
+              <Star className={`h-4 w-4 ${note.starred ? "fill-current" : ""}`} />
+            </button>
+          ) : null}
           {!isEditing ? (
             <button
               type="button"
@@ -165,6 +199,16 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
           <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
             <input
               type="checkbox"
+              name="starred"
+              checked={form.starred}
+              onChange={updateField}
+              className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+            />
+            {t("starred")}
+          </label>
+          <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
               name="pinned"
               checked={form.pinned}
               onChange={updateField}
@@ -205,6 +249,12 @@ function NoteCard({ note, onDelete, onUpdate, onUpdateError, onUpdateSuccess, de
             <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
               {note.category || "General"}
             </span>
+            {note.starred ? (
+              <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                <Star className="h-3 w-3 fill-current" />
+                {t("starred")}
+              </span>
+            ) : null}
           </div>
 
           {note.tags?.length ? (

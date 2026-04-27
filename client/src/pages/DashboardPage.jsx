@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [favoritesFilter, setFavoritesFilter] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -81,7 +82,8 @@ export default function DashboardPage() {
     async ({
       nextPage = page,
       nextSearch = searchTerm,
-      nextCategory = categoryFilter
+      nextCategory = categoryFilter,
+      nextStarred = favoritesFilter
     } = {}) => {
     setError("");
     setLoading(true);
@@ -91,7 +93,8 @@ export default function DashboardPage() {
         page: nextPage,
         limit: NOTES_LIMIT,
         search: nextSearch,
-        category: nextCategory
+        category: nextCategory,
+        starred: nextStarred
       });
       setNotes(result.notes);
       setPagination(result.pagination);
@@ -101,7 +104,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     },
-    [categoryFilter, page, searchTerm]
+    [categoryFilter, favoritesFilter, page, searchTerm]
   );
 
   useEffect(() => {
@@ -362,6 +365,21 @@ export default function DashboardPage() {
                     {category}
                   </option>
                 ))}
+              </select>
+            </label>
+            <label className="w-full sm:max-w-xs">
+              <span className="sr-only">{t("favoritesFilter")}</span>
+              <select
+                value={favoritesFilter}
+                onChange={(event) => {
+                  setFavoritesFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                aria-label={t("favoritesFilter")}
+              >
+                <option value="">{t("showAllNotes")}</option>
+                <option value="true">{t("showFavoritesOnly")}</option>
               </select>
             </label>
           </div>

@@ -1,11 +1,14 @@
 import {
   AlertCircle,
   AlertTriangle,
+  BarChart3,
+  CalendarDays,
   CheckCircle2,
   ChevronDown,
   Download,
   Edit3,
   FileText,
+  Folder,
   Loader2,
   LogOut,
   Pin,
@@ -13,7 +16,9 @@ import {
   Save,
   Search,
   Shield,
+  Star,
   Trash2,
+  TrendingUp,
   User,
   Users,
   X
@@ -90,6 +95,18 @@ const downloadTextFile = ({ contents, filename, type }) => {
   window.URL.revokeObjectURL(url);
 };
 
+const formatDisplayDate = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+};
+
 export default function DashboardPage() {
   const { user, logout, updateProfile } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
@@ -126,13 +143,76 @@ export default function DashboardPage() {
   const isSearching = Boolean(searchTerm.trim());
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const canEditRoles = user?.role === "superadmin";
+  const loadedNotesCount = notes.length;
   const pinnedNotesCount = notes.filter((note) => note.pinned).length;
+  const starredNotesCount = notes.filter((note) => note.starred).length;
+  const loadedCategories = notes.map((note) => note.category || "General");
+  const categoriesCount = new Set(loadedCategories).size;
+  const pinnedProgress = loadedNotesCount ? Math.round((pinnedNotesCount / loadedNotesCount) * 100) : 0;
+  const starredProgress = loadedNotesCount ? Math.round((starredNotesCount / loadedNotesCount) * 100) : 0;
   const totalPages = Math.max(pagination.pages, 1);
   const categoryOptions = Array.from(
     new Set([...DEFAULT_CATEGORIES, categoryFilter, ...notes.map((note) => note.category || "General")])
   )
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
+  const categoryCounts = loadedCategories.reduce((counts, category) => {
+    counts[category] = (counts[category] || 0) + 1;
+    return counts;
+  }, {});
+  const [mostUsedCategory = "", mostUsedCategoryCount = 0] =
+    Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0] || [];
+  const latestCreatedNote = [...notes].sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  )[0];
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const notesCreatedThisWeek = notes.filter(
+    (note) => note.createdAt && new Date(note.createdAt).getTime() >= weekStart.getTime()
+  ).length;
+  const weekProgress = loadedNotesCount
+    ? Math.round((notesCreatedThisWeek / loadedNotesCount) * 100)
+    : 0;
+  const statCards = [
+    {
+      label: t("totalNotes"),
+      value: loadedNotesCount,
+      icon: FileText,
+      tone: "emerald",
+      detail: t("currentLoadedNotes")
+    },
+    {
+      label: t("pinnedNotes"),
+      value: pinnedNotesCount,
+      icon: Pin,
+      tone: "emerald",
+      progress: pinnedProgress,
+      detail: t("ofLoadedNotes", { percent: pinnedProgress })
+    },
+    {
+      label: t("starredNotes"),
+      value: starredNotesCount,
+      icon: Star,
+      tone: "amber",
+      progress: starredProgress,
+      detail: t("ofLoadedNotes", { percent: starredProgress })
+    },
+    {
+      label: t("categoriesCount"),
+      value: categoriesCount,
+      icon: Folder,
+      tone: "slate",
+      detail: t("currentLoadedNotes")
+    },
+    {
+      label: t("userRole"),
+      value: user?.role || "user",
+      icon: Shield,
+      tone: "slate",
+      detail: t("account")
+    }
+  ];
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -439,31 +519,105 @@ export default function DashboardPage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-slate-600">{t("totalNotes")}</p>
-              <FileText className="h-5 w-5 text-emerald-700" />
-            </div>
-            <p className="mt-3 text-2xl font-bold text-slate-950">{pagination.total}</p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-slate-600">{t("pinnedNotes")}</p>
-              <Pin className="h-5 w-5 text-emerald-700" />
-            </div>
-            <p className="mt-3 text-2xl font-bold text-slate-950">{pinnedNotesCount}</p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-slate-600">{t("userRole")}</p>
-              <Shield className="h-5 w-5 text-emerald-700" />
-            </div>
-            <p className="mt-3 text-2xl font-bold capitalize text-slate-950">
-              {user?.role || "user"}
-            </p>
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          {statCards.map((stat) => {
+            const StatIcon = stat.icon;
+            const iconClass =
+              stat.tone === "amber"
+                ? "bg-amber-50 text-amber-700"
+                : stat.tone === "emerald"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-slate-100 text-slate-700";
+            const barClass = stat.tone === "amber" ? "bg-amber-500" : "bg-emerald-600";
+
+            return (
+              <div
+                key={stat.label}
+                className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-slate-600">{stat.label}</p>
+                  <span className={`flex h-9 w-9 items-center justify-center rounded-md ${iconClass}`}>
+                    <StatIcon className="h-4 w-4" />
+                  </span>
+                </div>
+                <p className="mt-3 truncate text-2xl font-bold capitalize text-slate-950">
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-xs font-medium text-slate-500">{stat.detail}</p>
+                {typeof stat.progress === "number" ? (
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full ${barClass}`}
+                      style={{ width: `${stat.progress}%` }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
+
+        <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-950">{t("productInsights")}</h2>
+              <p className="text-xs font-medium text-slate-500">{t("currentLoadedNotes")}</p>
+            </div>
+            <BarChart3 className="h-5 w-5 text-emerald-700" />
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("mostUsedCategory")}
+                </p>
+                <Folder className="h-4 w-4 text-slate-500" />
+              </div>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-950">
+                {mostUsedCategory || t("noInsightYet")}
+              </p>
+              {mostUsedCategory ? (
+                <span className="mt-2 inline-flex rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                  {t("notesCount", { count: mostUsedCategoryCount })}
+                </span>
+              ) : null}
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("latestNoteCreated")}
+                </p>
+                <CalendarDays className="h-4 w-4 text-slate-500" />
+              </div>
+              <p className="mt-2 truncate text-sm font-semibold text-slate-950">
+                {latestCreatedNote?.title || t("noInsightYet")}
+              </p>
+              {latestCreatedNote?.createdAt ? (
+                <p className="mt-2 text-xs font-medium text-slate-500">
+                  {formatDisplayDate(latestCreatedNote.createdAt)}
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t("notesCreatedThisWeek")}
+                </p>
+                <TrendingUp className="h-4 w-4 text-slate-500" />
+              </div>
+              <p className="mt-2 text-sm font-semibold text-slate-950">
+                {t("notesCount", { count: notesCreatedThisWeek })}
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                <div
+                  className="h-full rounded-full bg-emerald-600"
+                  style={{ width: `${weekProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8">

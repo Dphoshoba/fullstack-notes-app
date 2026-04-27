@@ -5,6 +5,11 @@ export async function fetchUsers() {
   return data.data;
 }
 
+export async function fetchUsage() {
+  const data = await apiRequest("/api/users/usage");
+  return data.data;
+}
+
 export async function updateMyProfile(input) {
   const data = await apiRequest("/api/users/me", {
     method: "PATCH",

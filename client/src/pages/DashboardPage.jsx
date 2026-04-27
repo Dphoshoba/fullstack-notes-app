@@ -28,7 +28,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
 import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
-import { fetchUsers, updateUserRole } from "../api/users.js";
+import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { Button } from "../components/Button.jsx";
 import { NoteForm } from "../components/NoteForm.jsx";
 import { NoteList, NoteListSkeleton } from "../components/NoteList.jsx";
@@ -143,6 +143,12 @@ export default function DashboardPage() {
   const [aiLoadingAction, setAiLoadingAction] = useState("");
   const [aiError, setAiError] = useState("");
   const [aiResult, setAiResult] = useState(null);
+  const [usage, setUsage] = useState({
+    plan: "free",
+    aiUsageCount: 0,
+    aiUsageLimit: 20
+  });
+  const [usageLoading, setUsageLoading] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
@@ -220,6 +226,11 @@ export default function DashboardPage() {
     }
   ];
   const selectedAiNote = notes.find((note) => note.id === selectedAiNoteId) || notes[0];
+  const usageLimitReached =
+    usage.plan === "free" && usage.aiUsageCount >= usage.aiUsageLimit;
+  const usageProgress = usage.aiUsageLimit
+    ? Math.min(Math.round((usage.aiUsageCount / usage.aiUsageLimit) * 100), 100)
+    : 0;
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -263,6 +274,23 @@ export default function DashboardPage() {
   useEffect(() => {
     loadNotes();
   }, [loadNotes]);
+
+  const loadUsage = useCallback(async () => {
+    setUsageLoading(true);
+
+    try {
+      const nextUsage = await fetchUsage();
+      setUsage(nextUsage);
+    } catch (err) {
+      addToast("error", t("usageLoadError", { message: err.message }));
+    } finally {
+      setUsageLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadUsage();
+  }, [loadUsage]);
 
   const handleCreate = async (input) => {
     const note = await createNote(input);
@@ -359,6 +387,7 @@ export default function DashboardPage() {
             : await generateSmartInsights();
 
       setAiResult(result);
+      await loadUsage();
       addToast("success", t("aiResultReady"));
     } catch (err) {
       setAiError(err.message);
@@ -695,11 +724,53 @@ export default function DashboardPage() {
                 </select>
               </label>
             </div>
+            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {t("currentPlan")}:{" "}
+                    <span className="font-semibold capitalize text-slate-950">
+                      {usage.plan === "premium" ? t("premiumPlan") : t("freePlan")}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  {t("upgrade")}
+                </button>
+              </div>
+              <div className="mt-3">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
+                  <span>{t("aiUsage")}</span>
+                  <span>
+                    {usageLoading
+                      ? t("loading")
+                      : `${usage.aiUsageCount} / ${usage.aiUsageLimit}`}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className={`h-full rounded-full ${
+                      usageLimitReached ? "bg-red-600" : "bg-emerald-600"
+                    }`}
+                    style={{ width: `${usageProgress}%` }}
+                  />
+                </div>
+                {usageLimitReached ? (
+                  <p className="mt-2 text-sm font-medium text-red-700">
+                    {t("upgradeToContinue")}
+                  </p>
+                ) : null}
+              </div>
+            </div>
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => runAiAction("summary")}
-                disabled={Boolean(aiLoadingAction) || !notes.length}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "summary" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
@@ -708,7 +779,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => runAiAction("tags")}
-                disabled={Boolean(aiLoadingAction) || !notes.length}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "tags" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
@@ -717,7 +788,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => runAiAction("insights")}
-                disabled={Boolean(aiLoadingAction)}
+                disabled={Boolean(aiLoadingAction) || usageLimitReached}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "insights" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}

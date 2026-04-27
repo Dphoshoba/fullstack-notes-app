@@ -427,12 +427,12 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-slate-950">{t("dashboard")}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-600">
+            <label className="flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
               <span className="sr-only">{t("language")}</span>
               <select
                 value={language}
                 onChange={(event) => setLanguage(event.target.value)}
-                className="bg-transparent text-sm font-medium text-slate-700 outline-none"
+                className="bg-white text-sm font-medium text-slate-700 outline-none"
                 aria-label={t("language")}
               >
                 {languages.map((item) => (
@@ -442,12 +442,12 @@ export default function DashboardPage() {
                 ))}
               </select>
             </label>
-            <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
               {user?.email}
             </span>
             <Button
               onClick={loadNotes}
-              className="h-10 bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+              className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
             >
               <RefreshCw className="h-4 w-4" />
               {t("refresh")}
@@ -456,7 +456,7 @@ export default function DashboardPage() {
               <Button
                 onClick={() => setExportOpen((current) => !current)}
                 disabled={loading}
-                className="h-10 bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+                className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
                 aria-expanded={exportOpen}
                 aria-haspopup="menu"
               >
@@ -496,7 +496,7 @@ export default function DashboardPage() {
             </div>
             <Button
               onClick={openProfile}
-              className="h-10 bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+              className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
             >
               <User className="h-4 w-4" />
               {t("profile")}
@@ -504,7 +504,7 @@ export default function DashboardPage() {
             {isAdmin ? (
               <Button
                 onClick={() => setAdminOpen(true)}
-                className="h-10 bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+                className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
               >
                 <Shield className="h-4 w-4" />
                 {t("admin")}

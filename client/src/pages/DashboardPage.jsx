@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Edit3,
   FileText,
@@ -10,6 +11,7 @@ import {
   Save,
   Search,
   Shield,
+  Trash2,
   User,
   Users,
   X
@@ -20,7 +22,7 @@ import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js"
 import { fetchUsers, updateUserRole } from "../api/users.js";
 import { Button } from "../components/Button.jsx";
 import { NoteForm } from "../components/NoteForm.jsx";
-import { NoteList } from "../components/NoteList.jsx";
+import { NoteList, NoteListSkeleton } from "../components/NoteList.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
@@ -34,6 +36,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState("");
+  const [pendingDeleteNote, setPendingDeleteNote] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [favoritesFilter, setFavoritesFilter] = useState("");
@@ -100,11 +103,12 @@ export default function DashboardPage() {
       setPagination(result.pagination);
     } catch (err) {
       setError(err.message);
+      addToast("error", t("notesLoadError", { message: err.message }));
     } finally {
       setLoading(false);
     }
     },
-    [categoryFilter, favoritesFilter, page, searchTerm]
+    [categoryFilter, favoritesFilter, page, searchTerm, t]
   );
 
   useEffect(() => {
@@ -118,7 +122,23 @@ export default function DashboardPage() {
     return note;
   };
 
-  const handleDelete = async (id) => {
+  const requestDelete = (id) => {
+    const note = notes.find((item) => item.id === id);
+    setPendingDeleteNote(note || { id, title: t("thisNote") });
+  };
+
+  const cancelDelete = () => {
+    if (!deletingId) {
+      setPendingDeleteNote(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!pendingDeleteNote) {
+      return;
+    }
+
+    const { id, title } = pendingDeleteNote;
     setDeletingId(id);
 
     try {
@@ -126,12 +146,13 @@ export default function DashboardPage() {
       const nextPage = notes.length === 1 && page > 1 ? page - 1 : page;
       setPage(nextPage);
       await loadNotes({ nextPage });
-      addToast("success", t("noteDeleted"));
+      addToast("success", t("noteDeleted", { title }));
     } catch (err) {
       setError(err.message);
-      addToast("error", err.message);
+      addToast("error", t("deleteNoteError", { message: err.message }));
     } finally {
       setDeletingId("");
+      setPendingDeleteNote(null);
     }
   };
 
@@ -177,7 +198,7 @@ export default function DashboardPage() {
       addToast("success", t("profileUpdated"));
     } catch (err) {
       setProfileError(err.message);
-      addToast("error", err.message);
+      addToast("error", t("profileUpdateError", { message: err.message }));
     } finally {
       setProfileSaving(false);
     }
@@ -213,7 +234,7 @@ export default function DashboardPage() {
       await loadAdminUsers();
     } catch (err) {
       setAdminError(err.message);
-      addToast("error", err.message);
+      addToast("error", t("roleUpdateError", { message: err.message }));
     } finally {
       setUpdatingRoleId("");
     }
@@ -321,7 +342,7 @@ export default function DashboardPage() {
               onCreateSuccess={(note) =>
                 addToast("success", t("createdNote", { title: note.title }))
               }
-              onCreateError={(err) => addToast("error", err.message)}
+              onCreateError={(err) => addToast("error", t("createNoteError", { message: err.message }))}
             />
           </div>
         </aside>
@@ -389,24 +410,29 @@ export default function DashboardPage() {
           ) : null}
 
           {loading ? (
-            <div className="rounded-lg border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-              {t("loadingNotes")}
+            <div role="status" aria-label={t("loadingNotes")}>
+              <NoteListSkeleton />
+              <span className="sr-only">{t("loadingNotes")}</span>
             </div>
           ) : (
             <NoteList
               notes={notes}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               onUpdate={handleUpdate}
               deletingId={deletingId}
-              emptyTitle={isSearching ? t("emptySearchTitle") : t("emptyNotesTitle")}
+              emptyTitle={
+                isSearching || categoryFilter || favoritesFilter
+                  ? t("emptyFilteredTitle")
+                  : t("emptyNotesTitle")
+              }
               emptyDescription={
-                isSearching
-                  ? t("emptySearchDescription")
+                isSearching || categoryFilter || favoritesFilter
+                  ? t("emptyFilteredDescription")
                   : t("emptyNotesDescription")
               }
-              emptyVariant={isSearching ? "search" : "notes"}
+              emptyVariant={isSearching || categoryFilter || favoritesFilter ? "search" : "notes"}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
-              onUpdateError={(err) => addToast("error", err.message)}
+              onUpdateError={(err) => addToast("error", t("updateNoteError", { message: err.message }))}
             />
           )}
           {!loading && pagination.total > 0 ? (
@@ -577,6 +603,50 @@ export default function DashboardPage() {
                 {t("editProfile")}
               </button>
             )}
+          </section>
+        </div>
+      ) : null}
+
+      {pendingDeleteNote ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
+          <section
+            className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-5 shadow-soft"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-note-title"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-700">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="delete-note-title" className="text-lg font-bold text-slate-950">
+                  {t("confirmDeleteTitle")}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {t("confirmDeleteDescription", { title: pendingDeleteNote.title })}
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={cancelDelete}
+                disabled={Boolean(deletingId)}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={Boolean(deletingId)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+              >
+                {deletingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                {deletingId ? t("deleting") : t("deleteNote")}
+              </button>
+            </div>
           </section>
         </div>
       ) : null}

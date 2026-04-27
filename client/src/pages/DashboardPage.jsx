@@ -2,6 +2,8 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  Download,
   Edit3,
   FileText,
   Loader2,
@@ -28,6 +30,65 @@ import { useI18n } from "../context/I18nContext.jsx";
 
 const NOTES_LIMIT = 12;
 const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
+
+const noteTimestamp = (note) => new Date(note.updatedAt || note.createdAt || 0).getTime();
+
+const sortVisibleNotes = (notes) =>
+  [...notes].sort((a, b) => {
+    if (a.pinned !== b.pinned) {
+      return a.pinned ? -1 : 1;
+    }
+
+    return noteTimestamp(b) - noteTimestamp(a);
+  });
+
+const noteToExport = (note) => ({
+  title: note.title || "",
+  body: note.body || "",
+  tags: note.tags || [],
+  category: note.category || "General",
+  pinned: Boolean(note.pinned),
+  starred: Boolean(note.starred),
+  createdDate: note.createdAt || "",
+  updatedDate: note.updatedAt || ""
+});
+
+const formatExportDate = (value) => (value ? new Date(value).toISOString() : "");
+
+const escapeMarkdown = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/`/g, "\\`");
+
+const notesToMarkdown = (notes) =>
+  notes
+    .map((note) => {
+      const exported = noteToExport(note);
+
+      return [
+        `# ${escapeMarkdown(exported.title)}`,
+        "",
+        `- Category: ${escapeMarkdown(exported.category)}`,
+        `- Tags: ${exported.tags.length ? exported.tags.map(escapeMarkdown).join(", ") : "None"}`,
+        `- Pinned: ${exported.pinned ? "Yes" : "No"}`,
+        `- Starred: ${exported.starred ? "Yes" : "No"}`,
+        `- Created: ${formatExportDate(exported.createdDate)}`,
+        `- Updated: ${formatExportDate(exported.updatedDate)}`,
+        "",
+        escapeMarkdown(exported.body)
+      ].join("\n");
+    })
+    .join("\n\n---\n\n");
+
+const downloadTextFile = ({ contents, filename, type }) => {
+  const blob = new window.Blob([contents], { type });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
 
 export default function DashboardPage() {
   const { user, logout, updateProfile } = useAuth();
@@ -59,6 +120,7 @@ export default function DashboardPage() {
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
   const [updatingRoleId, setUpdatingRoleId] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
   const isSearching = Boolean(searchTerm.trim());
@@ -161,6 +223,36 @@ export default function DashboardPage() {
     setNotes((current) => current.map((note) => (note.id === id ? updatedNote : note)));
     await loadNotes();
     return updatedNote;
+  };
+
+  const exportNotes = (format) => {
+    const visibleNotes = sortVisibleNotes(notes);
+
+    if (!visibleNotes.length) {
+      addToast("error", t("exportNoNotes"));
+      setExportOpen(false);
+      return;
+    }
+
+    const exportedAt = new Date().toISOString().slice(0, 10);
+
+    if (format === "json") {
+      downloadTextFile({
+        contents: JSON.stringify(visibleNotes.map(noteToExport), null, 2),
+        filename: `notes-${exportedAt}.json`,
+        type: "application/json"
+      });
+      addToast("success", t("exportSuccess", { format: "JSON" }));
+    } else {
+      downloadTextFile({
+        contents: notesToMarkdown(visibleNotes),
+        filename: `notes-${exportedAt}.md`,
+        type: "text/markdown"
+      });
+      addToast("success", t("exportSuccess", { format: "Markdown" }));
+    }
+
+    setExportOpen(false);
   };
 
   const openProfile = () => {
@@ -280,6 +372,48 @@ export default function DashboardPage() {
               <RefreshCw className="h-4 w-4" />
               {t("refresh")}
             </Button>
+            <div className="relative">
+              <Button
+                onClick={() => setExportOpen((current) => !current)}
+                disabled={loading}
+                className="h-10 bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+                aria-expanded={exportOpen}
+                aria-haspopup="menu"
+              >
+                <Download className="h-4 w-4" />
+                {t("exportNotes")}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              {exportOpen ? (
+                <div
+                  className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  role="menu"
+                  aria-label={t("exportVisibleNotes")}
+                >
+                  <p className="border-b border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t("exportVisibleNotes")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => exportNotes("markdown")}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <FileText className="h-4 w-4 text-emerald-700" />
+                    {t("exportMarkdown")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportNotes("json")}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <Download className="h-4 w-4 text-emerald-700" />
+                    {t("exportJson")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <Button
               onClick={openProfile}
               className="h-10 bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"

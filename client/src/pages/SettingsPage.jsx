@@ -1,10 +1,11 @@
-import { Loader2, Plus, Save, Settings, Users } from "lucide-react";
+import { Copy, Loader2, Mail, Plus, Save, Settings, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fetchUserSettings } from "../api/users.js";
 import {
   addWorkspaceMember,
+  createWorkspaceInvite,
   createWorkspace,
   fetchMyWorkspace,
   fetchWorkspaceMembers
@@ -22,10 +23,13 @@ export default function SettingsPage() {
   const [members, setMembers] = useState([]);
   const [workspaceName, setWorkspaceName] = useState("");
   const [memberForm, setMemberForm] = useState({ name: "", email: "", role: "staff" });
+  const [inviteForm, setInviteForm] = useState({ email: "", role: "staff" });
+  const [inviteLink, setInviteLink] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [workspaceSaving, setWorkspaceSaving] = useState(false);
   const [memberSaving, setMemberSaving] = useState(false);
+  const [inviteSaving, setInviteSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -116,6 +120,30 @@ export default function SettingsPage() {
     } finally {
       setMemberSaving(false);
     }
+  };
+
+  const submitInvite = async (event) => {
+    event.preventDefault();
+    setInviteSaving(true);
+    setInviteLink("");
+    setMessage("");
+    setError("");
+
+    try {
+      const invite = await createWorkspaceInvite(inviteForm);
+      setInviteLink(invite.inviteLink);
+      setInviteForm({ email: "", role: "staff" });
+      setMessage(t("workspaceInviteCreated"));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setInviteSaving(false);
+    }
+  };
+
+  const copyInviteLink = async () => {
+    await window.navigator.clipboard.writeText(inviteLink);
+    setMessage(t("inviteLinkCopied"));
   };
 
   return (
@@ -242,7 +270,63 @@ export default function SettingsPage() {
 
                   {canManageMembers ? (
                     <>
+                      <form onSubmit={submitInvite} className="grid gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <p className="text-sm font-semibold text-slate-950">{t("inviteMember")}</p>
+                          <p className="mt-1 text-sm text-slate-600">{t("inviteMemberDescription")}</p>
+                        </div>
+                        <input
+                          value={inviteForm.email}
+                          onChange={(event) => setInviteForm((current) => ({ ...current, email: event.target.value }))}
+                          required
+                          type="email"
+                          placeholder={t("email")}
+                          className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                        />
+                        <select
+                          value={inviteForm.role}
+                          onChange={(event) => setInviteForm((current) => ({ ...current, role: event.target.value }))}
+                          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                        >
+                          <option value="staff">{t("staff")}</option>
+                          <option value="manager">{t("manager")}</option>
+                        </select>
+                        <button
+                          type="submit"
+                          disabled={inviteSaving}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60 sm:col-span-2"
+                        >
+                          {inviteSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                          {t("createInvite")}
+                        </button>
+                        {inviteLink ? (
+                          <div className="sm:col-span-2 rounded-md border border-emerald-200 bg-white p-3">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              {t("inviteLink")}
+                            </p>
+                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                              <input
+                                value={inviteLink}
+                                readOnly
+                                className="h-10 flex-1 rounded-md border border-slate-300 px-3 text-sm text-slate-700"
+                              />
+                              <button
+                                type="button"
+                                onClick={copyInviteLink}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                              >
+                                <Copy className="h-4 w-4" />
+                                {t("copyLink")}
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </form>
+
                       <form onSubmit={submitMember} className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <p className="text-sm font-semibold text-slate-950">{t("addMemberManually")}</p>
+                        </div>
                         <input
                           value={memberForm.name}
                           onChange={(event) => setMemberForm((current) => ({ ...current, name: event.target.value }))}

@@ -5,6 +5,7 @@ import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom"
 import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { I18nProvider } from "./context/I18nContext.jsx";
+import AcceptInvitePage from "./pages/AcceptInvitePage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import GuidePage from "./pages/GuidePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
+      { path: "invite/:token", element: <AcceptInvitePage /> },
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       {

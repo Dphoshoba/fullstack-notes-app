@@ -25,3 +25,24 @@ export async function addWorkspaceMember(input) {
   });
   return data.data;
 }
+
+export async function createWorkspaceInvite(input) {
+  const data = await apiRequest("/api/workspaces/invites", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  return data.data;
+}
+
+export async function fetchWorkspaceInvite(token) {
+  const data = await apiRequest(`/api/workspaces/invites/${token}`);
+  return data.data;
+}
+
+export async function acceptWorkspaceInvite(token) {
+  const data = await apiRequest(`/api/workspaces/invites/${token}/accept`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+  return data.data;
+}

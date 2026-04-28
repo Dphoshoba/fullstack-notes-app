@@ -8,6 +8,14 @@ export async function createCheckoutSession() {
   return data.data;
 }
 
+export async function createPortalSession() {
+  const data = await apiRequest("/api/billing/create-portal-session", {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+  return data.data;
+}
+
 export async function fetchBillingStatus() {
   const data = await apiRequest("/api/billing/status");
   return data.data;

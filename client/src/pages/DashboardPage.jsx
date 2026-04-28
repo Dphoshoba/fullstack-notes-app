@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  CreditCard,
   Download,
   Edit3,
   FileText,
@@ -27,7 +28,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
-import { createCheckoutSession, fetchBillingStatus } from "../api/billing.js";
+import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
 import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { Button } from "../components/Button.jsx";
@@ -147,10 +148,12 @@ export default function DashboardPage() {
   const [usage, setUsage] = useState({
     plan: "free",
     aiUsageCount: 0,
-    aiUsageLimit: 20
+    aiUsageLimit: 5,
+    remainingAiUses: 5
   });
   const [usageLoading, setUsageLoading] = useState(true);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
@@ -229,10 +232,11 @@ export default function DashboardPage() {
   ];
   const selectedAiNote = notes.find((note) => note.id === selectedAiNoteId) || notes[0];
   const usageLimitReached =
-    usage.plan === "free" && usage.aiUsageCount >= usage.aiUsageLimit;
+    usage.plan === "free" && usage.remainingAiUses <= 0;
   const usageProgress = usage.aiUsageLimit
     ? Math.min(Math.round((usage.aiUsageCount / usage.aiUsageLimit) * 100), 100)
     : 0;
+  const usagePlanLabel = usage.plan === "premium" ? t("premiumPlan") : t("freePlan");
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -433,6 +437,18 @@ export default function DashboardPage() {
     } catch (err) {
       addToast("error", t("checkoutError", { message: err.message }));
       setUpgradeLoading(false);
+    }
+  };
+
+  const manageBilling = async () => {
+    setPortalLoading(true);
+
+    try {
+      const session = await createPortalSession();
+      window.location.href = session.portalUrl;
+    } catch (err) {
+      addToast("error", t("billingPortalError", { message: err.message }));
+      setPortalLoading(false);
     }
   };
 
@@ -770,7 +786,7 @@ export default function DashboardPage() {
                   <p className="mt-1 text-sm text-slate-600">
                     {t("currentPlan")}:{" "}
                     <span className="font-semibold capitalize text-slate-950">
-                      {usage.plan === "premium" ? t("premiumPlan") : t("freePlan")}
+                      {usagePlanLabel}
                     </span>
                     {usage.plan === "premium" ? (
                       <span className="ml-2 inline-flex rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white">
@@ -779,15 +795,31 @@ export default function DashboardPage() {
                     ) : null}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={startUpgrade}
-                  disabled={upgradeLoading || usage.plan === "premium"}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {usage.plan === "premium" ? t("premiumPlan") : t("upgrade")}
-                </button>
+                {usage.plan === "premium" ? (
+                  <button
+                    type="button"
+                    onClick={manageBilling}
+                    disabled={portalLoading}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {portalLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    {t("manageBilling")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startUpgrade}
+                    disabled={upgradeLoading}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {t("upgrade")}
+                  </button>
+                )}
               </div>
               <div className="mt-3">
                 <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
@@ -795,7 +827,11 @@ export default function DashboardPage() {
                   <span>
                     {usageLoading
                       ? t("loading")
-                      : `${usage.aiUsageCount} / ${usage.aiUsageLimit}`}
+                      : t("aiUsageValue", {
+                          plan: usagePlanLabel,
+                          used: usage.aiUsageCount,
+                          limit: usage.aiUsageLimit
+                        })}
                   </span>
                 </div>
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">

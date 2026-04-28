@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { fetchCurrentUser, loginUser, logoutUser, registerUser } from "../api/auth.js";
 import { tokenStorage } from "../api/http.js";
-import { updateMyProfile } from "../api/users.js";
+import { updateMyProfile, updateUserSettings } from "../api/users.js";
 
 const AuthContext = createContext(null);
 
@@ -49,6 +49,11 @@ export function AuthProvider({ children }) {
       },
       async updateProfile(input) {
         const updatedUser = await updateMyProfile(input);
+        setUser(updatedUser);
+        return updatedUser;
+      },
+      async updateSettings(input) {
+        const updatedUser = await updateUserSettings(input);
         setUser(updatedUser);
         return updatedUser;
       }

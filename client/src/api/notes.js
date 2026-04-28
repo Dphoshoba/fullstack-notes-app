@@ -5,7 +5,8 @@ export async function fetchNotes({
   page = 1,
   limit = 12,
   category = "",
-  starred = ""
+  starred = "",
+  scope = "all"
 } = {}) {
   const params = new URLSearchParams({
     page: String(page),
@@ -22,6 +23,10 @@ export async function fetchNotes({
 
   if (starred !== "") {
     params.set("starred", String(starred));
+  }
+
+  if (scope) {
+    params.set("scope", scope);
   }
 
   const data = await apiRequest(`/api/notes?${params.toString()}`);

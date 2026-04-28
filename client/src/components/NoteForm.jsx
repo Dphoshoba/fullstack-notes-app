@@ -9,13 +9,20 @@ const initialValues = {
   body: "",
   tags: "",
   category: "General",
+  visibility: "private",
   starred: false,
   pinned: false
 };
 
-export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
+export function NoteForm({
+  onCreate,
+  onCreateError,
+  onCreateSuccess,
+  hasWorkspace = false,
+  defaultVisibility = "private"
+}) {
   const { t } = useI18n();
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState({ ...initialValues, visibility: defaultVisibility });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -37,6 +44,7 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
         title: values.title,
         body: values.body,
         category: values.category,
+        visibility: hasWorkspace ? values.visibility : "private",
         starred: values.starred,
         pinned: values.pinned,
         tags: values.tags
@@ -44,7 +52,7 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
           .map((tag) => tag.trim())
           .filter(Boolean)
       });
-      setValues(initialValues);
+      setValues({ ...initialValues, visibility: hasWorkspace ? defaultVisibility : "private" });
       onCreateSuccess?.(note);
     } catch (err) {
       setError(err.message);
@@ -85,6 +93,26 @@ export function NoteForm({ onCreate, onCreateError, onCreateSuccess }) {
           className="mt-2 w-full resize-none rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
           placeholder={t("body")}
         />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-slate-700" htmlFor="visibility">
+          {t("noteVisibility")}
+        </label>
+        <select
+          id="visibility"
+          name="visibility"
+          value={hasWorkspace ? values.visibility : "private"}
+          onChange={updateField}
+          disabled={!hasWorkspace}
+          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
+        >
+          <option value="private">{t("privateNote")}</option>
+          <option value="workspace">{t("workspaceNote")}</option>
+        </select>
+        {!hasWorkspace ? (
+          <p className="mt-2 text-xs font-medium text-slate-500">{t("workspaceRequired")}</p>
+        ) : null}
       </div>
 
       <div>

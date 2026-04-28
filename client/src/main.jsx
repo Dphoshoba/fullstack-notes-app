@@ -9,6 +9,7 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import GuidePage from "./pages/GuidePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import SettingsPage from "./pages/SettingsPage.jsx";
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 import "./styles.css";
 
@@ -33,6 +34,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <GuidePage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "settings",
+        element: (
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         )
       }

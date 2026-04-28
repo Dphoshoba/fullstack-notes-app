@@ -8,6 +8,18 @@ const noteSchema = new mongoose.Schema(
       required: true,
       index: true
     },
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      default: null,
+      index: true
+    },
+    visibility: {
+      type: String,
+      enum: ["private", "workspace"],
+      default: "private",
+      index: true
+    },
     title: {
       type: String,
       required: true,

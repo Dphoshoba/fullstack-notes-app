@@ -10,6 +10,19 @@ export async function fetchUsage() {
   return data.data;
 }
 
+export async function fetchUserSettings() {
+  const data = await apiRequest("/api/users/settings");
+  return data.data;
+}
+
+export async function updateUserSettings(input) {
+  const data = await apiRequest("/api/users/settings", {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+  return data.data;
+}
+
 export async function updateMyProfile(input) {
   const data = await apiRequest("/api/users/me", {
     method: "PATCH",

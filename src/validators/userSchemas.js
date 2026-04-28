@@ -10,6 +10,16 @@ export const updateCurrentUserSchema = Joi.object({
   }).required()
 });
 
+export const updateUserSettingsSchema = Joi.object({
+  body: Joi.object({
+    name: Joi.string().trim().min(2).max(80),
+    preferredLanguage: Joi.string().trim().min(2).max(10),
+    defaultNoteScope: Joi.string().valid("private", "workspace")
+  })
+    .min(1)
+    .required()
+});
+
 export const updateUserRoleSchema = Joi.object({
   params: Joi.object({
     id: objectId.required()

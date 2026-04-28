@@ -19,6 +19,7 @@ const noteToForm = (note) => ({
   body: note.body || "",
   tags: note.tags?.join(", ") || "",
   category: note.category || "General",
+  visibility: note.visibility || "private",
   starred: Boolean(note.starred),
   pinned: Boolean(note.pinned)
 });
@@ -121,6 +122,9 @@ function NoteCard({ note, onDelete, onEdit, onUpdate, onUpdateError, onUpdateSuc
             {t("starred")}
           </span>
         ) : null}
+        <span className="ml-2 inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+          {(note.visibility || "private") === "workspace" ? t("workspaceNote") : t("privateNote")}
+        </span>
       </div>
 
       {note.tags?.length ? (
@@ -139,7 +143,14 @@ function NoteCard({ note, onDelete, onEdit, onUpdate, onUpdateError, onUpdateSuc
   );
 }
 
-function EditNoteModal({ note, onClose, onUpdate, onUpdateError, onUpdateSuccess }) {
+function EditNoteModal({
+  note,
+  onClose,
+  onUpdate,
+  onUpdateError,
+  onUpdateSuccess,
+  hasWorkspace = false
+}) {
   const { t } = useI18n();
   const [form, setForm] = useState(() => noteToForm(note));
   const [error, setError] = useState("");
@@ -177,6 +188,7 @@ function EditNoteModal({ note, onClose, onUpdate, onUpdateError, onUpdateSuccess
         body: form.body.trim(),
         tags: parseTags(form.tags),
         category: form.category.trim(),
+        visibility: hasWorkspace ? form.visibility : "private",
         starred: form.starred,
         pinned: form.pinned
       });
@@ -240,6 +252,20 @@ function EditNoteModal({ note, onClose, onUpdate, onUpdateError, onUpdateSuccess
                 rows="7"
                 className="mt-2 w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-3 text-sm leading-6 text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               />
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("noteVisibility")}</span>
+              <select
+                name="visibility"
+                value={hasWorkspace ? form.visibility : "private"}
+                onChange={updateField}
+                disabled={!hasWorkspace}
+                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
+              >
+                <option value="private">{t("privateNote")}</option>
+                <option value="workspace">{t("workspaceNote")}</option>
+              </select>
             </label>
 
             <label className="block">
@@ -362,7 +388,8 @@ export function NoteList({
   emptyDescription = "Create your first note from the form.",
   emptyVariant = "notes",
   onUpdateError,
-  onUpdateSuccess
+  onUpdateSuccess,
+  hasWorkspace = false
 }) {
   const [editingNote, setEditingNote] = useState(null);
   const sortedNotes = useMemo(() => sortNotes(notes), [notes]);
@@ -407,6 +434,7 @@ export function NoteList({
           onUpdate={onUpdate}
           onUpdateError={onUpdateError}
           onUpdateSuccess={onUpdateSuccess}
+          hasWorkspace={hasWorkspace}
         />
       ) : null}
     </>

@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Save,
   Search,
+  Settings,
   Shield,
   Star,
   Trash2,
@@ -33,6 +34,7 @@ import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js"
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
 import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
+import { fetchMyWorkspace } from "../api/workspaces.js";
 import { Button } from "../components/Button.jsx";
 import { NoteForm } from "../components/NoteForm.jsx";
 import { NoteList, NoteListSkeleton } from "../components/NoteList.jsx";
@@ -126,6 +128,7 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [favoritesFilter, setFavoritesFilter] = useState("");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -163,10 +166,12 @@ export default function DashboardPage() {
     () => localStorage.getItem(GUIDE_ONBOARDING_KEY) !== "true"
   );
   const [toasts, setToasts] = useState([]);
+  const [workspaceInfo, setWorkspaceInfo] = useState({ workspace: null, role: "staff" });
 
   const isSearching = Boolean(searchTerm.trim());
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const canEditRoles = user?.role === "superadmin";
+  const hasWorkspace = Boolean(workspaceInfo.workspace);
   const loadedNotesCount = notes.length;
   const pinnedNotesCount = notes.filter((note) => note.pinned).length;
   const starredNotesCount = notes.filter((note) => note.starred).length;
@@ -269,7 +274,8 @@ export default function DashboardPage() {
       nextPage = page,
       nextSearch = searchTerm,
       nextCategory = categoryFilter,
-      nextStarred = favoritesFilter
+      nextStarred = favoritesFilter,
+      nextScope = scopeFilter
     } = {}) => {
     setError("");
     setLoading(true);
@@ -280,7 +286,8 @@ export default function DashboardPage() {
         limit: NOTES_LIMIT,
         search: nextSearch,
         category: nextCategory,
-        starred: nextStarred
+        starred: nextStarred,
+        scope: nextScope
       });
       setNotes(result.notes);
       setPagination(result.pagination);
@@ -291,12 +298,25 @@ export default function DashboardPage() {
       setLoading(false);
     }
     },
-    [categoryFilter, favoritesFilter, page, searchTerm, t]
+    [categoryFilter, favoritesFilter, page, scopeFilter, searchTerm, t]
   );
 
   useEffect(() => {
     loadNotes();
   }, [loadNotes]);
+
+  const loadWorkspace = useCallback(async () => {
+    try {
+      const info = await fetchMyWorkspace();
+      setWorkspaceInfo(info);
+    } catch {
+      setWorkspaceInfo({ workspace: null, role: "staff" });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWorkspace();
+  }, [loadWorkspace]);
 
   const loadUsage = useCallback(async () => {
     setUsageLoading(true);
@@ -642,6 +662,13 @@ export default function DashboardPage() {
               <HelpCircle className="h-4 w-4 text-slate-700" />
               {t("guide")}
             </Link>
+            <Link
+              to="/settings"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950"
+            >
+              <Settings className="h-4 w-4 text-slate-700" />
+              {t("settings")}
+            </Link>
             {isAdmin ? (
               <Button
                 onClick={() => setAdminOpen(true)}
@@ -805,7 +832,12 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-slate-500">{t("notes")}</p>
           <div className="mt-5">
             <NoteForm
+              key={`${hasWorkspace}-${user?.defaultNoteScope || "private"}`}
               onCreate={handleCreate}
+              hasWorkspace={hasWorkspace}
+              defaultVisibility={
+                hasWorkspace && user?.defaultNoteScope === "workspace" ? "workspace" : "private"
+              }
               onCreateSuccess={(note) =>
                 addToast("success", t("createdNote", { title: note.title }))
               }
@@ -1024,6 +1056,22 @@ export default function DashboardPage() {
               />
             </label>
             <label className="w-full sm:max-w-xs">
+              <span className="sr-only">{t("scopeFilter")}</span>
+              <select
+                value={scopeFilter}
+                onChange={(event) => {
+                  setScopeFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                aria-label={t("scopeFilter")}
+              >
+                <option value="all">{t("allNotes")}</option>
+                <option value="private">{t("myPrivateNotes")}</option>
+                <option value="workspace">{t("workspaceNotes")}</option>
+              </select>
+            </label>
+            <label className="w-full sm:max-w-xs">
               <span className="sr-only">{t("categoryFilter")}</span>
               <select
                 value={categoryFilter}
@@ -1075,16 +1123,21 @@ export default function DashboardPage() {
               onUpdate={handleUpdate}
               deletingId={deletingId}
               emptyTitle={
-                isSearching || categoryFilter || favoritesFilter
+                isSearching || categoryFilter || favoritesFilter || scopeFilter !== "all"
                   ? t("emptyFilteredTitle")
                   : t("emptyNotesTitle")
               }
               emptyDescription={
-                isSearching || categoryFilter || favoritesFilter
+                isSearching || categoryFilter || favoritesFilter || scopeFilter !== "all"
                   ? t("emptyFilteredDescription")
                   : t("emptyNotesDescription")
               }
-              emptyVariant={isSearching || categoryFilter || favoritesFilter ? "search" : "notes"}
+              emptyVariant={
+                isSearching || categoryFilter || favoritesFilter || scopeFilter !== "all"
+                  ? "search"
+                  : "notes"
+              }
+              hasWorkspace={hasWorkspace}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
               onUpdateError={(err) => addToast("error", t("updateNoteError", { message: err.message }))}
             />

@@ -139,20 +139,22 @@ Local setup:
 1. Create a Stripe test-mode product and recurring price for the Premium plan.
 2. Put the test secret key in `STRIPE_SECRET_KEY`.
 3. Put the test price ID in `STRIPE_PRICE_ID`.
-4. Install and log in to the Stripe CLI.
-5. Forward webhooks to the local backend:
+4. Configure the Stripe Billing Portal in the Stripe Dashboard before using Manage billing.
+5. Install and log in to the Stripe CLI.
+6. Forward webhooks to the local backend:
 
 ```bash
 stripe listen --forward-to localhost:4000/api/billing/webhook
 ```
 
-6. Copy the CLI webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
-7. Restart the backend after changing `.env`.
+7. Copy the CLI webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+8. Restart the backend after changing `.env`.
 
 Protected billing routes:
 
 ```http
 POST /api/billing/create-checkout-session
+POST /api/billing/create-portal-session
 GET  /api/billing/status
 ```
 

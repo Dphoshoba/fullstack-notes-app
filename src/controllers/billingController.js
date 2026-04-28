@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 
 import { env } from "../config/env.js";
-import { User } from "../models/User.js";
+import { AI_USAGE_LIMITS, User } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const getClientOrigin = () => env.CLIENT_ORIGIN.split(",")[0];
@@ -14,6 +14,9 @@ const getStripe = () => {
 
   return new Stripe(env.STRIPE_SECRET_KEY);
 };
+
+const getCheckoutCustomerId = (session) =>
+  typeof session.customer === "string" ? session.customer : session.customer?.id;
 
 export const createCheckoutSession = async (req, res) => {
   if (!env.STRIPE_PRICE_ID) {
@@ -60,6 +63,44 @@ export const getBillingStatus = async (req, res) => {
   });
 };
 
+export const createPortalSession = async (req, res) => {
+  if ((req.user.plan || "free") !== "premium") {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Billing portal is available for premium users only");
+  }
+
+  const stripe = getStripe();
+  const clientOrigin = getClientOrigin();
+  let customerId = req.user.stripeCustomerId;
+
+  if (!customerId) {
+    const customers = await stripe.customers.list({
+      email: req.user.email,
+      limit: 1
+    });
+    customerId = customers.data[0]?.id;
+
+    if (customerId) {
+      await User.findByIdAndUpdate(req.user.id, { stripeCustomerId: customerId });
+    }
+  }
+
+  if (!customerId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Stripe customer could not be found");
+  }
+
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: clientOrigin
+  });
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      portalUrl: session.url
+    }
+  });
+};
+
 export const handleStripeWebhook = async (req, res) => {
   if (!env.STRIPE_WEBHOOK_SECRET) {
     throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, "Stripe webhook is not configured");
@@ -78,11 +119,13 @@ export const handleStripeWebhook = async (req, res) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const userId = session.metadata?.userId || session.client_reference_id;
+    const stripeCustomerId = getCheckoutCustomerId(session);
 
     if (userId) {
       await User.findByIdAndUpdate(userId, {
         plan: "premium",
-        aiUsageLimit: 100000
+        aiUsageLimit: AI_USAGE_LIMITS.premium,
+        ...(stripeCustomerId ? { stripeCustomerId } : {})
       });
     }
   }

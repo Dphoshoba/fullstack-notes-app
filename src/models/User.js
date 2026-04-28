@@ -3,6 +3,11 @@ import mongoose from "mongoose";
 
 export const USER_ROLES = ["user", "admin", "superadmin"];
 export const USER_PLANS = ["free", "premium"];
+export const WORKSPACE_ROLES = ["owner", "manager", "staff"];
+export const AI_USAGE_LIMITS = {
+  free: 5,
+  premium: 100000
+};
 
 const userSchema = new mongoose.Schema(
   {
@@ -32,6 +37,28 @@ const userSchema = new mongoose.Schema(
       enum: USER_ROLES,
       default: "user"
     },
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+      default: null,
+      index: true
+    },
+    workspaceRole: {
+      type: String,
+      enum: WORKSPACE_ROLES,
+      default: "staff"
+    },
+    preferredLanguage: {
+      type: String,
+      default: "en",
+      trim: true,
+      maxlength: 10
+    },
+    defaultNoteScope: {
+      type: String,
+      enum: ["private", "workspace"],
+      default: "private"
+    },
     plan: {
       type: String,
       enum: USER_PLANS,
@@ -44,8 +71,13 @@ const userSchema = new mongoose.Schema(
     },
     aiUsageLimit: {
       type: Number,
-      default: 20,
+      default: AI_USAGE_LIMITS.free,
       min: 0
+    },
+    stripeCustomerId: {
+      type: String,
+      default: "",
+      trim: true
     }
   },
   {
@@ -56,6 +88,7 @@ const userSchema = new mongoose.Schema(
         delete ret._id;
         delete ret.__v;
         delete ret.password;
+        delete ret.stripeCustomerId;
         return ret;
       }
     }

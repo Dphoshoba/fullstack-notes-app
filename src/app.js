@@ -14,6 +14,7 @@ import billingRoutes, { billingWebhookRouter } from "./routes/billingRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import workspaceRoutes from "./routes/workspaceRoutes.js";
 
 const app = express();
 const allowedOrigins = env.CLIENT_ORIGIN.split(",");
@@ -57,6 +58,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/workspaces", workspaceRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

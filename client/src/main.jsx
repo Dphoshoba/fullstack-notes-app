@@ -6,6 +6,7 @@ import App from "./App.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { I18nProvider } from "./context/I18nContext.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
+import GuidePage from "./pages/GuidePage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
@@ -24,6 +25,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "guide",
+        element: (
+          <ProtectedRoute>
+            <GuidePage />
           </ProtectedRoute>
         )
       }

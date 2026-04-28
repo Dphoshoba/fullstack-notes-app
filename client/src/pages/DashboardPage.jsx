@@ -11,6 +11,7 @@ import {
   Edit3,
   FileText,
   Folder,
+  HelpCircle,
   Loader2,
   LogOut,
   Pin,
@@ -26,6 +27,7 @@ import {
   X
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
@@ -39,6 +41,7 @@ import { useI18n } from "../context/I18nContext.jsx";
 
 const NOTES_LIMIT = 12;
 const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
+const GUIDE_ONBOARDING_KEY = "notes_api_guide_onboarding_seen";
 
 const noteTimestamp = (note) => new Date(note.updatedAt || note.createdAt || 0).getTime();
 
@@ -114,6 +117,7 @@ const formatDisplayDate = (value) => {
 export default function DashboardPage() {
   const { user, logout, updateProfile } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
+  const navigate = useNavigate();
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -155,6 +159,9 @@ export default function DashboardPage() {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showGuideOnboarding, setShowGuideOnboarding] = useState(
+    () => localStorage.getItem(GUIDE_ONBOARDING_KEY) !== "true"
+  );
   const [toasts, setToasts] = useState([]);
 
   const isSearching = Boolean(searchTerm.trim());
@@ -241,6 +248,16 @@ export default function DashboardPage() {
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((current) => [...current, { id, type, message }]);
+  };
+
+  const rememberGuideOnboarding = () => {
+    localStorage.setItem(GUIDE_ONBOARDING_KEY, "true");
+    setShowGuideOnboarding(false);
+  };
+
+  const openGuideFromOnboarding = () => {
+    rememberGuideOnboarding();
+    navigate("/guide");
   };
 
   const dismissToast = (id) => {
@@ -618,6 +635,13 @@ export default function DashboardPage() {
               <User className="h-4 w-4" />
               {t("profile")}
             </Button>
+            <Link
+              to="/guide"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950"
+            >
+              <HelpCircle className="h-4 w-4 text-slate-700" />
+              {t("guide")}
+            </Link>
             {isAdmin ? (
               <Button
                 onClick={() => setAdminOpen(true)}
@@ -634,6 +658,44 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {showGuideOnboarding ? (
+        <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-emerald-700">
+                  <HelpCircle className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">
+                    {t("welcomeGuidePrompt")}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {t("welcomeGuideDescription")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={openGuideFromOnboarding}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                >
+                  {t("viewGuide")}
+                </button>
+                <button
+                  type="button"
+                  onClick={rememberGuideOnboarding}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  {t("skip")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

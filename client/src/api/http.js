@@ -18,7 +18,7 @@ export async function apiRequest(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const token = tokenStorage.get();
 
-  if (!headers.has("Content-Type") && options.body) {
+  if (!headers.has("Content-Type") && options.body && !(options.body instanceof window.FormData)) {
     headers.set("Content-Type", "application/json");
   }
 

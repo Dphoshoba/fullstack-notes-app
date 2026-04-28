@@ -19,5 +19,8 @@ export const env = {
   ACCESS_TOKEN_EXPIRES_IN: process.env.ACCESS_TOKEN_EXPIRES_IN || "15m",
   REFRESH_TOKEN_EXPIRES_IN: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d",
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || "http://localhost:3000",
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+  STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID || "",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
   COOKIE_SECURE: process.env.COOKIE_SECURE === "true"
 };

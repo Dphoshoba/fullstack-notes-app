@@ -22,6 +22,10 @@ const buildNoteFilter = (userId, query) => {
     filter.pinned = query.pinned;
   }
 
+  if (typeof query.starred === "boolean") {
+    filter.starred = query.starred;
+  }
+
   return filter;
 };
 

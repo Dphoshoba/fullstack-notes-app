@@ -27,6 +27,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 
 import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
+import { createCheckoutSession, fetchBillingStatus } from "../api/billing.js";
 import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { Button } from "../components/Button.jsx";
@@ -149,6 +150,7 @@ export default function DashboardPage() {
     aiUsageLimit: 20
   });
   const [usageLoading, setUsageLoading] = useState(true);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [toasts, setToasts] = useState([]);
 
@@ -292,6 +294,31 @@ export default function DashboardPage() {
     loadUsage();
   }, [loadUsage]);
 
+  useEffect(() => {
+    const billingState = new URLSearchParams(window.location.search).get("billing");
+
+    if (!billingState) {
+      return;
+    }
+
+    const refreshBilling = async () => {
+      try {
+        const [status] = await Promise.all([fetchBillingStatus(), loadUsage()]);
+        setUsage((current) => ({ ...current, plan: status.plan }));
+        addToast(
+          billingState === "success" ? "success" : "error",
+          billingState === "success" ? t("billingReturnSuccess") : t("billingReturnCancelled")
+        );
+      } catch (err) {
+        addToast("error", t("billingStatusError", { message: err.message }));
+      } finally {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    };
+
+    refreshBilling();
+  }, [loadUsage, t]);
+
   const handleCreate = async (input) => {
     const note = await createNote(input);
     setPage(1);
@@ -394,6 +421,18 @@ export default function DashboardPage() {
       addToast("error", t("aiRequestError", { message: err.message }));
     } finally {
       setAiLoadingAction("");
+    }
+  };
+
+  const startUpgrade = async () => {
+    setUpgradeLoading(true);
+
+    try {
+      const session = await createCheckoutSession();
+      window.location.href = session.checkoutUrl;
+    } catch (err) {
+      addToast("error", t("checkoutError", { message: err.message }));
+      setUpgradeLoading(false);
     }
   };
 
@@ -733,13 +772,21 @@ export default function DashboardPage() {
                     <span className="font-semibold capitalize text-slate-950">
                       {usage.plan === "premium" ? t("premiumPlan") : t("freePlan")}
                     </span>
+                    {usage.plan === "premium" ? (
+                      <span className="ml-2 inline-flex rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white">
+                        {t("premiumBadge")}
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <button
                   type="button"
-                  className="inline-flex h-9 items-center justify-center rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  onClick={startUpgrade}
+                  disabled={upgradeLoading || usage.plan === "premium"}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {t("upgrade")}
+                  {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {usage.plan === "premium" ? t("premiumPlan") : t("upgrade")}
                 </button>
               </div>
               <div className="mt-3">

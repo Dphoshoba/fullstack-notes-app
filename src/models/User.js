@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
 
 export const USER_ROLES = ["user", "admin", "superadmin"];
+export const USER_PLANS = ["free", "premium"];
 
 const userSchema = new mongoose.Schema(
   {
@@ -30,6 +31,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: USER_ROLES,
       default: "user"
+    },
+    plan: {
+      type: String,
+      enum: USER_PLANS,
+      default: "free"
+    },
+    aiUsageCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    aiUsageLimit: {
+      type: Number,
+      default: 20,
+      min: 0
     }
   },
   {

@@ -8,6 +8,7 @@ export const listNotesSchema = Joi.object({
     limit: Joi.number().integer().min(1).max(100).default(20),
     search: Joi.string().trim().max(120).allow("").default(""),
     category: Joi.string().trim().max(60).allow("").default(""),
+    starred: Joi.boolean(),
     pinned: Joi.boolean()
   }).default()
 });
@@ -24,6 +25,7 @@ export const createNoteSchema = Joi.object({
     body: Joi.string().trim().min(1).max(10000).required(),
     tags: Joi.array().items(Joi.string().trim().min(1).max(30)).max(20).default([]),
     category: Joi.string().trim().min(1).max(60).default("General"),
+    starred: Joi.boolean().default(false),
     pinned: Joi.boolean().default(false)
   }).required()
 });
@@ -37,6 +39,7 @@ export const updateNoteSchema = Joi.object({
     body: Joi.string().trim().min(1).max(10000),
     tags: Joi.array().items(Joi.string().trim().min(1).max(30)).max(20),
     category: Joi.string().trim().min(1).max(60),
+    starred: Joi.boolean(),
     pinned: Joi.boolean()
   })
     .min(1)

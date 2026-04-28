@@ -19,6 +19,17 @@ export const getCurrentUser = async (req, res) => {
   });
 };
 
+export const getUsage = async (req, res) => {
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      plan: req.user.plan || "free",
+      aiUsageCount: req.user.aiUsageCount || 0,
+      aiUsageLimit: req.user.aiUsageLimit ?? 20
+    }
+  });
+};
+
 export const updateCurrentUser = async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,

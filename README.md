@@ -26,6 +26,9 @@ ACCESS_TOKEN_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN=7d
 CLIENT_ORIGIN=http://localhost:5173
 COOKIE_SECURE=false
+STRIPE_SECRET_KEY=sk_test_replace_me
+STRIPE_PRICE_ID=price_replace_me
+STRIPE_WEBHOOK_SECRET=whsec_replace_me
 ```
 
 ## Auth Flow
@@ -117,6 +120,49 @@ Update role body:
   "role": "admin"
 }
 ```
+
+### Billing
+
+Stripe is wired for test-mode Premium upgrades. Do not commit real Stripe keys.
+
+Backend environment variables:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PRICE_ID=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+CLIENT_ORIGIN=http://localhost:5173
+```
+
+Local setup:
+
+1. Create a Stripe test-mode product and recurring price for the Premium plan.
+2. Put the test secret key in `STRIPE_SECRET_KEY`.
+3. Put the test price ID in `STRIPE_PRICE_ID`.
+4. Install and log in to the Stripe CLI.
+5. Forward webhooks to the local backend:
+
+```bash
+stripe listen --forward-to localhost:4000/api/billing/webhook
+```
+
+6. Copy the CLI webhook signing secret into `STRIPE_WEBHOOK_SECRET`.
+7. Restart the backend after changing `.env`.
+
+Protected billing routes:
+
+```http
+POST /api/billing/create-checkout-session
+GET  /api/billing/status
+```
+
+Webhook route:
+
+```http
+POST /api/billing/webhook
+```
+
+On successful checkout completion, the webhook updates the matching user to `plan: "premium"`.
 
 ## Seed Demo User
 

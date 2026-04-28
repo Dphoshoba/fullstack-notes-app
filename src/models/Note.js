@@ -36,6 +36,11 @@ const noteSchema = new mongoose.Schema(
     pinned: {
       type: Boolean,
       default: false
+    },
+    starred: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   {

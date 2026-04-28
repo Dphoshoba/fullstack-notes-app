@@ -1140,6 +1140,7 @@ export default function DashboardPage() {
               hasWorkspace={hasWorkspace}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
               onUpdateError={(err) => addToast("error", t("updateNoteError", { message: err.message }))}
+              currentUser={user}
             />
           )}
           {!loading && pagination.total > 0 ? (

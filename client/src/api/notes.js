@@ -57,3 +57,30 @@ export async function updateNote(id, input) {
   });
   return data.data;
 }
+
+export async function fetchComments(noteId) {
+  const data = await apiRequest(`/api/notes/${noteId}/comments`);
+  return data.data;
+}
+
+export async function createComment(noteId, input) {
+  const data = await apiRequest(`/api/notes/${noteId}/comments`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  return data.data;
+}
+
+export async function updateComment(id, input) {
+  const data = await apiRequest(`/api/comments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+  return data.data;
+}
+
+export async function deleteComment(id) {
+  await apiRequest(`/api/comments/${id}`, {
+    method: "DELETE"
+  });
+}

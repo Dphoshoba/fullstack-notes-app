@@ -1,6 +1,12 @@
-import { Edit3, FileText, Loader2, Pin, Save, SearchX, Star, Trash2, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Edit3, FileText, Loader2, MessageSquare, Pin, Save, SearchX, Star, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
+import {
+  createComment,
+  deleteComment,
+  fetchComments,
+  updateComment
+} from "../api/notes.js";
 import { useI18n } from "../context/I18nContext.jsx";
 
 const noteTimestamp = (note) => new Date(note.updatedAt || note.createdAt || 0).getTime();
@@ -30,7 +36,213 @@ const parseTags = (tags) =>
     .map((tag) => tag.trim())
     .filter(Boolean);
 
-function NoteCard({ note, onDelete, onEdit, onUpdate, onUpdateError, onUpdateSuccess, deletingId }) {
+function NoteComments({ note, currentUser, onCommentError }) {
+  const { t } = useI18n();
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState("");
+  const [editingText, setEditingText] = useState("");
+
+  const canDeleteAny =
+    (note.visibility || "private") === "workspace" &&
+    ["owner", "manager"].includes(currentUser?.workspaceRole);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      setLoading(true);
+
+      try {
+        const nextComments = await fetchComments(note.id);
+        if (alive) {
+          setComments(nextComments);
+        }
+      } catch (err) {
+        onCommentError?.(err);
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      alive = false;
+    };
+  }, [note.id, onCommentError]);
+
+  const submitComment = async (event) => {
+    event.preventDefault();
+
+    if (!text.trim()) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const comment = await createComment(note.id, { text: text.trim() });
+      setComments((current) => [...current, comment]);
+      setText("");
+    } catch (err) {
+      onCommentError?.(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startEdit = (comment) => {
+    setEditingId(comment.id);
+    setEditingText(comment.text);
+  };
+
+  const submitEdit = async (commentId) => {
+    if (!editingText.trim()) {
+      return;
+    }
+
+    try {
+      const updated = await updateComment(commentId, { text: editingText.trim() });
+      setComments((current) => current.map((comment) => (comment.id === commentId ? updated : comment)));
+      setEditingId("");
+      setEditingText("");
+    } catch (err) {
+      onCommentError?.(err);
+    }
+  };
+
+  const removeComment = async (commentId) => {
+    try {
+      await deleteComment(commentId);
+      setComments((current) => current.filter((comment) => comment.id !== commentId));
+    } catch (err) {
+      onCommentError?.(err);
+    }
+  };
+
+  return (
+    <section className="mt-5 border-t border-slate-200 pt-4">
+      <div className="mb-3 flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-emerald-700" />
+        <h4 className="text-sm font-semibold text-slate-950">{t("comments")}</h4>
+      </div>
+
+      {loading ? (
+        <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">{t("loading")}</p>
+      ) : null}
+
+      {!loading && !comments.length ? (
+        <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">{t("noCommentsYet")}</p>
+      ) : null}
+
+      <div className="space-y-3">
+        {comments.map((comment) => {
+          const author = comment.userId;
+          const isOwn = author?.id === currentUser?.id || author?._id === currentUser?.id;
+          const canDelete = isOwn || canDeleteAny;
+
+          return (
+            <div key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">
+                    {author?.name || t("unknown")}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {new Date(comment.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  {isOwn ? (
+                    <button
+                      type="button"
+                      onClick={() => startEdit(comment)}
+                      className="inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-white"
+                    >
+                      {t("edit")}
+                    </button>
+                  ) : null}
+                  {canDelete ? (
+                    <button
+                      type="button"
+                      onClick={() => removeComment(comment.id)}
+                      className="inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                    >
+                      {t("delete")}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {editingId === comment.id ? (
+                <div className="mt-3 space-y-2">
+                  <textarea
+                    value={editingText}
+                    onChange={(event) => setEditingText(event.target.value)}
+                    rows="2"
+                    className="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => submitEdit(comment.id)}
+                      className="inline-flex h-8 items-center rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                    >
+                      {t("save")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId("")}
+                      className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      {t("cancel")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{comment.text}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <form onSubmit={submitComment} className="mt-3 flex flex-col gap-2">
+        <textarea
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          rows="2"
+          className="w-full resize-none rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          placeholder={t("addComment")}
+        />
+        <button
+          type="submit"
+          disabled={saving || !text.trim()}
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {t("postComment")}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+function NoteCard({
+  note,
+  onDelete,
+  onEdit,
+  onUpdate,
+  onUpdateError,
+  onUpdateSuccess,
+  deletingId,
+  currentUser
+}) {
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
 
@@ -139,6 +351,8 @@ function NoteCard({ note, onDelete, onEdit, onUpdate, onUpdateError, onUpdateSuc
           ))}
         </div>
       ) : null}
+
+      <NoteComments note={note} currentUser={currentUser} onCommentError={onUpdateError} />
     </article>
   );
 }
@@ -389,7 +603,8 @@ export function NoteList({
   emptyVariant = "notes",
   onUpdateError,
   onUpdateSuccess,
-  hasWorkspace = false
+  hasWorkspace = false,
+  currentUser
 }) {
   const [editingNote, setEditingNote] = useState(null);
   const sortedNotes = useMemo(() => sortNotes(notes), [notes]);
@@ -423,6 +638,7 @@ export function NoteList({
             onUpdateError={onUpdateError}
             onUpdateSuccess={onUpdateSuccess}
             deletingId={deletingId}
+            currentUser={currentUser}
           />
         ))}
       </div>

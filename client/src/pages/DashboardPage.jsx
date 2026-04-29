@@ -223,7 +223,9 @@ export default function DashboardPage() {
       icon: Pin,
       tone: "emerald",
       progress: pinnedProgress,
-      detail: t("ofLoadedNotes", { percent: pinnedProgress })
+      detail: pinnedNotesCount
+        ? t("ofLoadedNotes", { percent: pinnedProgress })
+        : t("emptyPinnedNotesDescription")
     },
     {
       label: t("starredNotes"),
@@ -231,7 +233,9 @@ export default function DashboardPage() {
       icon: Star,
       tone: "amber",
       progress: starredProgress,
-      detail: t("ofLoadedNotes", { percent: starredProgress })
+      detail: starredNotesCount
+        ? t("ofLoadedNotes", { percent: starredProgress })
+        : t("emptyStarredNotesDescription")
     },
     {
       label: t("categoriesCount"),
@@ -255,6 +259,46 @@ export default function DashboardPage() {
     ? Math.min(Math.round((usage.aiUsageCount / usage.aiUsageLimit) * 100), 100)
     : 0;
   const usagePlanLabel = usage.plan === "premium" ? t("premiumPlan") : t("freePlan");
+  const remainingAiUses = Math.max(usage.remainingAiUses ?? usage.aiUsageLimit - usage.aiUsageCount, 0);
+  const notesEmptyState = (() => {
+    if (isSearching) {
+      return {
+        title: t("emptySearchTitle"),
+        description: t("emptySearchDescription"),
+        variant: "search"
+      };
+    }
+
+    if (favoritesFilter === "true") {
+      return {
+        title: t("emptyStarredNotesTitle"),
+        description: t("emptyStarredNotesDescription"),
+        variant: "search"
+      };
+    }
+
+    if (scopeFilter === "workspace") {
+      return {
+        title: t("emptyWorkspaceNotesTitle"),
+        description: t("emptyWorkspaceNotesDescription"),
+        variant: "notes"
+      };
+    }
+
+    if (categoryFilter || scopeFilter !== "all") {
+      return {
+        title: t("emptyFilteredTitle"),
+        description: t("emptyFilteredDescription"),
+        variant: "search"
+      };
+    }
+
+    return {
+      title: t("emptyNotesTitle"),
+      description: t("emptyNotesDescription"),
+      variant: "notes"
+    };
+  })();
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -923,13 +967,30 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3">
                 <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
-                  <span>{t("aiUsage")}</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    {t("aiUsage")}
+                    <span className="group relative inline-flex">
+                      <button
+                        type="button"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+                        aria-label={t("aiUsageHelp")}
+                        title={t("aiUsageTooltip")}
+                      >
+                        <HelpCircle className="h-3.5 w-3.5" />
+                      </button>
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium leading-5 text-slate-600 shadow-soft group-hover:block group-focus-within:block"
+                      >
+                        {t("aiUsageTooltip")}
+                      </span>
+                    </span>
+                  </span>
                   <span>
                     {usageLoading
                       ? t("loading")
-                      : t("aiUsageValue", {
-                          plan: usagePlanLabel,
-                          used: usage.aiUsageCount,
+                      : t("aiUsesRemaining", {
+                          remaining: remainingAiUses,
                           limit: usage.aiUsageLimit
                         })}
                   </span>
@@ -1037,7 +1098,11 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
               </div>
-            ) : null}
+            ) : (
+              <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm leading-6 text-slate-600">
+                {t("emptyAiInsightsDescription")}
+              </div>
+            )}
           </div>
 
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -1128,21 +1193,9 @@ export default function DashboardPage() {
               onDelete={requestDelete}
               onUpdate={handleUpdate}
               deletingId={deletingId}
-              emptyTitle={
-                isSearching || categoryFilter || favoritesFilter || scopeFilter !== "all"
-                  ? t("emptyFilteredTitle")
-                  : t("emptyNotesTitle")
-              }
-              emptyDescription={
-                isSearching || categoryFilter || favoritesFilter || scopeFilter !== "all"
-                  ? t("emptyFilteredDescription")
-                  : t("emptyNotesDescription")
-              }
-              emptyVariant={
-                isSearching || categoryFilter || favoritesFilter || scopeFilter !== "all"
-                  ? "search"
-                  : "notes"
-              }
+              emptyTitle={notesEmptyState.title}
+              emptyDescription={notesEmptyState.description}
+              emptyVariant={notesEmptyState.variant}
               hasWorkspace={hasWorkspace}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
               onUpdateError={(err) =>

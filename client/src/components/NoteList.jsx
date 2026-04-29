@@ -1,4 +1,4 @@
-import { Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Star, Trash2, Upload, X } from "lucide-react";
+import { Bot, Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Star, Tags, Trash2, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -478,12 +478,18 @@ function NoteCard({
   onUpdate,
   onUpdateError,
   onUpdateSuccess,
+  onRunAiAction,
+  aiLoadingAction,
+  usageLimitReached,
   deletingId,
   currentUser
 }) {
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const summaryLoading = aiLoadingAction === `summary:${note.id}`;
+  const tagsLoading = aiLoadingAction === `tags:${note.id}`;
+  const aiActionDisabled = saving || Boolean(aiLoadingAction);
 
   const toggleStarred = async () => {
     setSaving(true);
@@ -590,6 +596,31 @@ function NoteCard({
           ))}
         </div>
       ) : null}
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onRunAiAction?.("summary", note)}
+          disabled={aiActionDisabled}
+          className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={`${t("summarizeThisNote")}: ${note.title}`}
+          title={usageLimitReached ? t("upgradeToContinue") : t("summarizeThisNote")}
+        >
+          {summaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+          {t("summarize")}
+        </button>
+        <button
+          type="button"
+          onClick={() => onRunAiAction?.("tags", note)}
+          disabled={aiActionDisabled}
+          className="inline-flex h-8 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={`${t("suggestTagsForThisNote")}: ${note.title}`}
+          title={usageLimitReached ? t("upgradeToContinue") : t("suggestTagsForThisNote")}
+        >
+          {tagsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Tags className="h-3.5 w-3.5" />}
+          {t("suggestTags")}
+        </button>
+      </div>
 
       <div className="mt-5 border-t border-slate-200 pt-4">
         <button
@@ -859,6 +890,9 @@ export function NoteList({
   emptyVariant = "notes",
   onUpdateError,
   onUpdateSuccess,
+  onRunAiAction,
+  aiLoadingAction,
+  usageLimitReached,
   hasWorkspace = false,
   currentUser
 }) {
@@ -893,6 +927,9 @@ export function NoteList({
             onUpdate={onUpdate}
             onUpdateError={onUpdateError}
             onUpdateSuccess={onUpdateSuccess}
+            onRunAiAction={onRunAiAction}
+            aiLoadingAction={aiLoadingAction}
+            usageLimitReached={usageLimitReached}
             deletingId={deletingId}
             currentUser={currentUser}
           />

@@ -488,22 +488,34 @@ export default function DashboardPage() {
     setExportOpen(false);
   };
 
-  const runAiAction = async (action) => {
+  const runAiAction = async (action, noteOverride = null) => {
+    if (usageLimitReached) {
+      setAiError(t("upgradeToContinue"));
+      addToast("error", t("upgradeToContinue"));
+      return;
+    }
+
+    const targetNote = noteOverride || selectedAiNote;
+    const loadingKey = noteOverride ? `${action}:${noteOverride.id}` : action;
+
     setAiError("");
-    setAiLoadingAction(action);
+    setAiLoadingAction(loadingKey);
 
     try {
-      if ((action === "summary" || action === "tags") && !selectedAiNote) {
+      if ((action === "summary" || action === "tags") && !targetNote) {
         throw new Error(t("aiSelectNoteRequired"));
       }
 
       const result =
         action === "summary"
-          ? await summarizeNote(selectedAiNote.id)
+          ? await summarizeNote(targetNote.id)
           : action === "tags"
-            ? await suggestTags(selectedAiNote.id)
+            ? await suggestTags(targetNote.id)
             : await generateSmartInsights();
 
+      if (targetNote?.id) {
+        setSelectedAiNoteId(targetNote.id);
+      }
       setAiResult(result);
       await loadUsage();
       addToast("success", t("aiResultReady"));
@@ -1197,6 +1209,9 @@ export default function DashboardPage() {
               emptyDescription={notesEmptyState.description}
               emptyVariant={notesEmptyState.variant}
               hasWorkspace={hasWorkspace}
+              onRunAiAction={runAiAction}
+              aiLoadingAction={aiLoadingAction}
+              usageLimitReached={usageLimitReached}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
               onUpdateError={(err) =>
                 addToast(

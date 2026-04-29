@@ -4,11 +4,17 @@ import { useState } from "react";
 import { Button } from "./Button.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
+const meetingTemplate = ["Agenda", "", "Discussion", "", "Decisions", "", "Action items", "", "Next steps"].join("\n");
+
 const initialValues = {
   title: "",
   body: "",
   tags: "",
   category: "General",
+  noteType: "standard",
+  meetingDate: "",
+  attendees: "",
+  followUpDate: "",
   visibility: "private",
   starred: false,
   pinned: false
@@ -34,6 +40,13 @@ export function NoteForm({
     }));
   };
 
+  const useMeetingTemplate = () => {
+    setValues((current) => ({
+      ...current,
+      body: current.body.trim() ? current.body : meetingTemplate
+    }));
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setError("");
@@ -44,6 +57,19 @@ export function NoteForm({
         title: values.title,
         body: values.body,
         category: values.category,
+        noteType: values.noteType,
+        meetingMeta:
+          values.noteType === "meeting"
+            ? {
+                meetingDate: values.meetingDate,
+                attendees: values.attendees
+                  .split(",")
+                  .map((attendee) => attendee.trim())
+                  .filter(Boolean),
+                followUpDate: values.followUpDate,
+                sourceType: "manual"
+              }
+            : undefined,
         visibility: hasWorkspace ? values.visibility : "private",
         starred: values.starred,
         pinned: values.pinned,
@@ -64,6 +90,66 @@ export function NoteForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      <div>
+        <label className="text-sm font-medium text-slate-700" htmlFor="noteType">
+          {t("noteType")}
+        </label>
+        <select
+          id="noteType"
+          name="noteType"
+          value={values.noteType}
+          onChange={updateField}
+          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+        >
+          <option value="standard">{t("standardNote")}</option>
+          <option value="meeting">{t("meetingNote")}</option>
+        </select>
+      </div>
+
+      {values.noteType === "meeting" ? (
+        <div className="rounded-md border border-emerald-100 bg-emerald-50/50 p-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("meetingDate")}</span>
+              <input
+                type="date"
+                name="meetingDate"
+                value={values.meetingDate}
+                onChange={updateField}
+                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("followUpDate")}</span>
+              <input
+                type="date"
+                name="followUpDate"
+                value={values.followUpDate}
+                onChange={updateField}
+                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              />
+            </label>
+          </div>
+          <label className="mt-3 block">
+            <span className="text-sm font-medium text-slate-700">{t("attendees")}</span>
+            <input
+              name="attendees"
+              value={values.attendees}
+              onChange={updateField}
+              className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              placeholder={t("attendeesHint")}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={useMeetingTemplate}
+            className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+          >
+            {t("useMeetingTemplate")}
+          </button>
+        </div>
+      ) : null}
+
       <div>
         <label className="text-sm font-medium text-slate-700" htmlFor="title">
           {t("title")}

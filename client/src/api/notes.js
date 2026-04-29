@@ -6,6 +6,7 @@ export async function fetchNotes({
   page = 1,
   limit = 12,
   category = "",
+  noteType = "all",
   starred = "",
   scope = "all",
   pinned = "",
@@ -22,6 +23,10 @@ export async function fetchNotes({
 
   if (category.trim()) {
     params.set("category", category.trim());
+  }
+
+  if (noteType && noteType !== "all") {
+    params.set("noteType", noteType);
   }
 
   if (starred !== "") {

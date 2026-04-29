@@ -31,7 +31,14 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
+import {
+  convertToMeetingMinutes,
+  extractActionItems,
+  extractAttendeesAndDecisions,
+  generateSmartInsights,
+  suggestTags,
+  summarizeNote
+} from "../api/ai.js";
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
 import { createComment, createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
@@ -63,20 +70,74 @@ const sortVisibleNotes = (notes) =>
     return noteTimestamp(b) - noteTimestamp(a);
   });
 
+const formatExportDate = (value) => (value ? new Date(value).toISOString() : "");
+
+const escapeMarkdown = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/`/g, "\\`");
+
+const escapeMarkdownTable = (value) => escapeMarkdown(value).replace(/\|/g, "\\|");
+
+const formatExportDay = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "");
+
+const exportLines = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : item?.text || ""))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+};
+
+const exportActionItems = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          return { text: item.trim(), owner: "", dueDate: "", status: "" };
+        }
+
+        return {
+          text: item?.text?.trim() || "",
+          owner: item?.owner?.trim() || "",
+          dueDate: item?.dueDate || item?.due || "",
+          status: item?.status?.trim() || ""
+        };
+      })
+      .filter((item) => item.text);
+  }
+
+  return exportLines(value).map((text) => ({ text, owner: "", dueDate: "", status: "" }));
+};
+
+const meetingMetaToExport = (note) => {
+  const meta = note.meetingMeta || {};
+
+  return {
+    meetingDate: meta.meetingDate || "",
+    attendees: Array.isArray(meta.attendees) ? meta.attendees.filter(Boolean) : exportLines(meta.attendees),
+    followUpDate: meta.followUpDate || "",
+    agenda: meta.agenda || "",
+    decisions: Array.isArray(meta.decisions) ? meta.decisions.filter(Boolean) : exportLines(meta.decisions),
+    actionItems: exportActionItems(meta.actionItems)
+  };
+};
+
 const noteToExport = (note) => ({
   title: note.title || "",
   body: note.body || "",
   tags: note.tags || [],
   category: note.category || "General",
+  noteType: note.noteType || "standard",
+  meetingMeta: meetingMetaToExport(note),
   pinned: Boolean(note.pinned),
   starred: Boolean(note.starred),
   createdDate: note.createdAt || "",
   updatedDate: note.updatedAt || ""
 });
-
-const formatExportDate = (value) => (value ? new Date(value).toISOString() : "");
-
-const escapeMarkdown = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/`/g, "\\`");
 
 const noteOwnerId = (note) => note?.owner?.id || note?.owner?._id || note?.owner;
 
@@ -87,6 +148,10 @@ const aiResultToText = (result) => {
 
   if (result.summary) {
     return result.summary;
+  }
+
+  if (result.cleanedBody) {
+    return result.cleanedBody;
   }
 
   if (result.suggestedTags) {
@@ -109,6 +174,22 @@ const aiResultToText = (result) => {
   return "";
 };
 
+const isMeetingAiResult = (result) =>
+  ["meeting-minutes", "meeting-action-items", "meeting-attendees-decisions"].includes(result?.type);
+
+const mergeMeetingMeta = (currentMeta = {}, nextMeta = {}) => ({
+  ...currentMeta,
+  ...Object.fromEntries(
+    Object.entries(nextMeta).filter(([, value]) => {
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+
+      return value !== undefined && value !== null && value !== "";
+    })
+  )
+});
+
 const roleBadgeClassName = (role) => {
   if (role === "superadmin") {
     return "bg-purple-50 text-purple-700 ring-purple-200";
@@ -121,23 +202,64 @@ const roleBadgeClassName = (role) => {
   return "bg-slate-100 text-slate-700 ring-slate-200";
 };
 
+const standardNoteToMarkdown = (exported) =>
+  [
+    `# ${escapeMarkdown(exported.title)}`,
+    "",
+    `- Type: ${escapeMarkdown(exported.noteType)}`,
+    `- Category: ${escapeMarkdown(exported.category)}`,
+    `- Tags: ${exported.tags.length ? exported.tags.map(escapeMarkdown).join(", ") : "None"}`,
+    `- Pinned: ${exported.pinned ? "Yes" : "No"}`,
+    `- Starred: ${exported.starred ? "Yes" : "No"}`,
+    `- Created: ${formatExportDate(exported.createdDate)}`,
+    `- Updated: ${formatExportDate(exported.updatedDate)}`,
+    "",
+    escapeMarkdown(exported.body)
+  ].join("\n");
+
+const meetingNoteToMarkdown = (exported) => {
+  const { meetingMeta } = exported;
+  const actionRows = meetingMeta.actionItems.length
+    ? meetingMeta.actionItems.map((item) =>
+        `- ${escapeMarkdownTable(item.text)} | ${escapeMarkdownTable(item.owner || "-")} | ${formatExportDay(item.dueDate) || "-"} | ${escapeMarkdownTable(item.status || "-")}`
+      )
+    : ["- No action items yet"];
+
+  return [
+    `# ${escapeMarkdown(exported.title)}`,
+    "",
+    `Type: ${escapeMarkdown(exported.noteType)}`,
+    `Date: ${formatExportDay(meetingMeta.meetingDate) || "-"}`,
+    `Attendees: ${meetingMeta.attendees.length ? meetingMeta.attendees.map(escapeMarkdown).join(", ") : "-"}`,
+    "",
+    "## Agenda",
+    meetingMeta.agenda ? escapeMarkdown(meetingMeta.agenda) : "-",
+    "",
+    "## Discussion",
+    exported.body ? escapeMarkdown(exported.body) : "-",
+    "",
+    "## Decisions",
+    meetingMeta.decisions.length
+      ? meetingMeta.decisions.map((decision) => `- ${escapeMarkdown(decision)}`).join("\n")
+      : "-",
+    "",
+    "## Action Items",
+    "- Task | Owner | Due Date | Status",
+    ...actionRows,
+    "",
+    "## Next Steps",
+    meetingMeta.followUpDate ? `Follow up on ${formatExportDay(meetingMeta.followUpDate)}.` : "-"
+  ].join("\n");
+};
+
 const notesToMarkdown = (notes) =>
   notes
     .map((note) => {
       const exported = noteToExport(note);
 
-      return [
-        `# ${escapeMarkdown(exported.title)}`,
-        "",
-        `- Category: ${escapeMarkdown(exported.category)}`,
-        `- Tags: ${exported.tags.length ? exported.tags.map(escapeMarkdown).join(", ") : "None"}`,
-        `- Pinned: ${exported.pinned ? "Yes" : "No"}`,
-        `- Starred: ${exported.starred ? "Yes" : "No"}`,
-        `- Created: ${formatExportDate(exported.createdDate)}`,
-        `- Updated: ${formatExportDate(exported.updatedDate)}`,
-        "",
-        escapeMarkdown(exported.body)
-      ].join("\n");
+      return exported.noteType === "meeting"
+        ? meetingNoteToMarkdown(exported)
+        : standardNoteToMarkdown(exported);
     })
     .join("\n\n---\n\n");
 
@@ -178,6 +300,7 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [noteTypeFilter, setNoteTypeFilter] = useState("all");
   const [favoritesFilter, setFavoritesFilter] = useState("");
   const [scopeFilter, setScopeFilter] = useState("all");
   const [pinnedFilter, setPinnedFilter] = useState("");
@@ -303,6 +426,7 @@ export default function DashboardPage() {
   ];
   const selectedAiNote = notes.find((note) => note.id === selectedAiNoteId) || notes[0];
   const selectedAiResultText = aiResultToText(aiResult);
+  const meetingAiResult = isMeetingAiResult(aiResult);
   const selectedAiNoteOwnerId = noteOwnerId(selectedAiNote);
   const canSaveAiToNote = Boolean(
     aiResult &&
@@ -352,7 +476,7 @@ export default function DashboardPage() {
       };
     }
 
-    if (categoryFilter || scopeFilter !== "all" || thisWeekFilter === "true") {
+    if (categoryFilter || noteTypeFilter !== "all" || scopeFilter !== "all" || thisWeekFilter === "true") {
       return {
         title: t("emptyFilteredTitle"),
         description: t("emptyFilteredDescription"),
@@ -430,6 +554,7 @@ export default function DashboardPage() {
       nextPage = page,
       nextSearch = debouncedSearchTerm,
       nextCategory = categoryFilter,
+      nextNoteType = noteTypeFilter,
       nextStarred = favoritesFilter,
       nextScope = scopeFilter,
       nextPinned = pinnedFilter,
@@ -444,6 +569,7 @@ export default function DashboardPage() {
         limit: NOTES_LIMIT,
         search: nextSearch,
         category: nextCategory,
+        noteType: nextNoteType,
         starred: nextStarred,
         scope: nextScope,
         pinned: nextPinned,
@@ -458,7 +584,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     },
-    [categoryFilter, debouncedSearchTerm, favoritesFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
+    [categoryFilter, debouncedSearchTerm, favoritesFilter, noteTypeFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
   );
 
   useEffect(() => {
@@ -612,7 +738,7 @@ export default function DashboardPage() {
     setAiLoadingAction(loadingKey);
 
     try {
-      if ((action === "summary" || action === "tags") && !targetNote) {
+      if (action !== "insights" && !targetNote) {
         throw new Error(t("aiSelectNoteRequired"));
       }
 
@@ -621,7 +747,13 @@ export default function DashboardPage() {
           ? await summarizeNote(targetNote.id)
           : action === "tags"
             ? await suggestTags(targetNote.id)
-            : await generateSmartInsights();
+            : action === "meeting-minutes"
+              ? await convertToMeetingMinutes(targetNote.id)
+              : action === "meeting-actions"
+                ? await extractActionItems(targetNote.id)
+                : action === "meeting-attendees-decisions"
+                  ? await extractAttendeesAndDecisions(targetNote.id)
+                  : await generateSmartInsights();
 
       if (targetNote?.id) {
         setSelectedAiNoteId(targetNote.id);
@@ -634,6 +766,73 @@ export default function DashboardPage() {
       addToast("error", t("aiRequestError", { message: err.message }));
     } finally {
       setAiLoadingAction("");
+    }
+  };
+
+  const replaceAiResultInNote = async () => {
+    if (!canSaveAiToNote) {
+      return;
+    }
+
+    setAiSavingAction("replace");
+    setAiError("");
+
+    try {
+      await handleUpdate(selectedAiNote.id, { body: selectedAiResultText });
+      addToast("success", t("savedToNote"));
+    } catch {
+      setAiError(t("couldNotSave"));
+      addToast("error", t("couldNotSave"));
+    } finally {
+      setAiSavingAction("");
+    }
+  };
+
+  const appendAiResultToNote = async () => {
+    if (!canSaveAiToNote) {
+      return;
+    }
+
+    setAiSavingAction("append");
+    setAiError("");
+
+    try {
+      const appendedBody = [
+        selectedAiNote.body,
+        "---",
+        t("aiResult"),
+        selectedAiResultText
+      ].filter(Boolean).join("\n\n");
+
+      await handleUpdate(selectedAiNote.id, { body: appendedBody });
+      addToast("success", t("savedToNote"));
+    } catch {
+      setAiError(t("couldNotSave"));
+      addToast("error", t("couldNotSave"));
+    } finally {
+      setAiSavingAction("");
+    }
+  };
+
+  const saveAiResultToMeetingDetails = async () => {
+    if (!canSaveAiToNote || !aiResult?.meetingMeta) {
+      return;
+    }
+
+    setAiSavingAction("meetingDetails");
+    setAiError("");
+
+    try {
+      await handleUpdate(selectedAiNote.id, {
+        noteType: "meeting",
+        meetingMeta: mergeMeetingMeta(selectedAiNote.meetingMeta, aiResult.meetingMeta)
+      });
+      addToast("success", t("savedToMeetingDetails"));
+    } catch {
+      setAiError(t("couldNotSave"));
+      addToast("error", t("couldNotSave"));
+    } finally {
+      setAiSavingAction("");
     }
   };
 
@@ -1212,6 +1411,33 @@ export default function DashboardPage() {
                 {aiLoadingAction === "insights" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
                 {t("generateSmartInsights")}
               </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("meeting-minutes")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "meeting-minutes" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                {t("convertToMeetingMinutes")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("meeting-actions")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "meeting-actions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {t("extractActionItems")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("meeting-attendees-decisions")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "meeting-attendees-decisions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+                {t("extractAttendeesDecisions")}
+              </button>
             </div>
             {aiError ? (
               <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
@@ -1271,25 +1497,95 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 ) : null}
+                {aiResult.cleanedBody ? (
+                  <div className="mt-3 rounded-md bg-white px-3 py-3 ring-1 ring-emerald-100">
+                    <p className="text-xs font-semibold uppercase text-slate-500">{t("preview")}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                      {aiResult.cleanedBody}
+                    </p>
+                  </div>
+                ) : null}
+                {aiResult.meetingMeta ? (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {aiResult.meetingMeta.attendees?.length ? (
+                      <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                        {t("attendees")}: <strong>{aiResult.meetingMeta.attendees.join(", ")}</strong>
+                      </p>
+                    ) : null}
+                    {aiResult.meetingMeta.decisions?.length ? (
+                      <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                        {t("decisions")}: <strong>{aiResult.meetingMeta.decisions.length}</strong>
+                      </p>
+                    ) : null}
+                    {aiResult.meetingMeta.actionItems?.length ? (
+                      <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                        {t("actionItems")}: <strong>{aiResult.meetingMeta.actionItems.length}</strong>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="mt-4 flex flex-col gap-2 border-t border-emerald-200 pt-4 sm:flex-row sm:flex-wrap">
-                  <button
-                    type="button"
-                    onClick={saveAiResultToNote}
-                    disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {aiSavingAction === "note" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {t("saveToNote")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveAiResultAsComment}
-                    disabled={!canSaveAiAsComment || Boolean(aiSavingAction)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {aiSavingAction === "comment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                    {t("saveAsComment")}
-                  </button>
+                  {meetingAiResult ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={replaceAiResultInNote}
+                        disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiSavingAction === "replace" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {t("replaceNoteBody")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={appendAiResultToNote}
+                        disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiSavingAction === "append" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {t("appendToNoteBody")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveAiResultToMeetingDetails}
+                        disabled={!canSaveAiToNote || !aiResult.meetingMeta || Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiSavingAction === "meetingDetails" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        {t("saveToMeetingDetails")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiResult(null)}
+                        disabled={Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <X className="h-4 w-4" />
+                        {t("cancel")}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={saveAiResultToNote}
+                        disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiSavingAction === "note" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        {t("saveToNote")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveAiResultAsComment}
+                        disabled={!canSaveAiAsComment || Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiSavingAction === "comment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                        {t("saveAsComment")}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1407,6 +1703,22 @@ export default function DashboardPage() {
                 <option value="all">{t("allNotes")}</option>
                 <option value="private">{t("myPrivateNotes")}</option>
                 <option value="workspace">{t("workspaceNotes")}</option>
+              </select>
+            </label>
+            <label className="w-full sm:max-w-xs">
+              <span className="sr-only">{t("noteTypeFilter")}</span>
+              <select
+                value={noteTypeFilter}
+                onChange={(event) => {
+                  setNoteTypeFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                aria-label={t("noteTypeFilter")}
+              >
+                <option value="all">{t("allNotes")}</option>
+                <option value="standard">{t("standardNotes")}</option>
+                <option value="meeting">{t("meetingNotes")}</option>
               </select>
             </label>
             <label className="w-full sm:max-w-xs">

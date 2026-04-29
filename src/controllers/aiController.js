@@ -73,12 +73,109 @@ const notePayload = (note) => ({
   category: note.category || "General"
 });
 
-export const summarizeNote = async (req, res) => {
+const noteLookup = async (req) => {
   const note = await Note.findOne({ _id: req.body.noteId, owner: req.user.id });
 
   if (!note) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
   }
+
+  return note;
+};
+
+const linesFromBody = (body) =>
+  String(body || "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+
+const parseNamedList = (body, names) => {
+  const lines = linesFromBody(body);
+  const results = [];
+  let collecting = false;
+
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    const isRequestedHeading = names.some((name) => lowerLine.startsWith(`${name}:`) || lowerLine === name);
+    const isOtherHeading = /^[a-z][a-z\s&]+:$/i.test(line) && !isRequestedHeading;
+
+    if (isRequestedHeading) {
+      const inlineValue = line.split(":").slice(1).join(":").trim();
+      if (inlineValue) {
+        results.push(...inlineValue.split(",").map((item) => item.trim()).filter(Boolean));
+      }
+      collecting = true;
+      continue;
+    }
+
+    if (collecting && isOtherHeading) {
+      collecting = false;
+    }
+
+    if (collecting) {
+      results.push(line);
+    }
+  }
+
+  return [...new Set(results)];
+};
+
+const inferAttendees = (note) => {
+  const existing = note.meetingMeta?.attendees || [];
+  const parsed = parseNamedList(note.body, ["attendees", "participants", "present"]);
+
+  return [...new Set([...existing, ...parsed])].filter(Boolean);
+};
+
+const inferDecisions = (body) => {
+  const parsed = parseNamedList(body, ["decisions", "decision"]);
+
+  if (parsed.length) {
+    return parsed;
+  }
+
+  return linesFromBody(body).filter((line) => /\b(decided|approved|agreed)\b/i.test(line)).slice(0, 6);
+};
+
+const inferActionItems = (body) => {
+  const parsed = parseNamedList(body, ["action items", "actions", "tasks"]);
+  const fallback = linesFromBody(body).filter((line) => /\b(todo|action|follow up|follow-up|owner|due)\b/i.test(line));
+  const items = (parsed.length ? parsed : fallback).slice(0, 8);
+
+  return items.map((text) => ({
+    text,
+    owner: "",
+    dueDate: "",
+    status: "open"
+  }));
+};
+
+const buildMeetingMinutes = (note) => {
+  const decisions = inferDecisions(note.body);
+  const actionItems = inferActionItems(note.body);
+
+  return [
+    `# ${note.title}`,
+    "",
+    "## Agenda",
+    note.meetingMeta?.agenda || summarizeBody(note.body) || "Review discussion topics.",
+    "",
+    "## Discussion",
+    note.body,
+    "",
+    "## Decisions",
+    decisions.length ? decisions.map((decision) => `- ${decision}`).join("\n") : "- No decisions captured yet.",
+    "",
+    "## Action items",
+    actionItems.length ? actionItems.map((item) => `- ${item.text}`).join("\n") : "- No action items captured yet.",
+    "",
+    "## Next steps",
+    note.meetingMeta?.followUpDate ? `Follow up on ${note.meetingMeta.followUpDate.toISOString().slice(0, 10)}.` : "Confirm next steps with attendees."
+  ].join("\n");
+};
+
+export const summarizeNote = async (req, res) => {
+  const note = await noteLookup(req);
 
   return res.status(StatusCodes.OK).json({
     success: true,
@@ -93,11 +190,7 @@ export const summarizeNote = async (req, res) => {
 };
 
 export const suggestTags = async (req, res) => {
-  const note = await Note.findOne({ _id: req.body.noteId, owner: req.user.id });
-
-  if (!note) {
-    throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
-  }
+  const note = await noteLookup(req);
 
   const existingTags = new Set((note.tags || []).map((tag) => tag.toLowerCase()));
   const suggestedTags = keywordTags(note).filter((tag) => !existingTags.has(tag));
@@ -109,6 +202,84 @@ export const suggestTags = async (req, res) => {
       provider: "local-placeholder",
       note: notePayload(note),
       suggestedTags,
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const convertToMeetingMinutes = async (req, res) => {
+  const note = await noteLookup(req);
+  const attendees = inferAttendees(note);
+  const decisions = inferDecisions(note.body);
+  const actionItems = inferActionItems(note.body);
+  const cleanedBody = buildMeetingMinutes(note);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "meeting-minutes",
+      provider: "local-placeholder",
+      note: notePayload(note),
+      cleanedBody,
+      meetingMeta: {
+        meetingDate: note.meetingMeta?.meetingDate || null,
+        attendees,
+        agenda: note.meetingMeta?.agenda || summarizeBody(note.body),
+        decisions,
+        actionItems,
+        followUpDate: note.meetingMeta?.followUpDate || null,
+        sourceType: "ai-local"
+      },
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const extractActionItems = async (req, res) => {
+  const note = await noteLookup(req);
+  const actionItems = inferActionItems(note.body);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "meeting-action-items",
+      provider: "local-placeholder",
+      note: notePayload(note),
+      cleanedBody: actionItems.length
+        ? actionItems.map((item) => `- ${item.text}`).join("\n")
+        : "No action items captured yet.",
+      meetingMeta: {
+        actionItems,
+        sourceType: "ai-local"
+      },
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const extractAttendeesAndDecisions = async (req, res) => {
+  const note = await noteLookup(req);
+  const attendees = inferAttendees(note);
+  const decisions = inferDecisions(note.body);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "meeting-attendees-decisions",
+      provider: "local-placeholder",
+      note: notePayload(note),
+      cleanedBody: [
+        "Attendees:",
+        attendees.length ? attendees.map((attendee) => `- ${attendee}`).join("\n") : "- None captured yet.",
+        "",
+        "Decisions:",
+        decisions.length ? decisions.map((decision) => `- ${decision}`).join("\n") : "- None captured yet."
+      ].join("\n"),
+      meetingMeta: {
+        attendees,
+        decisions,
+        sourceType: "ai-local"
+      },
       replaceableWithAi: true
     }
   });

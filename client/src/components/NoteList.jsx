@@ -29,16 +29,81 @@ const noteToForm = (note) => ({
   body: note.body || "",
   tags: note.tags?.join(", ") || "",
   category: note.category || "General",
+  noteType: note.noteType || "standard",
+  meetingDate: note.meetingMeta?.meetingDate ? note.meetingMeta.meetingDate.slice(0, 10) : "",
+  attendees: note.meetingMeta?.attendees?.join(", ") || "",
+  followUpDate: note.meetingMeta?.followUpDate ? note.meetingMeta.followUpDate.slice(0, 10) : "",
   visibility: note.visibility || "private",
   starred: Boolean(note.starred),
   pinned: Boolean(note.pinned)
 });
+
+const meetingTemplate = ["Agenda", "", "Discussion", "", "Decisions", "", "Action items", "", "Next steps"].join("\n");
 
 const parseTags = (tags) =>
   tags
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+
+const formatMeetingDate = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+};
+
+const toTextLines = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : item?.text || ""))
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return String(value || "")
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+};
+
+const normalizeActionItems = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          return { text: item.trim() };
+        }
+
+        return {
+          text: item?.text?.trim() || "",
+          owner: item?.owner?.trim() || "",
+          dueDate: item?.dueDate || item?.due || "",
+          status: item?.status?.trim() || ""
+        };
+      })
+      .filter((item) => item.text);
+  }
+
+  return toTextLines(value).map((text) => ({ text }));
+};
+
+const statusLabel = (status, t) => {
+  if (status === "open") {
+    return t("open");
+  }
+
+  if (status === "done") {
+    return t("done");
+  }
+
+  return status;
+};
 
 const formatFileSize = (size) => {
   if (size < 1024) {
@@ -51,6 +116,127 @@ const formatFileSize = (size) => {
 
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
+
+function MeetingSummary({ note }) {
+  const { t } = useI18n();
+  const meta = note.meetingMeta || {};
+  const attendees = Array.isArray(meta.attendees)
+    ? meta.attendees.filter(Boolean)
+    : toTextLines(meta.attendees);
+  const agendaItems = toTextLines(meta.agenda);
+  const decisions = toTextLines(meta.decisions);
+  const actionItems = normalizeActionItems(meta.actionItems);
+  const hasSummaryContent = Boolean(
+    meta.meetingDate ||
+      attendees.length ||
+      meta.followUpDate ||
+      agendaItems.length ||
+      decisions.length ||
+      actionItems.length
+  );
+
+  if (note.noteType !== "meeting" || !hasSummaryContent) {
+    return null;
+  }
+
+  return (
+    <section className="mt-5 rounded-md border border-indigo-100 bg-indigo-50/40 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="text-sm font-semibold text-slate-950">{t("meetingSummary")}</h4>
+        <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200">
+          {t("meeting")}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {meta.meetingDate ? (
+          <div className="rounded-md bg-white/80 px-3 py-2 ring-1 ring-indigo-100">
+            <p className="text-xs font-semibold uppercase text-slate-500">{t("meetingDate")}</p>
+            <p className="mt-1 text-sm text-slate-800">{formatMeetingDate(meta.meetingDate)}</p>
+          </div>
+        ) : null}
+
+        {meta.followUpDate ? (
+          <div className="rounded-md bg-white/80 px-3 py-2 ring-1 ring-indigo-100">
+            <p className="text-xs font-semibold uppercase text-slate-500">{t("followUpDate")}</p>
+            <p className="mt-1 text-sm text-slate-800">{formatMeetingDate(meta.followUpDate)}</p>
+          </div>
+        ) : null}
+      </div>
+
+      {attendees.length ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">{t("attendees")}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {attendees.map((attendee) => (
+              <span key={attendee} className="rounded-md bg-white px-2 py-1 text-xs font-medium text-slate-700 ring-1 ring-indigo-100">
+                {attendee}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {agendaItems.length ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">{t("agenda")}</p>
+          <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+            {agendaItems.map((item) => (
+              <li key={item}>- {item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {decisions.length ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">{t("decisions")}</p>
+          <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+            {decisions.map((decision) => (
+              <li key={decision}>- {decision}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="mt-3">
+        <p className="text-xs font-semibold uppercase text-slate-500">{t("actionItems")}</p>
+        {actionItems.length ? (
+          <div className="mt-2 space-y-2">
+            {actionItems.map((item, index) => (
+              <div key={`${item.text}-${index}`} className="rounded-md bg-white px-3 py-2 ring-1 ring-indigo-100">
+                <p className="text-sm font-medium text-slate-800">{item.text}</p>
+                {item.owner || item.dueDate || item.status ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {item.owner ? (
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                        {item.owner}
+                      </span>
+                    ) : null}
+                    {item.dueDate ? (
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                        {formatMeetingDate(item.dueDate)}
+                      </span>
+                    ) : null}
+                    {item.status ? (
+                      <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-emerald-100">
+                        {statusLabel(item.status, t)}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-slate-500 ring-1 ring-indigo-100">
+            {t("noActionItemsYet")}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
 
 function NoteAttachments({ note, currentUser, onAttachmentError, onCountChange }) {
   const { t } = useI18n();
@@ -601,6 +787,11 @@ function NoteCard({
             {t("starred")}
           </span>
         ) : null}
+        {note.noteType === "meeting" ? (
+          <span className="ml-2 inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200">
+            {t("meeting")}
+          </span>
+        ) : null}
         <span className="ml-2 inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
           {(note.visibility || "private") === "workspace" ? t("workspaceNote") : t("privateNote")}
         </span>
@@ -672,6 +863,7 @@ function NoteCard({
 
       {detailsOpen ? (
         <>
+          <MeetingSummary note={note} />
           <NoteAttachments
             note={note}
             currentUser={currentUser}
@@ -712,6 +904,13 @@ function EditNoteModal({
     }));
   };
 
+  const useMeetingTemplate = () => {
+    setForm((current) => ({
+      ...current,
+      body: current.body.trim() ? current.body : meetingTemplate
+    }));
+  };
+
   const closeModal = () => {
     if (!saving) {
       onClose();
@@ -735,6 +934,19 @@ function EditNoteModal({
         body: form.body.trim(),
         tags: parseTags(form.tags),
         category: form.category.trim(),
+        noteType: form.noteType,
+        meetingMeta:
+          form.noteType === "meeting"
+            ? {
+                meetingDate: form.meetingDate,
+                attendees: parseTags(form.attendees),
+                agenda: note.meetingMeta?.agenda || "",
+                decisions: note.meetingMeta?.decisions || "",
+                actionItems: note.meetingMeta?.actionItems || "",
+                followUpDate: form.followUpDate,
+                sourceType: note.meetingMeta?.sourceType || "manual"
+              }
+            : undefined,
         visibility: hasWorkspace ? form.visibility : "private",
         starred: form.starred,
         pinned: form.pinned
@@ -778,6 +990,63 @@ function EditNoteModal({
 
         <form onSubmit={submitEdit} className="overflow-y-auto px-5 py-5">
           <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block sm:col-span-2">
+              <span className="text-sm font-medium text-slate-700">{t("noteType")}</span>
+              <select
+                name="noteType"
+                value={form.noteType}
+                onChange={updateField}
+                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              >
+                <option value="standard">{t("standardNote")}</option>
+                <option value="meeting">{t("meetingNote")}</option>
+              </select>
+            </label>
+
+            {form.noteType === "meeting" ? (
+              <div className="rounded-md border border-emerald-100 bg-emerald-50/50 p-3 sm:col-span-2">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">{t("meetingDate")}</span>
+                    <input
+                      type="date"
+                      name="meetingDate"
+                      value={form.meetingDate}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">{t("followUpDate")}</span>
+                    <input
+                      type="date"
+                      name="followUpDate"
+                      value={form.followUpDate}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    />
+                  </label>
+                </div>
+                <label className="mt-3 block">
+                  <span className="text-sm font-medium text-slate-700">{t("attendees")}</span>
+                  <input
+                    name="attendees"
+                    value={form.attendees}
+                    onChange={updateField}
+                    className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    placeholder={t("attendeesHint")}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={useMeetingTemplate}
+                  className="mt-3 inline-flex h-9 items-center justify-center rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50"
+                >
+                  {t("useMeetingTemplate")}
+                </button>
+              </div>
+            ) : null}
+
             <label className="block sm:col-span-2">
               <span className="text-sm font-medium text-slate-700">{t("title")}</span>
               <input

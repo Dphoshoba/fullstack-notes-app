@@ -21,6 +21,37 @@ const serializeNote = (note) => {
   };
 };
 
+const normalizeMeetingMeta = (meetingMeta = {}) => ({
+  ...meetingMeta,
+  meetingDate: meetingMeta.meetingDate || null,
+  followUpDate: meetingMeta.followUpDate || null,
+  attendees: Array.isArray(meetingMeta.attendees)
+    ? meetingMeta.attendees.map((attendee) => attendee.trim()).filter(Boolean)
+    : []
+});
+
+const normalizeNoteInput = (input, { defaultNoteType } = {}) => {
+  const noteType = input.noteType || defaultNoteType;
+
+  if (!noteType && !input.meetingMeta) {
+    return input;
+  }
+
+  if (noteType !== "meeting") {
+    return {
+      ...input,
+      noteType: "standard",
+      meetingMeta: undefined
+    };
+  }
+
+  return {
+    ...input,
+    noteType,
+    meetingMeta: normalizeMeetingMeta(input.meetingMeta)
+  };
+};
+
 const buildVisibilityFilter = (user, scope = "all") => {
   const privateFilter = {
     owner: user.id,
@@ -64,6 +95,10 @@ const buildNoteFilter = (user, query) => {
 
   if (typeof query.starred === "boolean") {
     filter.starred = query.starred;
+  }
+
+  if (query.noteType && query.noteType !== "all") {
+    filter.noteType = query.noteType;
   }
 
   if (query.thisWeek === true) {
@@ -138,7 +173,7 @@ export const createNote = async (req, res) => {
   }
 
   const note = await Note.create({
-    ...req.body,
+    ...normalizeNoteInput(req.body, { defaultNoteType: "standard" }),
     visibility,
     organizationId: visibility === "workspace" ? req.user.organizationId : null,
     owner: req.user.id
@@ -188,7 +223,7 @@ export const updateNote = async (req, res) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Create or join a workspace to share notes.");
   }
 
-  Object.assign(note, req.body, {
+  Object.assign(note, normalizeNoteInput(req.body), {
     visibility: nextVisibility,
     organizationId: nextVisibility === "workspace" ? req.user.organizationId : null
   });

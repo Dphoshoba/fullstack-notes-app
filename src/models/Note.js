@@ -45,6 +45,48 @@ const noteSchema = new mongoose.Schema(
       default: "General",
       index: true
     },
+    noteType: {
+      type: String,
+      enum: ["standard", "meeting"],
+      default: "standard",
+      index: true
+    },
+    meetingMeta: {
+      meetingDate: {
+        type: Date,
+        default: null
+      },
+      attendees: {
+        type: [String],
+        default: []
+      },
+      agenda: {
+        type: String,
+        trim: true,
+        maxlength: 5000,
+        default: ""
+      },
+      decisions: {
+        type: String,
+        trim: true,
+        maxlength: 5000,
+        default: ""
+      },
+      actionItems: {
+        type: mongoose.Schema.Types.Mixed,
+        default: ""
+      },
+      followUpDate: {
+        type: Date,
+        default: null
+      },
+      sourceType: {
+        type: String,
+        trim: true,
+        maxlength: 60,
+        default: ""
+      }
+    },
     pinned: {
       type: Boolean,
       default: false,

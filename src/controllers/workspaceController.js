@@ -1,8 +1,10 @@
 import { StatusCodes } from "http-status-codes";
 import { nanoid } from "nanoid";
 
+import { env } from "../config/env.js";
 import { Organization } from "../models/Organization.js";
 import { User } from "../models/User.js";
+import { WorkspaceInvite } from "../models/WorkspaceInvite.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const canManageMembers = (user) => ["owner", "manager"].includes(user.workspaceRole);
@@ -21,6 +23,27 @@ const getWorkspace = async (user) => {
   }
 
   return Organization.findById(user.organizationId);
+};
+
+const getInviteLink = (token) => `${env.CLIENT_ORIGIN.split(",")[0]}/invite/${token}`;
+
+const getValidInvite = async (token) => {
+  const invite = await WorkspaceInvite.findOne({ token }).populate("workspaceId", "name slug");
+
+  if (!invite) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Invite not found");
+  }
+
+  if (invite.status === "pending" && invite.expiresAt <= new Date()) {
+    invite.status = "expired";
+    await invite.save();
+  }
+
+  if (invite.status !== "pending") {
+    throw new ApiError(StatusCodes.GONE, "Invite is no longer active");
+  }
+
+  return invite;
 };
 
 export const createWorkspace = async (req, res) => {
@@ -112,5 +135,75 @@ export const addWorkspaceMember = async (req, res) => {
   return res.status(StatusCodes.CREATED).json({
     success: true,
     data: member
+  });
+};
+
+export const createWorkspaceInvite = async (req, res) => {
+  if (!req.user.organizationId || !canManageMembers(req.user)) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Workspace owner or manager required");
+  }
+
+  const token = nanoid(36);
+  const invite = await WorkspaceInvite.create({
+    workspaceId: req.user.organizationId,
+    invitedEmail: req.body.email,
+    invitedBy: req.user.id,
+    workspaceRole: req.body.role,
+    token,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  });
+
+  return res.status(StatusCodes.CREATED).json({
+    success: true,
+    data: {
+      invite,
+      inviteLink: getInviteLink(token)
+    }
+  });
+};
+
+export const getWorkspaceInvite = async (req, res) => {
+  const invite = await getValidInvite(req.params.token);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      workspaceName: invite.workspaceId.name,
+      invitedEmail: invite.invitedEmail,
+      workspaceRole: invite.workspaceRole,
+      expiresAt: invite.expiresAt
+    }
+  });
+};
+
+export const acceptWorkspaceInvite = async (req, res) => {
+  const invite = await getValidInvite(req.params.token);
+
+  if (req.user.email.toLowerCase() !== invite.invitedEmail) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Invite email does not match your account");
+  }
+
+  if (req.user.organizationId && req.user.organizationId.toString() !== invite.workspaceId.id) {
+    throw new ApiError(StatusCodes.CONFLICT, "You already belong to another workspace");
+  }
+
+  req.user.organizationId = invite.workspaceId.id;
+  req.user.workspaceRole = invite.workspaceRole;
+  req.user.defaultNoteScope = "workspace";
+  await req.user.save();
+
+  await Organization.findByIdAndUpdate(invite.workspaceId.id, {
+    $addToSet: { members: req.user.id }
+  });
+
+  invite.status = "accepted";
+  await invite.save();
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      workspace: invite.workspaceId,
+      role: req.user.workspaceRole
+    }
   });
 };

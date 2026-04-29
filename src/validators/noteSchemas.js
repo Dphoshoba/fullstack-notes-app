@@ -10,7 +10,8 @@ export const listNotesSchema = Joi.object({
     category: Joi.string().trim().max(60).allow("").default(""),
     scope: Joi.string().valid("all", "private", "workspace").default("all"),
     starred: Joi.boolean(),
-    pinned: Joi.boolean()
+    pinned: Joi.boolean(),
+    thisWeek: Joi.boolean()
   }).default()
 });
 

@@ -7,7 +7,9 @@ export async function fetchNotes({
   limit = 12,
   category = "",
   starred = "",
-  scope = "all"
+  scope = "all",
+  pinned = "",
+  thisWeek = ""
 } = {}) {
   const params = new URLSearchParams({
     page: String(page),
@@ -24,6 +26,14 @@ export async function fetchNotes({
 
   if (starred !== "") {
     params.set("starred", String(starred));
+  }
+
+  if (pinned !== "") {
+    params.set("pinned", String(pinned));
+  }
+
+  if (thisWeek !== "") {
+    params.set("thisWeek", String(thisWeek));
   }
 
   if (scope) {

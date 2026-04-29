@@ -1,5 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
+import { Attachment } from "../models/Attachment.js";
+import { Comment } from "../models/Comment.js";
 import { Note } from "../models/Note.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -54,6 +56,13 @@ const buildNoteFilter = (user, query) => {
     filter.starred = query.starred;
   }
 
+  if (query.thisWeek === true) {
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    filter.createdAt = { $gte: weekStart };
+  }
+
   return filter;
 };
 
@@ -66,10 +75,38 @@ export const listNotes = async (req, res) => {
     Note.find(filter).sort({ pinned: -1, updatedAt: -1 }).skip(skip).limit(limit),
     Note.countDocuments(filter)
   ]);
+  const noteIds = notes.map((note) => note._id);
+  const [commentCounts, attachmentCounts] = noteIds.length
+    ? await Promise.all([
+        Comment.aggregate([
+          { $match: { noteId: { $in: noteIds } } },
+          { $group: { _id: "$noteId", count: { $sum: 1 } } }
+        ]),
+        Attachment.aggregate([
+          { $match: { noteId: { $in: noteIds } } },
+          { $group: { _id: "$noteId", count: { $sum: 1 } } }
+        ])
+      ])
+    : [[], []];
+  const commentsByNoteId = new Map(
+    commentCounts.map((item) => [item._id.toString(), item.count])
+  );
+  const attachmentsByNoteId = new Map(
+    attachmentCounts.map((item) => [item._id.toString(), item.count])
+  );
+  const notesWithCounts = notes.map((note) => {
+    const noteData = note.toJSON();
+
+    return {
+      ...noteData,
+      commentsCount: commentsByNoteId.get(noteData.id) || 0,
+      attachmentsCount: attachmentsByNoteId.get(noteData.id) || 0
+    };
+  });
 
   return res.status(StatusCodes.OK).json({
     success: true,
-    data: notes,
+    data: notesWithCounts,
     pagination: {
       page,
       limit,

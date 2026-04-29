@@ -32,6 +32,11 @@ export const errorHandler = (error, _req, res, _next) => {
     message = `${field} already exists`;
   }
 
+  if (error?.code === "LIMIT_FILE_SIZE") {
+    statusCode = StatusCodes.BAD_REQUEST;
+    message = "File too large. Maximum size is 10MB.";
+  }
+
   const response = {
     success: false,
     message

@@ -109,6 +109,18 @@ const aiResultToText = (result) => {
   return "";
 };
 
+const roleBadgeClassName = (role) => {
+  if (role === "superadmin") {
+    return "bg-purple-50 text-purple-700 ring-purple-200";
+  }
+
+  if (role === "admin") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+
+  return "bg-slate-100 text-slate-700 ring-slate-200";
+};
+
 const notesToMarkdown = (notes) =>
   notes
     .map((note) => {
@@ -167,6 +179,8 @@ export default function DashboardPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [favoritesFilter, setFavoritesFilter] = useState("");
   const [scopeFilter, setScopeFilter] = useState("all");
+  const [pinnedFilter, setPinnedFilter] = useState("");
+  const [thisWeekFilter, setThisWeekFilter] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -182,6 +196,7 @@ export default function DashboardPage() {
   const [profileSuccess, setProfileSuccess] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [adminSearch, setAdminSearch] = useState("");
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
@@ -320,6 +335,14 @@ export default function DashboardPage() {
       };
     }
 
+    if (pinnedFilter === "true") {
+      return {
+        title: t("emptyPinnedNotesTitle"),
+        description: t("emptyPinnedNotesDescription"),
+        variant: "search"
+      };
+    }
+
     if (scopeFilter === "workspace") {
       return {
         title: t("emptyWorkspaceNotesTitle"),
@@ -328,7 +351,7 @@ export default function DashboardPage() {
       };
     }
 
-    if (categoryFilter || scopeFilter !== "all") {
+    if (categoryFilter || scopeFilter !== "all" || thisWeekFilter === "true") {
       return {
         title: t("emptyFilteredTitle"),
         description: t("emptyFilteredDescription"),
@@ -342,6 +365,17 @@ export default function DashboardPage() {
       variant: "notes"
     };
   })();
+  const filteredAdminUsers = adminUsers.filter((adminUser) => {
+    const query = adminSearch.trim().toLowerCase();
+
+    if (!query) {
+      return true;
+    }
+
+    return [adminUser.name, adminUser.email, adminUser.role]
+      .filter(Boolean)
+      .some((value) => value.toLowerCase().includes(query));
+  });
 
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -358,6 +392,26 @@ export default function DashboardPage() {
     navigate("/guide");
   };
 
+  const togglePinnedFilter = () => {
+    setPinnedFilter((current) => (current === "true" ? "" : "true"));
+    setPage(1);
+  };
+
+  const toggleThisWeekFilter = () => {
+    setThisWeekFilter((current) => (current === "true" ? "" : "true"));
+    setPage(1);
+  };
+
+  const toggleStarredFilter = () => {
+    setFavoritesFilter((current) => (current === "true" ? "" : "true"));
+    setPage(1);
+  };
+
+  const toggleScopeChip = (scope) => {
+    setScopeFilter((current) => (current === scope ? "all" : scope));
+    setPage(1);
+  };
+
   const dismissToast = (id) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   };
@@ -368,7 +422,9 @@ export default function DashboardPage() {
       nextSearch = searchTerm,
       nextCategory = categoryFilter,
       nextStarred = favoritesFilter,
-      nextScope = scopeFilter
+      nextScope = scopeFilter,
+      nextPinned = pinnedFilter,
+      nextThisWeek = thisWeekFilter
     } = {}) => {
     setError("");
     setLoading(true);
@@ -380,7 +436,9 @@ export default function DashboardPage() {
         search: nextSearch,
         category: nextCategory,
         starred: nextStarred,
-        scope: nextScope
+        scope: nextScope,
+        pinned: nextPinned,
+        thisWeek: nextThisWeek
       });
       setNotes(result.notes);
       setPagination(result.pagination);
@@ -391,7 +449,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     },
-    [categoryFilter, favoritesFilter, page, scopeFilter, searchTerm, t]
+    [categoryFilter, favoritesFilter, page, pinnedFilter, scopeFilter, searchTerm, t, thisWeekFilter]
   );
 
   useEffect(() => {
@@ -712,12 +770,12 @@ export default function DashboardPage() {
 
     try {
       await updateUserRole(targetUser.id, role);
-      setAdminSuccess(t("roleUpdatedTo", { name: targetUser.name, role }));
-      addToast("success", t("roleUpdated", { name: targetUser.name }));
+      setAdminSuccess(t("roleUpdateSuccess"));
+      addToast("success", t("roleUpdateSuccess"));
       await loadAdminUsers();
-    } catch (err) {
-      setAdminError(err.message);
-      addToast("error", t("roleUpdateError", { message: err.message }));
+    } catch {
+      setAdminError(t("roleUpdateFailed"));
+      addToast("error", t("roleUpdateFailed"));
     } finally {
       setUpdatingRoleId("");
     }
@@ -1232,6 +1290,79 @@ export default function DashboardPage() {
             )}
           </div>
 
+          <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <p className="text-sm font-semibold text-slate-700">{t("quickFilters")}</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={togglePinnedFilter}
+                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    pinnedFilter === "true"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={pinnedFilter === "true"}
+                >
+                  <Pin className="h-3.5 w-3.5" />
+                  {t("pinned")}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleStarredFilter}
+                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    favoritesFilter === "true"
+                      ? "border-amber-300 bg-amber-50 text-amber-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={favoritesFilter === "true"}
+                >
+                  <Star className="h-3.5 w-3.5" />
+                  {t("starred")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleScopeChip("workspace")}
+                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    scopeFilter === "workspace"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={scopeFilter === "workspace"}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  {t("workspace")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleScopeChip("private")}
+                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    scopeFilter === "private"
+                      ? "border-slate-400 bg-slate-100 text-slate-900"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={scopeFilter === "private"}
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  {t("privateNote")}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleThisWeekFilter}
+                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    thisWeekFilter === "true"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={thisWeekFilter === "true"}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {t("thisWeek")}
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
@@ -1591,26 +1722,66 @@ export default function DashboardPage() {
               </span>
             </div>
 
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+                <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${roleBadgeClassName("user")}`}>
+                  user
+                </span>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{t("userRoleDescription")}</p>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+                <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${roleBadgeClassName("admin")}`}>
+                  admin
+                </span>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{t("adminRoleDescription")}</p>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+                <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${roleBadgeClassName("superadmin")}`}>
+                  superadmin
+                </span>
+                <p className="mt-2 text-xs leading-5 text-slate-600">{t("superadminRoleDescription")}</p>
+              </div>
+            </div>
+
             <div className="mt-5">
-              <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-emerald-700" />
                   <h3 className="text-sm font-semibold text-slate-950">{t("users")}</h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={loadAdminUsers}
-                  disabled={adminLoading}
-                  className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${adminLoading ? "animate-spin" : ""}`} />
-                  {t("refresh")}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="relative w-full sm:w-64">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="search"
+                      value={adminSearch}
+                      onChange={(event) => setAdminSearch(event.target.value)}
+                      className="h-9 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                      placeholder={t("searchUsers")}
+                      aria-label={t("searchUsers")}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={loadAdminUsers}
+                    disabled={adminLoading}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${adminLoading ? "animate-spin" : ""}`} />
+                    {t("refresh")}
+                  </button>
+                </div>
               </div>
 
               {!canEditRoles ? (
                 <p className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
                   {t("adminViewOnly")}
+                </p>
+              ) : null}
+
+              {canEditRoles ? (
+                <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  {t("selfRoleChangeDisabled")}
                 </p>
               ) : null}
 
@@ -1642,7 +1813,7 @@ export default function DashboardPage() {
                     <span>{t("created")}</span>
                   </div>
                   <div className="divide-y divide-slate-200 bg-white">
-                    {adminUsers.map((adminUser) => (
+                    {filteredAdminUsers.map((adminUser) => (
                       <div
                         key={adminUser.id}
                         className="grid gap-2 px-4 py-3 text-sm text-slate-700 sm:grid-cols-[1fr_1.35fr_170px_120px] sm:items-center sm:gap-3"
@@ -1654,12 +1825,16 @@ export default function DashboardPage() {
                         <p className="hidden break-all text-slate-600 sm:block">{adminUser.email}</p>
                         {canEditRoles ? (
                           <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded-md px-2 py-1 text-xs font-semibold capitalize ring-1 ${roleBadgeClassName(adminUser.role)}`}>
+                              {adminUser.role}
+                            </span>
                             <select
                               value={adminUser.role}
                               onChange={(event) => handleRoleChange(adminUser, event.target.value)}
                               disabled={adminUser.id === user?.id || updatingRoleId === adminUser.id}
-                              className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm capitalize text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                              className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold capitalize text-slate-800 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                               aria-label={`${t("role")}: ${adminUser.name}`}
+                              title={adminUser.id === user?.id ? t("selfRoleChangeDisabled") : t("role")}
                             >
                               <option value="user">user</option>
                               <option value="admin">admin</option>
@@ -1669,11 +1844,13 @@ export default function DashboardPage() {
                               <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
                             ) : null}
                             {adminUser.id === user?.id ? (
-                              <span className="text-xs text-slate-500">{t("you")}</span>
+                              <span className="text-xs text-slate-500" title={t("selfRoleChangeDisabled")}>
+                                {t("you")}
+                              </span>
                             ) : null}
                           </div>
                         ) : (
-                          <span className="w-fit rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold capitalize text-slate-700">
+                          <span className={`w-fit rounded-md px-2 py-1 text-xs font-semibold capitalize ring-1 ${roleBadgeClassName(adminUser.role)}`}>
                             {adminUser.role}
                           </span>
                         )}
@@ -1683,7 +1860,7 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
-                  {!adminUsers.length ? (
+                  {!filteredAdminUsers.length ? (
                     <div className="bg-white px-4 py-10 text-center text-sm text-slate-500">
                       {t("noUsersFound")}
                     </div>

@@ -9,8 +9,10 @@ import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import attachmentRoutes from "./routes/attachmentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import billingRoutes, { billingWebhookRouter } from "./routes/billingRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -54,8 +56,10 @@ app.use(
 
 app.use("/api/health", healthRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/attachments", attachmentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/billing", billingRoutes);
+app.use("/api/comments", commentRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);

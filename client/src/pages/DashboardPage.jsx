@@ -28,7 +28,7 @@ import {
   Users,
   X
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -345,6 +345,7 @@ export default function DashboardPage() {
   );
   const [toasts, setToasts] = useState([]);
   const [workspaceInfo, setWorkspaceInfo] = useState({ workspace: null, role: "staff" });
+  const notesRequestIdRef = useRef(0);
 
   const isSearching = Boolean(searchTerm.trim());
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
@@ -560,6 +561,8 @@ export default function DashboardPage() {
       nextPinned = pinnedFilter,
       nextThisWeek = thisWeekFilter
     } = {}) => {
+    const requestId = notesRequestIdRef.current + 1;
+    notesRequestIdRef.current = requestId;
     setError("");
     setLoading(true);
 
@@ -575,13 +578,21 @@ export default function DashboardPage() {
         pinned: nextPinned,
         thisWeek: nextThisWeek
       });
+      if (requestId !== notesRequestIdRef.current) {
+        return;
+      }
       setNotes(result.notes);
       setPagination(result.pagination);
     } catch (err) {
+      if (requestId !== notesRequestIdRef.current) {
+        return;
+      }
       setError(err.message);
       addToast("error", t("notesLoadError", { message: err.message }));
     } finally {
-      setLoading(false);
+      if (requestId === notesRequestIdRef.current) {
+        setLoading(false);
+      }
     }
     },
     [categoryFilter, debouncedSearchTerm, favoritesFilter, noteTypeFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]

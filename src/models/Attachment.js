@@ -53,4 +53,6 @@ const attachmentSchema = new mongoose.Schema(
   }
 );
 
+attachmentSchema.index({ noteId: 1, createdAt: -1 });
+
 export const Attachment = mongoose.model("Attachment", attachmentSchema);

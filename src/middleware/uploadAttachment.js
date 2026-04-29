@@ -21,6 +21,7 @@ const allowedMimeTypes = new Set([
 ]);
 
 const allowedExtensions = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp", ".doc", ".docx", ".txt", ".md"]);
+const allowedFileTypesMessage = "Unsupported file type. Allowed files: PDF, JPG, JPEG, PNG, WEBP, DOC, DOCX, TXT, and MD.";
 
 fs.mkdirSync(uploadsDir, { recursive: true });
 
@@ -38,7 +39,7 @@ const fileFilter = (_req, file, callback) => {
   const extension = path.extname(file.originalname).toLowerCase();
 
   if (!allowedMimeTypes.has(file.mimetype) || !allowedExtensions.has(extension)) {
-    return callback(new ApiError(400, "Unsupported file type"));
+    return callback(new ApiError(400, allowedFileTypesMessage));
   }
 
   return callback(null, true);

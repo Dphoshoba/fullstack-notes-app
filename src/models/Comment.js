@@ -35,4 +35,6 @@ const commentSchema = new mongoose.Schema(
   }
 );
 
+commentSchema.index({ noteId: 1, createdAt: -1 });
+
 export const Comment = mongoose.model("Comment", commentSchema);

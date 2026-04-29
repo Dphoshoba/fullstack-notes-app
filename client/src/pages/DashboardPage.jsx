@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Loader2,
   LogOut,
+  MessageSquare,
   Pin,
   RefreshCw,
   Save,
@@ -32,7 +33,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { generateSmartInsights, suggestTags, summarizeNote } from "../api/ai.js";
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
-import { createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
+import { createComment, createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
 import { Button } from "../components/Button.jsx";
@@ -76,6 +77,37 @@ const noteToExport = (note) => ({
 const formatExportDate = (value) => (value ? new Date(value).toISOString() : "");
 
 const escapeMarkdown = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/`/g, "\\`");
+
+const noteOwnerId = (note) => note?.owner?.id || note?.owner?._id || note?.owner;
+
+const aiResultToText = (result) => {
+  if (!result) {
+    return "";
+  }
+
+  if (result.summary) {
+    return result.summary;
+  }
+
+  if (result.suggestedTags) {
+    return result.suggestedTags.length
+      ? `AI Suggested Tags:\n${result.suggestedTags.map((tag) => `- ${tag}`).join("\n")}`
+      : "AI Suggested Tags:\nNo new tag suggestions yet.";
+  }
+
+  if (result.insights) {
+    return [
+      "AI Insights:",
+      `Total notes: ${result.insights.totalNotes}`,
+      `Most used category: ${result.insights.topCategory}`,
+      `Pinned notes: ${result.insights.pinnedCount}`,
+      `Starred notes: ${result.insights.starredCount}`,
+      result.insights.suggestedFocus
+    ].filter(Boolean).join("\n");
+  }
+
+  return "";
+};
 
 const notesToMarkdown = (notes) =>
   notes
@@ -156,6 +188,7 @@ export default function DashboardPage() {
   const [updatingRoleId, setUpdatingRoleId] = useState("");
   const [selectedAiNoteId, setSelectedAiNoteId] = useState("");
   const [aiLoadingAction, setAiLoadingAction] = useState("");
+  const [aiSavingAction, setAiSavingAction] = useState("");
   const [aiError, setAiError] = useState("");
   const [aiResult, setAiResult] = useState(null);
   const [usage, setUsage] = useState({
@@ -253,6 +286,16 @@ export default function DashboardPage() {
     }
   ];
   const selectedAiNote = notes.find((note) => note.id === selectedAiNoteId) || notes[0];
+  const selectedAiResultText = aiResultToText(aiResult);
+  const selectedAiNoteOwnerId = noteOwnerId(selectedAiNote);
+  const canSaveAiToNote = Boolean(
+    aiResult &&
+      selectedAiNote &&
+      selectedAiResultText &&
+      selectedAiNoteOwnerId &&
+      selectedAiNoteOwnerId.toString() === user?.id
+  );
+  const canSaveAiAsComment = Boolean(aiResult && selectedAiNote && selectedAiResultText);
   const usageLimitReached =
     usage.plan === "free" && usage.remainingAiUses <= 0;
   const usageProgress = usage.aiUsageLimit
@@ -524,6 +567,58 @@ export default function DashboardPage() {
       addToast("error", t("aiRequestError", { message: err.message }));
     } finally {
       setAiLoadingAction("");
+    }
+  };
+
+  const saveAiResultToNote = async () => {
+    if (!canSaveAiToNote) {
+      return;
+    }
+
+    setAiSavingAction("note");
+    setAiError("");
+
+    try {
+      const appendedBody = [
+        selectedAiNote.body,
+        "---",
+        "AI Summary:",
+        selectedAiResultText
+      ].filter(Boolean).join("\n\n");
+
+      await handleUpdate(selectedAiNote.id, { body: appendedBody });
+      addToast("success", t("savedToNote"));
+    } catch {
+      setAiError(t("couldNotSave"));
+      addToast("error", t("couldNotSave"));
+    } finally {
+      setAiSavingAction("");
+    }
+  };
+
+  const saveAiResultAsComment = async () => {
+    if (!canSaveAiAsComment) {
+      return;
+    }
+
+    setAiSavingAction("comment");
+    setAiError("");
+
+    try {
+      await createComment(selectedAiNote.id, { text: selectedAiResultText });
+      setNotes((current) =>
+        current.map((note) =>
+          note.id === selectedAiNote.id
+            ? { ...note, commentsCount: (note.commentsCount || 0) + 1 }
+            : note
+        )
+      );
+      addToast("success", t("savedAsComment"));
+    } catch {
+      setAiError(t("couldNotSave"));
+      addToast("error", t("couldNotSave"));
+    } finally {
+      setAiSavingAction("");
     }
   };
 
@@ -1109,6 +1204,26 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 ) : null}
+                <div className="mt-4 flex flex-col gap-2 border-t border-emerald-200 pt-4 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={saveAiResultToNote}
+                    disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {aiSavingAction === "note" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {t("saveToNote")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveAiResultAsComment}
+                    disabled={!canSaveAiAsComment || Boolean(aiSavingAction)}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {aiSavingAction === "comment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                    {t("saveAsComment")}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm leading-6 text-slate-600">

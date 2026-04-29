@@ -52,7 +52,7 @@ const formatFileSize = (size) => {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-function NoteAttachments({ note, currentUser, onAttachmentError }) {
+function NoteAttachments({ note, currentUser, onAttachmentError, onCountChange }) {
   const { t } = useI18n();
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -132,6 +132,7 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
     try {
       await uploadAttachment(note.id, file);
       await loadAttachments();
+      onCountChange?.(1);
     } catch {
       reportAttachmentError("Attachment could not be uploaded");
     } finally {
@@ -143,6 +144,7 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
     try {
       await deleteAttachment(attachmentId);
       await loadAttachments();
+      onCountChange?.(-1);
     } catch (err) {
       setError(err.message);
       onAttachmentErrorRef.current?.(err);
@@ -239,7 +241,7 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
   );
 }
 
-function NoteComments({ note, currentUser, onCommentError }) {
+function NoteComments({ note, currentUser, onCommentError, onCountChange }) {
   const { t } = useI18n();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -320,6 +322,7 @@ function NoteComments({ note, currentUser, onCommentError }) {
     try {
       await createComment(note.id, { text: text.trim() });
       await loadComments();
+      onCountChange?.(1);
       setText("");
     } catch {
       reportCommentError("Comment could not be saved");
@@ -352,6 +355,7 @@ function NoteComments({ note, currentUser, onCommentError }) {
     try {
       await deleteComment(commentId);
       await loadComments();
+      onCountChange?.(-1);
     } catch (err) {
       onCommentErrorRef.current?.(err);
     }
@@ -487,9 +491,27 @@ function NoteCard({
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activityCounts, setActivityCounts] = useState({
+    comments: note.commentsCount || 0,
+    attachments: note.attachmentsCount || 0
+  });
   const summaryLoading = aiLoadingAction === `summary:${note.id}`;
   const tagsLoading = aiLoadingAction === `tags:${note.id}`;
   const aiActionDisabled = saving || Boolean(aiLoadingAction);
+
+  useEffect(() => {
+    setActivityCounts({
+      comments: note.commentsCount || 0,
+      attachments: note.attachmentsCount || 0
+    });
+  }, [note.attachmentsCount, note.commentsCount, note.id]);
+
+  const updateActivityCount = (key, delta) => {
+    setActivityCounts((current) => ({
+      ...current,
+      [key]: Math.max((current[key] || 0) + delta, 0)
+    }));
+  };
 
   const toggleStarred = async () => {
     setSaving(true);
@@ -626,18 +648,42 @@ function NoteCard({
         <button
           type="button"
           onClick={() => setDetailsOpen((current) => !current)}
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="inline-flex min-h-9 flex-wrap items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           aria-expanded={detailsOpen}
         >
           <MessageSquare className="h-4 w-4" />
           {t("comments")} / {t("attachments")}
+          <span
+            className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600"
+            title={activityCounts.comments ? t("comments") : t("noCommentsYet")}
+          >
+            <MessageSquare className="h-3 w-3" />
+            {activityCounts.comments}
+          </span>
+          <span
+            className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600"
+            title={activityCounts.attachments ? t("attachments") : t("noAttachmentsYet")}
+          >
+            <Paperclip className="h-3 w-3" />
+            {activityCounts.attachments}
+          </span>
         </button>
       </div>
 
       {detailsOpen ? (
         <>
-          <NoteAttachments note={note} currentUser={currentUser} onAttachmentError={onUpdateError} />
-          <NoteComments note={note} currentUser={currentUser} onCommentError={onUpdateError} />
+          <NoteAttachments
+            note={note}
+            currentUser={currentUser}
+            onAttachmentError={onUpdateError}
+            onCountChange={(delta) => updateActivityCount("attachments", delta)}
+          />
+          <NoteComments
+            note={note}
+            currentUser={currentUser}
+            onCommentError={onUpdateError}
+            onCountChange={(delta) => updateActivityCount("comments", delta)}
+          />
         </>
       ) : null}
     </article>

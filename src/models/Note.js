@@ -47,7 +47,8 @@ const noteSchema = new mongoose.Schema(
     },
     pinned: {
       type: Boolean,
-      default: false
+      default: false,
+      index: true
     },
     starred: {
       type: Boolean,
@@ -69,5 +70,11 @@ const noteSchema = new mongoose.Schema(
 );
 
 noteSchema.index({ title: "text", body: "text", tags: "text", category: "text" });
+noteSchema.index({ owner: 1, createdAt: -1 });
+noteSchema.index({ owner: 1, category: 1, createdAt: -1 });
+noteSchema.index({ owner: 1, starred: 1, createdAt: -1 });
+noteSchema.index({ owner: 1, pinned: 1, updatedAt: -1 });
+noteSchema.index({ organizationId: 1, createdAt: -1 });
+noteSchema.index({ organizationId: 1, category: 1, createdAt: -1 });
 
 export const Note = mongoose.model("Note", noteSchema);

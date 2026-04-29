@@ -11,6 +11,16 @@ const canManageWorkspaceNote = (user) => ["owner", "manager"].includes(user.work
 
 const userWorkspaceId = (user) => user.organizationId?.toString();
 
+const serializeNote = (note) => {
+  const { _id, ...noteData } = note;
+  delete noteData.__v;
+
+  return {
+    ...noteData,
+    id: _id.toString()
+  };
+};
+
 const buildVisibilityFilter = (user, scope = "all") => {
   const privateFilter = {
     owner: user.id,
@@ -72,7 +82,11 @@ export const listNotes = async (req, res) => {
   const filter = buildNoteFilter(req.user, req.query);
 
   const [notes, total] = await Promise.all([
-    Note.find(filter).sort({ pinned: -1, updatedAt: -1 }).skip(skip).limit(limit),
+    Note.find(filter)
+      .sort({ pinned: -1, updatedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Note.countDocuments(filter)
   ]);
   const noteIds = notes.map((note) => note._id);
@@ -95,7 +109,7 @@ export const listNotes = async (req, res) => {
     attachmentCounts.map((item) => [item._id.toString(), item.count])
   );
   const notesWithCounts = notes.map((note) => {
-    const noteData = note.toJSON();
+    const noteData = serializeNote(note);
 
     return {
       ...noteData,

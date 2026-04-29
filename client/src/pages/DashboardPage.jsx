@@ -176,6 +176,7 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState("");
   const [pendingDeleteNote, setPendingDeleteNote] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [favoritesFilter, setFavoritesFilter] = useState("");
   const [scopeFilter, setScopeFilter] = useState("all");
@@ -392,6 +393,14 @@ export default function DashboardPage() {
     navigate("/guide");
   };
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
+
   const togglePinnedFilter = () => {
     setPinnedFilter((current) => (current === "true" ? "" : "true"));
     setPage(1);
@@ -419,7 +428,7 @@ export default function DashboardPage() {
   const loadNotes = useCallback(
     async ({
       nextPage = page,
-      nextSearch = searchTerm,
+      nextSearch = debouncedSearchTerm,
       nextCategory = categoryFilter,
       nextStarred = favoritesFilter,
       nextScope = scopeFilter,
@@ -449,7 +458,7 @@ export default function DashboardPage() {
       setLoading(false);
     }
     },
-    [categoryFilter, favoritesFilter, page, pinnedFilter, scopeFilter, searchTerm, t, thisWeekFilter]
+    [categoryFilter, debouncedSearchTerm, favoritesFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
   );
 
   useEffect(() => {

@@ -1,5 +1,11 @@
 import { Outlet } from "react-router-dom";
 
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+
 export default function App() {
-  return <Outlet />;
+  return (
+    <ErrorBoundary>
+      <Outlet />
+    </ErrorBoundary>
+  );
 }

@@ -2,12 +2,12 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
-import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
+import { requestLogger } from "./middleware/requestLogger.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -40,15 +40,16 @@ app.use("/api/billing/webhook", express.raw({ type: "application/json" }), billi
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-if (env.NODE_ENV !== "test") {
-  app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
-}
+app.use(requestLogger);
 
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 300,
+    windowMs: 10 * 60 * 1000,
+    limit: 1000,
+    message: {
+      success: false,
+      message: "Too many requests. Please wait a moment and try again."
+    },
     standardHeaders: "draft-7",
     legacyHeaders: false
   })

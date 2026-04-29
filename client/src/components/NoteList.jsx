@@ -1,5 +1,5 @@
 import { Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Star, Trash2, Upload, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createComment,
@@ -55,27 +55,55 @@ const formatFileSize = (size) => {
 function NoteAttachments({ note, currentUser, onAttachmentError }) {
   const { t } = useI18n();
   const [attachments, setAttachments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const onAttachmentErrorRef = useRef(onAttachmentError);
   const canDeleteAny =
     note.owner === currentUser?.id ||
     ((note.visibility || "private") === "workspace" &&
       ["owner", "manager"].includes(currentUser?.workspaceRole));
 
   useEffect(() => {
+    onAttachmentErrorRef.current = onAttachmentError;
+  }, [onAttachmentError]);
+
+  const reportAttachmentError = useCallback((message) => {
+    const nextError = new Error(message);
+    setError(message);
+    onAttachmentErrorRef.current?.(nextError);
+  }, []);
+
+  const loadAttachments = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const nextAttachments = await fetchAttachments(note.id);
+      setAttachments(nextAttachments);
+    } catch {
+      reportAttachmentError("Attachments could not be loaded");
+    } finally {
+      setLoading(false);
+    }
+  }, [note.id, reportAttachmentError]);
+
+  useEffect(() => {
     let alive = true;
 
     const load = async () => {
       setLoading(true);
+      setError("");
 
       try {
         const nextAttachments = await fetchAttachments(note.id);
         if (alive) {
           setAttachments(nextAttachments);
         }
-      } catch (err) {
-        onAttachmentError?.(err);
+      } catch {
+        if (alive) {
+          reportAttachmentError("Attachments could not be loaded");
+        }
       } finally {
         if (alive) {
           setLoading(false);
@@ -88,7 +116,7 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
     return () => {
       alive = false;
     };
-  }, [note.id, onAttachmentError]);
+  }, [note.id, reportAttachmentError]);
 
   const uploadFile = async (event) => {
     const file = event.target.files?.[0];
@@ -102,11 +130,10 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
     setError("");
 
     try {
-      const attachment = await uploadAttachment(note.id, file);
-      setAttachments((current) => [attachment, ...current]);
-    } catch (err) {
-      setError(err.message);
-      onAttachmentError?.(err);
+      await uploadAttachment(note.id, file);
+      await loadAttachments();
+    } catch {
+      reportAttachmentError("Attachment could not be uploaded");
     } finally {
       setUploading(false);
     }
@@ -115,10 +142,10 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
   const removeAttachment = async (attachmentId) => {
     try {
       await deleteAttachment(attachmentId);
-      setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId));
+      await loadAttachments();
     } catch (err) {
       setError(err.message);
-      onAttachmentError?.(err);
+      onAttachmentErrorRef.current?.(err);
     }
   };
 
@@ -127,7 +154,7 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
       await downloadAttachmentFile(attachment);
     } catch (err) {
       setError(err.message);
-      onAttachmentError?.(err);
+      onAttachmentErrorRef.current?.(err);
     }
   };
 
@@ -215,29 +242,58 @@ function NoteAttachments({ note, currentUser, onAttachmentError }) {
 function NoteComments({ note, currentUser, onCommentError }) {
   const { t } = useI18n();
   const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [editingText, setEditingText] = useState("");
+  const onCommentErrorRef = useRef(onCommentError);
 
   const canDeleteAny =
     (note.visibility || "private") === "workspace" &&
     ["owner", "manager"].includes(currentUser?.workspaceRole);
 
   useEffect(() => {
+    onCommentErrorRef.current = onCommentError;
+  }, [onCommentError]);
+
+  const reportCommentError = useCallback((message) => {
+    const nextError = new Error(message);
+    setError(message);
+    onCommentErrorRef.current?.(nextError);
+  }, []);
+
+  const loadComments = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const nextComments = await fetchComments(note.id);
+      setComments(nextComments);
+    } catch {
+      reportCommentError("Comments could not be loaded");
+    } finally {
+      setLoading(false);
+    }
+  }, [note.id, reportCommentError]);
+
+  useEffect(() => {
     let alive = true;
 
     const load = async () => {
       setLoading(true);
+      setError("");
 
       try {
         const nextComments = await fetchComments(note.id);
         if (alive) {
           setComments(nextComments);
         }
-      } catch (err) {
-        onCommentError?.(err);
+      } catch {
+        if (alive) {
+          reportCommentError("Comments could not be loaded");
+        }
       } finally {
         if (alive) {
           setLoading(false);
@@ -250,7 +306,7 @@ function NoteComments({ note, currentUser, onCommentError }) {
     return () => {
       alive = false;
     };
-  }, [note.id, onCommentError]);
+  }, [note.id, reportCommentError]);
 
   const submitComment = async (event) => {
     event.preventDefault();
@@ -262,11 +318,11 @@ function NoteComments({ note, currentUser, onCommentError }) {
     setSaving(true);
 
     try {
-      const comment = await createComment(note.id, { text: text.trim() });
-      setComments((current) => [...current, comment]);
+      await createComment(note.id, { text: text.trim() });
+      await loadComments();
       setText("");
-    } catch (err) {
-      onCommentError?.(err);
+    } catch {
+      reportCommentError("Comment could not be saved");
     } finally {
       setSaving(false);
     }
@@ -283,21 +339,21 @@ function NoteComments({ note, currentUser, onCommentError }) {
     }
 
     try {
-      const updated = await updateComment(commentId, { text: editingText.trim() });
-      setComments((current) => current.map((comment) => (comment.id === commentId ? updated : comment)));
+      await updateComment(commentId, { text: editingText.trim() });
+      await loadComments();
       setEditingId("");
       setEditingText("");
-    } catch (err) {
-      onCommentError?.(err);
+    } catch {
+      reportCommentError("Comment could not be saved");
     }
   };
 
   const removeComment = async (commentId) => {
     try {
       await deleteComment(commentId);
-      setComments((current) => current.filter((comment) => comment.id !== commentId));
+      await loadComments();
     } catch (err) {
-      onCommentError?.(err);
+      onCommentErrorRef.current?.(err);
     }
   };
 
@@ -307,6 +363,12 @@ function NoteComments({ note, currentUser, onCommentError }) {
         <MessageSquare className="h-4 w-4 text-emerald-700" />
         <h4 className="text-sm font-semibold text-slate-950">{t("comments")}</h4>
       </div>
+
+      {error ? (
+        <p className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
         <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">{t("loading")}</p>
@@ -421,6 +483,7 @@ function NoteCard({
 }) {
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const toggleStarred = async () => {
     setSaving(true);
@@ -528,8 +591,24 @@ function NoteCard({
         </div>
       ) : null}
 
-      <NoteAttachments note={note} currentUser={currentUser} onAttachmentError={onUpdateError} />
-      <NoteComments note={note} currentUser={currentUser} onCommentError={onUpdateError} />
+      <div className="mt-5 border-t border-slate-200 pt-4">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((current) => !current)}
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          aria-expanded={detailsOpen}
+        >
+          <MessageSquare className="h-4 w-4" />
+          {t("comments")} / {t("attachments")}
+        </button>
+      </div>
+
+      {detailsOpen ? (
+        <>
+          <NoteAttachments note={note} currentUser={currentUser} onAttachmentError={onUpdateError} />
+          <NoteComments note={note} currentUser={currentUser} onCommentError={onUpdateError} />
+        </>
+      ) : null}
     </article>
   );
 }

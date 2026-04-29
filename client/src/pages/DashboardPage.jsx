@@ -44,6 +44,12 @@ import { useI18n } from "../context/I18nContext.jsx";
 const NOTES_LIMIT = 12;
 const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
 const GUIDE_ONBOARDING_KEY = "notes_api_guide_onboarding_seen";
+const DETAIL_ERROR_MESSAGES = new Set([
+  "Comments could not be loaded",
+  "Attachments could not be loaded",
+  "Attachment could not be uploaded",
+  "Comment could not be saved"
+]);
 
 const noteTimestamp = (note) => new Date(note.updatedAt || note.createdAt || 0).getTime();
 
@@ -1139,7 +1145,14 @@ export default function DashboardPage() {
               }
               hasWorkspace={hasWorkspace}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
-              onUpdateError={(err) => addToast("error", t("updateNoteError", { message: err.message }))}
+              onUpdateError={(err) =>
+                addToast(
+                  "error",
+                  DETAIL_ERROR_MESSAGES.has(err.message)
+                    ? err.message
+                    : t("updateNoteError", { message: err.message })
+                )
+              }
               currentUser={user}
             />
           )}

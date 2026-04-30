@@ -39,6 +39,7 @@ import {
   suggestTags,
   summarizeNote
 } from "../api/ai.js";
+import { fetchAnalyticsSummary, trackEvent } from "../api/analytics.js";
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
 import { createComment, createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
@@ -324,6 +325,9 @@ export default function DashboardPage() {
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState("");
   const [adminSuccess, setAdminSuccess] = useState("");
+  const [analyticsSummary, setAnalyticsSummary] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsError, setAnalyticsError] = useState("");
   const [updatingRoleId, setUpdatingRoleId] = useState("");
   const [selectedAiNoteId, setSelectedAiNoteId] = useState("");
   const [aiLoadingAction, setAiLoadingAction] = useState("");
@@ -503,6 +507,10 @@ export default function DashboardPage() {
       .some((value) => value.toLowerCase().includes(query));
   });
 
+  useEffect(() => {
+    trackEvent("dashboard_view");
+  }, []);
+
   const addToast = (type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((current) => [...current, { id, type, message }]);
@@ -659,6 +667,10 @@ export default function DashboardPage() {
 
   const handleCreate = async (input) => {
     const note = await createNote(input);
+    trackEvent("create_note", {
+      noteType: note.noteType || "standard",
+      visibility: note.visibility || "private"
+    });
     setPage(1);
     await loadNotes({ nextPage: 1 });
     return note;
@@ -732,6 +744,7 @@ export default function DashboardPage() {
       addToast("success", t("exportSuccess", { format: "Markdown" }));
     }
 
+    trackEvent("export_notes", { format, count: visibleNotes.length });
     setExportOpen(false);
   };
 
@@ -766,6 +779,10 @@ export default function DashboardPage() {
                   ? await extractAttendeesAndDecisions(targetNote.id)
                   : await generateSmartInsights();
 
+      trackEvent("use_ai_tool", {
+        action,
+        noteType: targetNote?.noteType || "standard"
+      });
       if (targetNote?.id) {
         setSelectedAiNoteId(targetNote.id);
       }
@@ -900,6 +917,7 @@ export default function DashboardPage() {
   };
 
   const startUpgrade = async () => {
+    trackEvent("click_upgrade", { location: "dashboard_plan_usage" });
     setUpgradeLoading(true);
 
     try {
@@ -978,6 +996,20 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const loadAnalyticsSummary = useCallback(async () => {
+    setAnalyticsError("");
+    setAnalyticsLoading(true);
+
+    try {
+      const summary = await fetchAnalyticsSummary();
+      setAnalyticsSummary(summary);
+    } catch (err) {
+      setAnalyticsError(err.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
+
   const handleRoleChange = async (targetUser, role) => {
     if (!canEditRoles || targetUser.id === user?.id || role === targetUser.role) {
       return;
@@ -1003,8 +1035,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (adminOpen && isAdmin) {
       loadAdminUsers();
+      loadAnalyticsSummary();
     }
-  }, [adminOpen, isAdmin, loadAdminUsers]);
+  }, [adminOpen, isAdmin, loadAdminUsers, loadAnalyticsSummary]);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -2053,6 +2086,62 @@ export default function DashboardPage() {
                 {user?.role || "user"}
               </span>
             </div>
+
+            <section className="mt-4 rounded-md border border-slate-200 bg-white p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-950">Analytics summary</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    First-party funnel events. Sensitive data is not tracked.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadAnalyticsSummary}
+                  disabled={analyticsLoading}
+                  className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${analyticsLoading ? "animate-spin" : ""}`} />
+                  {t("refresh")}
+                </button>
+              </div>
+
+              {analyticsError ? (
+                <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {analyticsError}
+                </p>
+              ) : null}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  ["Total events", analyticsSummary?.totalEvents || 0],
+                  ["Landing views", analyticsSummary?.landingPageViews || 0],
+                  ["Register clicks", analyticsSummary?.registerClicks || 0],
+                  ["Upgrade clicks", analyticsSummary?.upgradeClicks || 0]
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className="mt-2 text-xl font-bold text-slate-950">{analyticsLoading ? "..." : value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {analyticsSummary?.mostCommonPaths?.length ? (
+                <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Most common paths</p>
+                  <div className="mt-3 space-y-2">
+                    {analyticsSummary.mostCommonPaths.map((item) => (
+                      <div key={item.path} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="truncate font-medium text-slate-700">{item.path}</span>
+                        <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                          {item.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-md border border-slate-200 bg-white px-3 py-3">

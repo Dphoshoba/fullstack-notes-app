@@ -15,42 +15,52 @@ import SettingsPage from "./pages/SettingsPage.jsx";
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 import "./styles.css";
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <App />,
+      children: [
+        { index: true, element: <LandingPage /> },
+        { path: "invite/:token", element: <AcceptInvitePage /> },
+        { path: "login", element: <LoginPage /> },
+        { path: "register", element: <RegisterPage /> },
+        {
+          path: "dashboard",
+          element: (
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          )
+        },
+        {
+          path: "guide",
+          element: (
+            <ProtectedRoute>
+              <GuidePage />
+            </ProtectedRoute>
+          )
+        },
+        {
+          path: "settings",
+          element: (
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          )
+        }
+      ]
+    }
+  ],
   {
-    path: "/",
-    element: <App />,
-    children: [
-      { index: true, element: <LandingPage /> },
-      { path: "invite/:token", element: <AcceptInvitePage /> },
-      { path: "login", element: <LoginPage /> },
-      { path: "register", element: <RegisterPage /> },
-      {
-        path: "dashboard",
-        element: (
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: "guide",
-        element: (
-          <ProtectedRoute>
-            <GuidePage />
-          </ProtectedRoute>
-        )
-      },
-      {
-        path: "settings",
-        element: (
-          <ProtectedRoute>
-            <SettingsPage />
-          </ProtectedRoute>
-        )
-      }
-    ]
+    future: {
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_relativeSplatPath: true,
+      v7_skipActionErrorRevalidation: true
+    }
   }
-]);
+);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

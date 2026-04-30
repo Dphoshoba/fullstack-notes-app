@@ -166,6 +166,32 @@ POST /api/billing/webhook
 
 On successful checkout completion, the webhook updates the matching user to `plan: "premium"`.
 
+### Analytics
+
+The app includes lightweight first-party analytics stored in MongoDB. It does not use paid analytics services.
+
+Event ingestion:
+
+```http
+POST /api/analytics/events
+```
+
+- Works for anonymous landing page visitors and logged-in users.
+- Anonymous visitors receive a browser `anonymousId` stored in localStorage.
+- Logged-in requests can include `Authorization: Bearer <token>` so the backend can attach `userId`.
+- Events should only include safe product metadata such as button location, route path, export format, note type, or AI action.
+- Do not send passwords, payment details, card information, JWTs, cookies, API keys, or secrets.
+
+Admin summary:
+
+```http
+GET /api/analytics/summary
+```
+
+- Requires role `admin` or `superadmin`.
+- Returns total events, landing page views, register clicks, login clicks, upgrade clicks, and most common paths.
+- The Dashboard Admin modal displays a simple analytics summary card for admins.
+
 ## Seed Demo User
 
 ```bash

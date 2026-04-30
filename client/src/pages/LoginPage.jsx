@@ -2,6 +2,7 @@ import { LogIn } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 
+import { trackEvent } from "../api/analytics.js";
 import { AuthLayout } from "../components/AuthLayout.jsx";
 import { Button } from "../components/Button.jsx";
 import { FormField } from "../components/FormField.jsx";
@@ -31,6 +32,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError("");
     setLoading(true);
+    trackEvent("click_login", { location: "login_form" });
 
     try {
       await login(form);

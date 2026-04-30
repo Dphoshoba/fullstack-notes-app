@@ -9,6 +9,7 @@ import { notFound } from "./middleware/notFound.js";
 import { authLimiter, billingLimiter, globalLimiter, uploadLimiter } from "./middleware/rateLimiters.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import aiRoutes from "./routes/aiRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import billingRoutes, { billingWebhookRouter } from "./routes/billingRoutes.js";
@@ -46,6 +47,7 @@ app.use(globalLimiter);
 
 app.use("/api/health", healthRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/analytics", analyticsRoutes);
 app.use("/api/attachments", uploadLimiter, attachmentRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/billing", billingLimiter, billingRoutes);

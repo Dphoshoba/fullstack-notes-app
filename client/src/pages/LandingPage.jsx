@@ -16,7 +16,12 @@ import {
   Star,
   Users
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import { trackEvent } from "../api/analytics.js";
+
+const LANDING_EMAIL_KEY = "notes_api_landing_email";
 
 const featureHighlights = [
   {
@@ -90,14 +95,14 @@ const pricingPlans = [
   }
 ];
 
-function CtaLink({ children, to, variant = "primary" }) {
+function CtaLink({ children, onClick, to, variant = "primary" }) {
   const className =
     variant === "primary"
       ? "inline-flex h-11 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-100"
       : "inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100";
 
   return (
-    <Link to={to} className={className}>
+    <Link to={to} onClick={onClick} className={className}>
       {children}
     </Link>
   );
@@ -114,6 +119,29 @@ function SectionHeading({ eyebrow, title, copy }) {
 }
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    trackEvent("landing_page_view");
+  }, []);
+
+  const trackClick = (eventName, metadata = {}) => {
+    trackEvent(eventName, metadata);
+  };
+
+  const submitEmailCapture = (event) => {
+    event.preventDefault();
+    const trimmedEmail = email.trim();
+
+    if (trimmedEmail) {
+      localStorage.setItem(LANDING_EMAIL_KEY, trimmedEmail);
+    }
+
+    trackClick("click_get_started", { location: "hero_email_capture" });
+    navigate("/register");
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -126,19 +154,21 @@ export default function LandingPage() {
           </Link>
           <div className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
             <a href="#features" className="hover:text-slate-950">Features</a>
-            <a href="#pricing" className="hover:text-slate-950">Pricing</a>
+            <a href="#pricing" onClick={() => trackClick("click_pricing", { location: "nav" })} className="hover:text-slate-950">Pricing</a>
             <a href="#faq" className="hover:text-slate-950">FAQ</a>
             <Link to="/guide" className="hover:text-slate-950">Guide</Link>
           </div>
           <div className="flex items-center gap-2">
             <Link
               to="/login"
+              onClick={() => trackClick("click_login", { location: "header" })}
               className="inline-flex h-10 items-center justify-center rounded-md px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950"
             >
               Log in
             </Link>
             <Link
               to="/register"
+              onClick={() => trackClick("click_register", { location: "header" })}
               className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
               Register
@@ -146,6 +176,25 @@ export default function LandingPage() {
           </div>
         </nav>
       </header>
+
+      <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Link
+            to="/register"
+            onClick={() => trackClick("click_get_started", { location: "sticky_start_free" })}
+            className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+          >
+            Start Free
+          </Link>
+          <Link
+            to="/register"
+            onClick={() => trackClick("click_upgrade", { location: "sticky_try_premium" })}
+            className="inline-flex h-10 items-center justify-center rounded-md border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+          >
+            Try Premium
+          </Link>
+        </div>
+      </div>
 
       <section className="relative isolate overflow-hidden bg-slate-950">
         <div className="absolute inset-0 opacity-35">
@@ -218,14 +267,55 @@ export default function LandingPage() {
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
               Capture ideas, organize office knowledge, turn meetings into action items, and use AI to work faster.
             </p>
+            <form
+              onSubmit={submitEmailCapture}
+              className="mt-8 flex max-w-xl flex-col gap-3 rounded-lg border border-white/15 bg-white/10 p-2 backdrop-blur sm:flex-row"
+            >
+              <label className="sr-only" htmlFor="landing-email">Enter your email to get started</label>
+              <input
+                id="landing-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Enter your email to get started"
+                className="h-12 min-w-0 flex-1 rounded-md border border-white/20 bg-white px-4 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20"
+                autoComplete="email"
+              />
+              <button
+                type="submit"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/30"
+              >
+                Get Started Free
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <CtaLink to="/register">
+              <CtaLink to="/register" onClick={() => trackClick("click_get_started", { location: "hero_cta" })}>
                 Get started
                 <ArrowRight className="h-4 w-4" />
               </CtaLink>
-              <CtaLink to="/login" variant="secondary">Log in</CtaLink>
-              <CtaLink to="/register" variant="secondary">Upgrade / Premium</CtaLink>
+              <CtaLink to="/login" variant="secondary" onClick={() => trackClick("click_login", { location: "hero_cta" })}>Log in</CtaLink>
+              <CtaLink to="/register" variant="secondary" onClick={() => trackClick("click_upgrade", { location: "hero_cta" })}>Upgrade / Premium</CtaLink>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-white px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <Users className="h-6 w-6 text-emerald-700" />
+            <h2 className="mt-3 text-lg font-bold text-slate-950">Built for individuals and teams</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Start with private notes, then bring your office into shared workspaces when collaboration grows.
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <Shield className="h-6 w-6 text-emerald-700" />
+            <h2 className="mt-3 text-lg font-bold text-slate-950">Secure, fast, and scalable</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Protected routes, role-aware admin tools, scoped workspaces, and production-ready deployment guidance.
+            </p>
           </div>
         </div>
       </section>
@@ -294,6 +384,14 @@ export default function LandingPage() {
                 </span>
               ))}
             </div>
+            <Link
+              to="/register"
+              onClick={() => trackClick("click_register", { location: "try_meeting_notes" })}
+              className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-indigo-700 px-4 text-sm font-semibold text-white transition hover:bg-indigo-800"
+            >
+              Try Meeting Notes
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </article>
           <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
             <Bot className="h-8 w-8 text-emerald-700" />
@@ -301,6 +399,14 @@ export default function LandingPage() {
             <p className="mt-3 text-sm leading-6 text-slate-600">
               Summarize notes, suggest tags, generate insights, and turn meetings into structured next steps.
             </p>
+            <Link
+              to="/register"
+              onClick={() => trackClick("click_register", { location: "try_ai_tools" })}
+              className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            >
+              Try AI Tools
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </article>
         </div>
       </section>
@@ -344,10 +450,15 @@ export default function LandingPage() {
             {pricingPlans.map((plan) => (
               <article
                 key={plan.name}
-                className={`rounded-lg border p-6 shadow-sm ${
-                  plan.featured ? "border-emerald-300 bg-emerald-50/50" : "border-slate-200 bg-white"
+                className={`relative rounded-lg border p-6 shadow-sm ${
+                  plan.featured ? "border-emerald-400 bg-emerald-50/70 shadow-emerald-950/10" : "border-slate-200 bg-white"
                 }`}
               >
+                {plan.featured ? (
+                  <span className="absolute right-4 top-4 rounded-md bg-emerald-700 px-3 py-1 text-xs font-semibold text-white">
+                    Most Popular
+                  </span>
+                ) : null}
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-xl font-bold text-slate-950">{plan.name}</h3>
@@ -366,6 +477,12 @@ export default function LandingPage() {
                 </ul>
                 <Link
                   to={plan.to}
+                  onClick={() =>
+                    trackClick(plan.featured ? "click_upgrade" : "click_get_started", {
+                      location: "pricing",
+                      plan: plan.name
+                    })
+                  }
                   className={`mt-6 inline-flex h-10 w-full items-center justify-center rounded-md px-4 text-sm font-semibold transition ${
                     plan.featured
                       ? "bg-emerald-700 text-white hover:bg-emerald-800"
@@ -410,8 +527,8 @@ export default function LandingPage() {
             Start free, explore the guide, and upgrade when your team is ready for more AI-powered knowledge work.
           </p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <CtaLink to="/register">Get started</CtaLink>
-            <CtaLink to="/login" variant="secondary">Log in</CtaLink>
+            <CtaLink to="/register" onClick={() => trackClick("click_get_started", { location: "final_cta" })}>Get started</CtaLink>
+            <CtaLink to="/login" variant="secondary" onClick={() => trackClick("click_login", { location: "final_cta" })}>Log in</CtaLink>
             <CtaLink to="/guide" variant="secondary">Read the Guide</CtaLink>
           </div>
         </div>

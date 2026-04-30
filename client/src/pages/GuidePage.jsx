@@ -10,8 +10,10 @@ import {
   Shield,
   Sparkles
 } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
+import { trackEvent } from "../api/analytics.js";
 import { useI18n } from "../context/I18nContext.jsx";
 
 const quickStartKeys = [
@@ -198,6 +200,10 @@ function SectionCard({ section }) {
 
 export default function GuidePage() {
   const { t } = useI18n();
+
+  useEffect(() => {
+    trackEvent("guide_view");
+  }, []);
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">

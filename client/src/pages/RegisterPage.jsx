@@ -2,17 +2,24 @@ import { UserPlus } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
+import { trackEvent } from "../api/analytics.js";
 import { AuthLayout } from "../components/AuthLayout.jsx";
 import { Button } from "../components/Button.jsx";
 import { FormField } from "../components/FormField.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
+const LANDING_EMAIL_KEY = "notes_api_landing_email";
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { isAuthenticated, register } = useAuth();
   const { t } = useI18n();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState(() => ({
+    name: "",
+    email: localStorage.getItem(LANDING_EMAIL_KEY) || "",
+    password: ""
+  }));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +35,7 @@ export default function RegisterPage() {
     event.preventDefault();
     setError("");
     setLoading(true);
+    trackEvent("click_register", { location: "register_form" });
 
     try {
       await register(form);

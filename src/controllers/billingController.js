@@ -3,6 +3,7 @@ import Stripe from "stripe";
 
 import { env } from "../config/env.js";
 import { AI_USAGE_LIMITS, User } from "../models/User.js";
+import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const getClientOrigin = () => env.CLIENT_ORIGIN.split(",")[0];
@@ -126,6 +127,11 @@ export const handleStripeWebhook = async (req, res) => {
         plan: "premium",
         aiUsageLimit: AI_USAGE_LIMITS.premium,
         ...(stripeCustomerId ? { stripeCustomerId } : {})
+      });
+      await createNotification({
+        userId,
+        type: "subscription_upgrade",
+        message: "Your subscription was upgraded to Premium."
       });
     }
   }

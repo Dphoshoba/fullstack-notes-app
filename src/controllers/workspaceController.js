@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import { Organization } from "../models/Organization.js";
 import { User } from "../models/User.js";
 import { WorkspaceInvite } from "../models/WorkspaceInvite.js";
+import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const canManageMembers = (user) => ["owner", "manager"].includes(user.workspaceRole);
@@ -198,6 +199,14 @@ export const acceptWorkspaceInvite = async (req, res) => {
 
   invite.status = "accepted";
   await invite.save();
+
+  if (invite.invitedBy.toString() !== req.user.id) {
+    await createNotification({
+      userId: invite.invitedBy,
+      type: "workspace_invite_accepted",
+      message: `${req.user.name} accepted your workspace invite for ${invite.workspaceId.name}.`
+    });
+  }
 
   return res.status(StatusCodes.OK).json({
     success: true,

@@ -12,6 +12,32 @@ npm run dev
 
 The API defaults to `http://localhost:4000`.
 
+## Mobile App With Capacitor
+
+The React frontend now has a Capacitor Android wrapper in `client/android`.
+
+From `client/`:
+
+```bash
+npm install
+npm run mobile:sync
+npm run android:open
+```
+
+To build a debug APK from the command line:
+
+```bash
+npm run android:build
+```
+
+Android build prerequisites:
+
+- Install a JDK and set `JAVA_HOME`.
+- Install Android Studio or the Android SDK.
+- For an Android emulator, API calls default to `http://10.0.2.2:4000`.
+- For a physical Android device, set `VITE_API_BASE_URL` to your computer's LAN address, for example `http://192.168.1.25:4000`.
+- Add the mobile origin your WebView uses to `CLIENT_ORIGIN` when needed, for example `http://localhost:5173,capacitor://localhost`.
+
 ## Environment
 
 Set these values in `.env`:
@@ -29,6 +55,8 @@ COOKIE_SECURE=false
 STRIPE_SECRET_KEY=sk_test_replace_me
 STRIPE_PRICE_ID=price_replace_me
 STRIPE_WEBHOOK_SECRET=whsec_replace_me
+OPENAI_API_KEY=sk_replace_me
+OPENAI_MODEL=gpt-5.2
 ```
 
 ## Auth Flow
@@ -166,6 +194,22 @@ POST /api/billing/webhook
 
 On successful checkout completion, the webhook updates the matching user to `plan: "premium"`.
 
+### AI Tools
+
+AI Tools use the OpenAI API from the backend. The frontend never receives the OpenAI API key.
+
+Backend environment variables:
+
+```bash
+OPENAI_API_KEY=sk_...
+OPENAI_MODEL=gpt-5.2
+```
+
+- `OPENAI_API_KEY` is required for real AI responses.
+- `OPENAI_MODEL` is optional and defaults to `gpt-5.2`.
+- Free and Premium AI usage limits still apply before AI routes call OpenAI.
+- If OpenAI is not configured or an AI request fails, the API returns a safe error message instead of crashing the app.
+
 ### Analytics
 
 The app includes lightweight first-party analytics stored in MongoDB. It does not use paid analytics services.
@@ -289,6 +333,8 @@ Backend environment variables:
 - `REFRESH_TOKEN_EXPIRES_IN=7d` or your chosen refresh-token lifetime.
 - `CLIENT_ORIGIN` is your deployed frontend URL, for example `https://your-app.netlify.app`.
 - `COOKIE_SECURE=true` in production.
+- `OPENAI_API_KEY` is set for real AI-powered summaries, tag suggestions, meeting minutes, and action item extraction.
+- `OPENAI_MODEL` is set if you want to override the default AI model.
 
 Frontend environment variables:
 

@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { Comment } from "../models/Comment.js";
 import { Note } from "../models/Note.js";
+import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const canManageWorkspace = (user) => ["owner", "manager"].includes(user.workspaceRole);
@@ -65,6 +66,14 @@ export const createComment = async (req, res) => {
     text: req.body.text
   });
   await comment.populate("userId", "name email");
+
+  if (note.owner.toString() !== req.user.id) {
+    await createNotification({
+      userId: note.owner,
+      type: "new_comment",
+      message: `${req.user.name} commented on "${note.title}".`
+    });
+  }
 
   return res.status(StatusCodes.CREATED).json({
     success: true,

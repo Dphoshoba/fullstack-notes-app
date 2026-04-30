@@ -16,6 +16,7 @@ import billingRoutes, { billingWebhookRouter } from "./routes/billingRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import workspaceRoutes from "./routes/workspaceRoutes.js";
 
@@ -53,6 +54,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/billing", billingLimiter, billingRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/notes", noteRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 

@@ -270,10 +270,12 @@ export const translations = {
     invitedEmail: "Invited email",
     loginToAcceptInvite: "Log in with the invited email address to accept this workspace invite.",
     manageBilling: "Manage billing",
+    markAsRead: "Mark as read",
     meetingDate: "Meeting date",
     meetingNote: "Meeting",
     meetingSummary: "Meeting summary",
     loadingNotes: "Loading notes",
+    loadingNotifications: "Loading notifications...",
     loadingUsers: "Loading users",
     logIn: "Log in",
     logInSubtitle: "Use your API account to access protected notes.",
@@ -287,9 +289,11 @@ export const translations = {
     noCommentsYet: "No comments yet",
     noAttachmentsYet: "No attachments yet",
     noActionItemsYet: "No action items yet",
+    noNotifications: "No notifications yet.",
     noteRequiredFields: "Title, body, and category are required.",
     noteType: "Note type",
     noteTypeFilter: "Note type filter",
+    notifications: "Notifications",
     notesCount: "{{count}} notes",
     notesCreatedThisWeek: "Created this week",
     notesLoadError: "Notes could not be loaded. {{message}}",
@@ -1328,7 +1332,11 @@ Object.assign(translations.fr, {
   noteTypeFilter: "Filtre par type de note",
   meeting: "Reunion",
   meetingNotes: "Notes de reunion",
-  standardNotes: "Notes standard"
+  standardNotes: "Notes standard",
+  notifications: "Notifications",
+  loadingNotifications: "Chargement des notifications...",
+  noNotifications: "Aucune notification pour le moment.",
+  markAsRead: "Marquer comme lu"
 });
 
 Object.assign(translations.es, {
@@ -1350,7 +1358,11 @@ Object.assign(translations.es, {
   noteTypeFilter: "Filtro de tipo de nota",
   meeting: "Reunion",
   meetingNotes: "Notas de reunion",
-  standardNotes: "Notas estandar"
+  standardNotes: "Notas estandar",
+  notifications: "Notificaciones",
+  loadingNotifications: "Cargando notificaciones...",
+  noNotifications: "No hay notificaciones todavia.",
+  markAsRead: "Marcar como leida"
 });
 
 Object.assign(translations.pt, {
@@ -1372,7 +1384,11 @@ Object.assign(translations.pt, {
   noteTypeFilter: "Filtro de tipo de nota",
   meeting: "Reuniao",
   meetingNotes: "Notas de reuniao",
-  standardNotes: "Notas padrao"
+  standardNotes: "Notas padrao",
+  notifications: "Notificacoes",
+  loadingNotifications: "Carregando notificacoes...",
+  noNotifications: "Ainda sem notificacoes.",
+  markAsRead: "Marcar como lida"
 });
 
 Object.assign(translations.ar, {
@@ -1416,5 +1432,9 @@ Object.assign(translations.kri, {
   noteTypeFilter: "Note type filter",
   meeting: "Meeting",
   meetingNotes: "Meeting notes",
-  standardNotes: "Standard notes"
+  standardNotes: "Standard notes",
+  notifications: "Notifications",
+  loadingNotifications: "Loading notifications...",
+  noNotifications: "No notifications yet.",
+  markAsRead: "Mark as read"
 });

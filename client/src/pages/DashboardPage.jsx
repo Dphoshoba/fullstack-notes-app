@@ -2,6 +2,7 @@ import {
   AlertCircle,
   AlertTriangle,
   BarChart3,
+  Bell,
   Bot,
   CalendarDays,
   CheckCircle2,
@@ -42,6 +43,7 @@ import {
 import { fetchAnalyticsSummary, trackEvent } from "../api/analytics.js";
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
 import { createComment, createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
+import { fetchNotifications, markNotificationRead } from "../api/notifications.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
 import { Button } from "../components/Button.jsx";
@@ -344,6 +346,11 @@ export default function DashboardPage() {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+  const [markingNotificationId, setMarkingNotificationId] = useState("");
   const [showGuideOnboarding, setShowGuideOnboarding] = useState(
     () => localStorage.getItem(GUIDE_ONBOARDING_KEY) !== "true"
   );
@@ -363,6 +370,7 @@ export default function DashboardPage() {
   const pinnedProgress = loadedNotesCount ? Math.round((pinnedNotesCount / loadedNotesCount) * 100) : 0;
   const starredProgress = loadedNotesCount ? Math.round((starredNotesCount / loadedNotesCount) * 100) : 0;
   const totalPages = Math.max(pagination.pages, 1);
+  const unreadNotificationsCount = notifications.filter((notification) => !notification.read).length;
   const categoryOptions = Array.from(
     new Set([...DEFAULT_CATEGORIES, categoryFilter, ...notes.map((note) => note.category || "General")])
   )
@@ -524,6 +532,42 @@ export default function DashboardPage() {
   const openGuideFromOnboarding = () => {
     rememberGuideOnboarding();
     navigate("/guide");
+  };
+
+  const loadNotifications = useCallback(async () => {
+    setNotificationsError("");
+    setNotificationsLoading(true);
+
+    try {
+      const nextNotifications = await fetchNotifications();
+      setNotifications(nextNotifications);
+    } catch (err) {
+      setNotificationsError(err.message);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const handleMarkNotificationRead = async (notificationId) => {
+    setMarkingNotificationId(notificationId);
+    setNotificationsError("");
+
+    try {
+      const updatedNotification = await markNotificationRead(notificationId);
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === updatedNotification.id ? updatedNotification : notification
+        )
+      );
+    } catch (err) {
+      setNotificationsError(err.message);
+    } finally {
+      setMarkingNotificationId("");
+    }
   };
 
   useEffect(() => {
@@ -1047,8 +1091,8 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold text-emerald-700">Notes API</p>
             <h1 className="text-2xl font-bold text-slate-950">{t("dashboard")}</h1>
           </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
-            <label className="flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0">
+            <label className="flex h-10 min-w-28 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
               <span className="sr-only">{t("language")}</span>
               <select
                 value={language}
@@ -1063,7 +1107,7 @@ export default function DashboardPage() {
                 ))}
               </select>
             </label>
-            <span className="col-span-2 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 sm:col-span-1">
+            <span className="max-w-64 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
               {user?.email}
             </span>
             <Button
@@ -1073,6 +1117,112 @@ export default function DashboardPage() {
               <RefreshCw className="h-4 w-4" />
               {t("refresh")}
             </Button>
+            <div className="relative">
+              <Button
+                onClick={() => {
+                  setNotificationsOpen((current) => !current);
+                  if (!notificationsOpen) {
+                    loadNotifications();
+                  }
+                }}
+                className="h-10 w-full bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
+                aria-expanded={notificationsOpen}
+                aria-haspopup="menu"
+                aria-label={t("notifications")}
+                title={t("notifications")}
+              >
+                <span className="relative inline-flex">
+                  <Bell className="h-4 w-4" />
+                  {unreadNotificationsCount ? (
+                    <span className="absolute -right-2 -top-2 inline-flex min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-4 text-white">
+                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                    </span>
+                  ) : null}
+                </span>
+                {t("notifications")}
+              </Button>
+              {notificationsOpen ? (
+                <div
+                  className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  role="menu"
+                  aria-label={t("notifications")}
+                >
+                  <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("notifications")}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={loadNotifications}
+                      disabled={notificationsLoading}
+                      className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${notificationsLoading ? "animate-spin" : ""}`} />
+                      {t("refresh")}
+                    </button>
+                  </div>
+                  {notificationsLoading ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-slate-600">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t("loadingNotifications")}
+                    </div>
+                  ) : null}
+                  {notificationsError ? (
+                    <div className="border-b border-red-100 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                      {notificationsError}
+                    </div>
+                  ) : null}
+                  {!notificationsLoading && !notifications.length ? (
+                    <div className="px-4 py-8 text-center text-sm text-slate-500">
+                      {t("noNotifications")}
+                    </div>
+                  ) : null}
+                  {!notificationsLoading && notifications.length ? (
+                    <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                      {notifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className={`px-3 py-3 ${notification.read ? "bg-white" : "bg-emerald-50/60"}`}
+                          role="menuitem"
+                        >
+                          <div className="flex items-start gap-2">
+                            <span
+                              className={`mt-1 h-2 w-2 rounded-full ${
+                                notification.read ? "bg-slate-300" : "bg-emerald-600"
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium leading-5 text-slate-800">
+                                {notification.message}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {new Date(notification.createdAt).toLocaleString()}
+                              </p>
+                              {!notification.read ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkNotificationRead(notification.id)}
+                                  disabled={markingNotificationId === notification.id}
+                                  className="mt-2 inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                                >
+                                  {markingNotificationId === notification.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                  )}
+                                  {t("markAsRead")}
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
             <div className="relative">
               <Button
                 onClick={() => setExportOpen((current) => !current)}

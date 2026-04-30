@@ -46,5 +46,7 @@ export const env = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
   STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID || "",
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
+  OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-5.2",
   COOKIE_SECURE: process.env.COOKIE_SECURE === "true"
 };

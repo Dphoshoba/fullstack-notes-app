@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Notes Workspace</string>
+    <string name="title_activity_main">Notes Workspace</string>
+    <string name="package_name">com.notesworkspace.app</string>
+    <string name="custom_url_scheme">com.notesworkspace.app</string>
+</resources>

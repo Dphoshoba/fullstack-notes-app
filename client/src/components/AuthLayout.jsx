@@ -6,7 +6,7 @@ export function AuthLayout({ title, subtitle, footer, children }) {
   const { t } = useI18n();
 
   return (
-    <main className="min-h-screen bg-stone-50 text-slate-950">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
       <div className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="flex flex-col justify-between border-b border-slate-200 bg-white px-6 py-8 lg:border-b-0 lg:border-r lg:px-10">
           <Link to="/dashboard" className="text-sm font-bold tracking-wide text-slate-950">

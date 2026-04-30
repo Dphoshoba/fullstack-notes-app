@@ -4,7 +4,7 @@ export function Button({ children, className = "", loading = false, type = "butt
   return (
     <button
       type={type}
-      className={`inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+      className={`inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       {...props}
       disabled={loading || props.disabled}
     >

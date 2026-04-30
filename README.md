@@ -229,6 +229,27 @@ npm run dev:full
 
 Use this section before deploying the app outside your local machine.
 
+### Launch Checklist
+
+Before launch, walk through this checklist from top to bottom:
+
+- Run local backend lint from the project root: `npm run lint`.
+- Run local client lint from `client/`: `npm run lint`.
+- Run a production client build from `client/`: `npm run build`.
+- Test core user flows locally: register, login, logout, create note, edit note, delete note, search, filters, pin/star, comments, attachments, meeting notes, AI tools, export, profile, settings, workspace, admin, upgrade, and billing portal.
+- Confirm Render has all backend production environment variables.
+- Confirm Netlify has `VITE_API_BASE_URL` set to the deployed Render backend URL.
+- Confirm deployment URLs are final before setting CORS.
+- Set backend `CLIENT_ORIGIN` to the exact Netlify frontend origin.
+- Set `COOKIE_SECURE=true` for production HTTPS.
+- Confirm MongoDB Atlas Network Access allows the Render service to connect.
+- Confirm Stripe live keys are used only when you are ready for real payments.
+- Configure the Stripe webhook endpoint as `https://your-api.onrender.com/api/billing/webhook`.
+- Store the matching Stripe webhook signing secret in `STRIPE_WEBHOOK_SECRET`.
+- Use strong production JWT secrets and never reuse example values.
+- Never commit real `.env` files or secrets.
+- Create a real admin or superadmin account for production and remove demo seed users.
+
 ### Environment Validation Checklist
 
 Backend environment variables:

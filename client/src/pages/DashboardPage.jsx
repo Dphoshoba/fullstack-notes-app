@@ -1007,14 +1007,14 @@ export default function DashboardPage() {
   }, [adminOpen, isAdmin, loadAdminUsers]);
 
   return (
-    <main className="min-h-screen bg-stone-50 text-slate-950">
+    <main className="min-h-screen bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-emerald-700">Notes API</p>
             <h1 className="text-2xl font-bold text-slate-950">{t("dashboard")}</h1>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end [&>*]:w-full sm:[&>*]:w-auto">
             <label className="flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
               <span className="sr-only">{t("language")}</span>
               <select
@@ -1030,7 +1030,7 @@ export default function DashboardPage() {
                 ))}
               </select>
             </label>
-            <span className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+            <span className="col-span-2 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 sm:col-span-1">
               {user?.email}
             </span>
             <Button
@@ -1044,7 +1044,7 @@ export default function DashboardPage() {
               <Button
                 onClick={() => setExportOpen((current) => !current)}
                 disabled={loading}
-                className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
+                className="h-10 w-full bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
                 aria-expanded={exportOpen}
                 aria-haspopup="menu"
               >
@@ -1394,7 +1394,7 @@ export default function DashboardPage() {
                 ) : null}
               </div>
             </div>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <button
                 type="button"
                 onClick={() => runAiAction("summary")}
@@ -1679,14 +1679,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
               <p className="text-sm text-slate-500">
                 {t("shownCount", { shown: notes.length, total: pagination.total })}
               </p>
             </div>
-            <label className="relative w-full sm:max-w-xs">
+            <label className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
@@ -1700,7 +1700,7 @@ export default function DashboardPage() {
                 aria-label={t("searchNotes")}
               />
             </label>
-            <label className="w-full sm:max-w-xs">
+            <label className="w-full">
               <span className="sr-only">{t("scopeFilter")}</span>
               <select
                 value={scopeFilter}
@@ -1716,7 +1716,7 @@ export default function DashboardPage() {
                 <option value="workspace">{t("workspaceNotes")}</option>
               </select>
             </label>
-            <label className="w-full sm:max-w-xs">
+            <label className="w-full">
               <span className="sr-only">{t("noteTypeFilter")}</span>
               <select
                 value={noteTypeFilter}
@@ -1732,7 +1732,7 @@ export default function DashboardPage() {
                 <option value="meeting">{t("meetingNotes")}</option>
               </select>
             </label>
-            <label className="w-full sm:max-w-xs">
+            <label className="w-full">
               <span className="sr-only">{t("categoryFilter")}</span>
               <select
                 value={categoryFilter}
@@ -1751,7 +1751,7 @@ export default function DashboardPage() {
                 ))}
               </select>
             </label>
-            <label className="w-full sm:max-w-xs">
+            <label className="w-full">
               <span className="sr-only">{t("favoritesFilter")}</span>
               <select
                 value={favoritesFilter}
@@ -2021,7 +2021,7 @@ export default function DashboardPage() {
       {adminOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
           <section
-            className="w-full max-w-3xl rounded-lg border border-slate-200 bg-white p-5 shadow-soft"
+            className="max-h-[calc(100vh-3rem)] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-soft"
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-title"

@@ -374,6 +374,11 @@ export default function SettingsPage() {
                               </span>
                             </div>
                           ))}
+                          {!members.length ? (
+                            <div className="px-4 py-8 text-center text-sm text-slate-500">
+                              {t("noUsersFound")}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </>

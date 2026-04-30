@@ -1,14 +1,16 @@
-import OpenAI from "openai";
 import { StatusCodes } from "http-status-codes";
+import OpenAI from "openai";
 
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
+
+const AI_UNAVAILABLE_MESSAGE = "AI service unavailable. Please try again.";
 
 let client;
 
 const getClient = () => {
   if (!env.OPENAI_API_KEY) {
-    throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, "AI is not configured. Add OPENAI_API_KEY to enable AI tools.");
+    throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, AI_UNAVAILABLE_MESSAGE);
   }
 
   if (!client) {
@@ -20,76 +22,90 @@ const getClient = () => {
 
 const truncateInput = (value, maxLength = 12000) => String(value || "").slice(0, maxLength);
 
-const runTextPrompt = async ({ instructions, input, maxOutputTokens = 700 }) => {
+const cleanStringArray = (items, maxItems) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean)
+    .slice(0, maxItems);
+
+const parseJson = (value) => {
   try {
-    const response = await getClient().responses.create({
-      model: env.OPENAI_MODEL,
-      instructions,
-      input: truncateInput(input),
-      max_output_tokens: maxOutputTokens,
-      text: {
-        verbosity: "low"
-      }
-    });
-
-    return response.output_text?.trim() || "";
-  } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-
-    throw new ApiError(StatusCodes.BAD_GATEWAY, "AI request failed. Please try again.");
+    return JSON.parse(value || "{}");
+  } catch {
+    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
   }
 };
 
-const runJsonPrompt = async ({ instructions, input, name, schema, maxOutputTokens = 1200 }) => {
+const runTextPrompt = async ({ system, user, maxCompletionTokens = 700 }) => {
   try {
-    const response = await getClient().responses.create({
+    const response = await getClient().chat.completions.create({
       model: env.OPENAI_MODEL,
-      instructions,
-      input: truncateInput(input),
-      max_output_tokens: maxOutputTokens,
-      text: {
-        format: {
-          type: "json_schema",
-          name,
-          strict: true,
-          schema
-        },
-        verbosity: "low"
-      }
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: truncateInput(user) }
+      ],
+      max_completion_tokens: maxCompletionTokens
     });
 
-    return JSON.parse(response.output_text || "{}");
+    return response.choices?.[0]?.message?.content?.trim() || "";
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
 
-    throw new ApiError(StatusCodes.BAD_GATEWAY, "AI request failed. Please try again.");
+    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+  }
+};
+
+const runJsonPrompt = async ({ system, user, name, schema, maxCompletionTokens = 1200 }) => {
+  try {
+    const response = await getClient().chat.completions.create({
+      model: env.OPENAI_MODEL,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: truncateInput(user) }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name,
+          strict: true,
+          schema
+        }
+      },
+      max_completion_tokens: maxCompletionTokens
+    });
+
+    return parseJson(response.choices?.[0]?.message?.content);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
   }
 };
 
 export const summarizeNote = (noteText) =>
   runTextPrompt({
-    instructions: [
+    system: [
       "You summarize user notes for a productivity app.",
       "Return clean plain text only.",
       "Keep the summary concise, specific, and useful.",
       "Do not invent facts that are not present in the note."
     ].join(" "),
-    input: `Summarize this note in 2-4 short sentences:\n\n${noteText}`,
-    maxOutputTokens: 350
+    user: `Summarize this note in 2-4 short sentences:\n\n${noteText}`,
+    maxCompletionTokens: 350
   });
 
 export const suggestTags = async (noteText) => {
   const result = await runJsonPrompt({
-    instructions: [
+    system: [
       "You suggest tags for a notes app.",
-      "Return concise lowercase tags.",
-      "Do not include sensitive personal data as tags."
+      "Return 3 to 6 relevant lowercase tags.",
+      "Use short tags and do not include sensitive personal data."
     ].join(" "),
-    input: `Suggest up to 8 useful tags for this note:\n\n${noteText}`,
+    user: `Suggest 3 to 6 useful tags for this note:\n\n${noteText}`,
     name: "tag_suggestions",
     schema: {
       type: "object",
@@ -97,25 +113,28 @@ export const suggestTags = async (noteText) => {
       properties: {
         tags: {
           type: "array",
-          maxItems: 8,
+          minItems: 3,
+          maxItems: 6,
           items: { type: "string" }
         }
       },
       required: ["tags"]
-    }
+    },
+    maxCompletionTokens: 350
   });
 
-  return Array.isArray(result.tags) ? result.tags.map((tag) => String(tag).trim()).filter(Boolean) : [];
+  return cleanStringArray(result.tags, 6);
 };
 
 export const convertToMeetingMinutes = async (noteText) => {
   const result = await runJsonPrompt({
-    instructions: [
-      "You convert rough meeting notes into clean meeting minutes.",
-      "Return structured JSON only.",
-      "Preserve facts from the note and do not invent attendees, decisions, or due dates."
+    system: [
+      "You convert rough meeting notes into clear meeting minutes.",
+      "Return JSON only.",
+      "Preserve facts from the note and do not invent attendees, decisions, owners, or due dates.",
+      "The cleaned body must use these sections: Agenda, Discussion, Decisions, Action items, Next steps."
     ].join(" "),
-    input: `Convert this note into meeting minutes and structured meeting details:\n\n${noteText}`,
+    user: `Convert this note into structured meeting minutes:\n\n${noteText}`,
     name: "meeting_minutes",
     schema: {
       type: "object",
@@ -134,7 +153,7 @@ export const convertToMeetingMinutes = async (noteText) => {
               text: { type: "string" },
               owner: { type: "string" },
               dueDate: { type: "string" },
-              status: { type: "string", enum: ["open", "done"] }
+              status: { type: "string", enum: ["open"] }
             },
             required: ["text", "owner", "dueDate", "status"]
           }
@@ -142,27 +161,27 @@ export const convertToMeetingMinutes = async (noteText) => {
       },
       required: ["cleanedBody", "attendees", "agenda", "decisions", "actionItems"]
     },
-    maxOutputTokens: 1800
+    maxCompletionTokens: 1800
   });
 
   return {
     cleanedBody: result.cleanedBody || "",
-    attendees: Array.isArray(result.attendees) ? result.attendees : [],
+    attendees: cleanStringArray(result.attendees),
     agenda: result.agenda || "",
-    decisions: Array.isArray(result.decisions) ? result.decisions : [],
-    actionItems: Array.isArray(result.actionItems) ? result.actionItems : []
+    decisions: cleanStringArray(result.decisions),
+    actionItems: normalizeActionItems(result.actionItems)
   };
 };
 
 export const extractActionItems = async (noteText) => {
   const result = await runJsonPrompt({
-    instructions: [
+    system: [
       "You extract action items from meeting notes.",
       "Return JSON only.",
       "Use empty strings when owner or due date is not stated.",
-      "Use status open for all newly extracted tasks unless the note explicitly says done."
+      "Every returned task must have status open."
     ].join(" "),
-    input: `Extract action items from this note:\n\n${noteText}`,
+    user: `Extract action items from this note:\n\n${noteText}`,
     name: "meeting_action_items",
     schema: {
       type: "object",
@@ -177,7 +196,7 @@ export const extractActionItems = async (noteText) => {
               text: { type: "string" },
               owner: { type: "string" },
               dueDate: { type: "string" },
-              status: { type: "string", enum: ["open", "done"] }
+              status: { type: "string", enum: ["open"] }
             },
             required: ["text", "owner", "dueDate", "status"]
           }
@@ -187,17 +206,17 @@ export const extractActionItems = async (noteText) => {
     }
   });
 
-  return Array.isArray(result.actionItems) ? result.actionItems : [];
+  return normalizeActionItems(result.actionItems);
 };
 
 export const extractAttendeesAndDecisions = async (noteText) => {
   const result = await runJsonPrompt({
-    instructions: [
+    system: [
       "You extract attendees and decisions from meeting notes.",
       "Return JSON only.",
       "Do not infer names or decisions that are not present."
     ].join(" "),
-    input: `Extract attendees and decisions from this note:\n\n${noteText}`,
+    user: `Extract attendees and decisions from this note:\n\n${noteText}`,
     name: "meeting_attendees_decisions",
     schema: {
       type: "object",
@@ -211,19 +230,19 @@ export const extractAttendeesAndDecisions = async (noteText) => {
   });
 
   return {
-    attendees: Array.isArray(result.attendees) ? result.attendees : [],
-    decisions: Array.isArray(result.decisions) ? result.decisions : []
+    attendees: cleanStringArray(result.attendees),
+    decisions: cleanStringArray(result.decisions)
   };
 };
 
 export const generateSmartInsights = async (notesText) => {
   const result = await runJsonPrompt({
-    instructions: [
+    system: [
       "You generate brief productivity insights from a user's notes.",
       "Return JSON only.",
       "Do not include sensitive personal details."
     ].join(" "),
-    input: `Generate simple insights for these notes:\n\n${notesText}`,
+    user: `Generate simple insights for these notes:\n\n${notesText}`,
     name: "smart_insights",
     schema: {
       type: "object",
@@ -234,7 +253,7 @@ export const generateSmartInsights = async (notesText) => {
       },
       required: ["topCategory", "suggestedFocus"]
     },
-    maxOutputTokens: 500
+    maxCompletionTokens: 500
   });
 
   return {
@@ -242,3 +261,13 @@ export const generateSmartInsights = async (notesText) => {
     suggestedFocus: result.suggestedFocus || "Add more notes to unlock stronger patterns."
   };
 };
+
+const normalizeActionItems = (items) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      text: String(item?.text || "").trim(),
+      owner: String(item?.owner || "").trim(),
+      dueDate: String(item?.dueDate || "").trim(),
+      status: "open"
+    }))
+    .filter((item) => item.text);

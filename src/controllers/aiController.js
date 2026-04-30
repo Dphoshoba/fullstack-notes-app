@@ -68,6 +68,7 @@ export const summarizeNote = async (req, res) => {
     data: {
       type: "summary",
       provider: "openai",
+      source: "openai",
       note: notePayload(note),
       summary,
       replaceableWithAi: true
@@ -87,6 +88,7 @@ export const suggestTags = async (req, res) => {
     data: {
       type: "tag-suggestions",
       provider: "openai",
+      source: "openai",
       note: notePayload(note),
       suggestedTags,
       replaceableWithAi: true
@@ -103,6 +105,7 @@ export const convertToMeetingMinutes = async (req, res) => {
     data: {
       type: "meeting-minutes",
       provider: "openai",
+      source: "openai",
       note: notePayload(note),
       cleanedBody: result.cleanedBody,
       meetingMeta: {
@@ -128,6 +131,7 @@ export const extractActionItems = async (req, res) => {
     data: {
       type: "meeting-action-items",
       provider: "openai",
+      source: "openai",
       note: notePayload(note),
       cleanedBody: actionItemsToText(actionItems),
       meetingMeta: {
@@ -148,6 +152,7 @@ export const extractAttendeesAndDecisions = async (req, res) => {
     data: {
       type: "meeting-attendees-decisions",
       provider: "openai",
+      source: "openai",
       note: notePayload(note),
       cleanedBody: [
         "Attendees:",
@@ -189,6 +194,7 @@ export const smartInsights = async (req, res) => {
     data: {
       type: "smart-insights",
       provider: "openai",
+      source: "openai",
       insights: {
         totalNotes: notes.length,
         topCategory: aiInsights.topCategory || localTopCategory,

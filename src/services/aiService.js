@@ -5,16 +5,33 @@ import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const AI_UNAVAILABLE_MESSAGE = "AI service unavailable. Please try again.";
+const EMPTY_MEETING_RESULT = {
+  cleanedBody: "",
+  attendees: [],
+  agenda: "",
+  decisions: [],
+  actionItems: []
+};
+const EMPTY_ATTENDEES_DECISIONS = {
+  attendees: [],
+  decisions: []
+};
+const EMPTY_INSIGHTS = {
+  topCategory: "General",
+  suggestedFocus: "Review your recent notes to identify the next useful priority."
+};
 
 let client;
 
 const getClient = () => {
-  if (!env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
     throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, AI_UNAVAILABLE_MESSAGE);
   }
 
   if (!client) {
-    client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+    client = new OpenAI({ apiKey });
   }
 
   return client;
@@ -28,11 +45,11 @@ const cleanStringArray = (items, maxItems) =>
     .filter(Boolean)
     .slice(0, maxItems);
 
-const parseJson = (value) => {
+const parseJson = (value, fallback) => {
   try {
-    return JSON.parse(value || "{}");
+    return JSON.parse(value || JSON.stringify(fallback));
   } catch {
-    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+    return fallback;
   }
 };
 
@@ -57,7 +74,7 @@ const runTextPrompt = async ({ system, user, maxCompletionTokens = 700 }) => {
   }
 };
 
-const runJsonPrompt = async ({ system, user, name, schema, maxCompletionTokens = 1200 }) => {
+const runJsonPrompt = async ({ system, user, name, schema, fallback, maxCompletionTokens = 1200 }) => {
   try {
     const response = await getClient().chat.completions.create({
       model: env.OPENAI_MODEL,
@@ -76,7 +93,7 @@ const runJsonPrompt = async ({ system, user, name, schema, maxCompletionTokens =
       max_completion_tokens: maxCompletionTokens
     });
 
-    return parseJson(response.choices?.[0]?.message?.content);
+    return parseJson(response.choices?.[0]?.message?.content, fallback);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
@@ -120,6 +137,7 @@ export const suggestTags = async (noteText) => {
       },
       required: ["tags"]
     },
+    fallback: { tags: [] },
     maxCompletionTokens: 350
   });
 
@@ -161,6 +179,7 @@ export const convertToMeetingMinutes = async (noteText) => {
       },
       required: ["cleanedBody", "attendees", "agenda", "decisions", "actionItems"]
     },
+    fallback: EMPTY_MEETING_RESULT,
     maxCompletionTokens: 1800
   });
 
@@ -203,7 +222,8 @@ export const extractActionItems = async (noteText) => {
         }
       },
       required: ["actionItems"]
-    }
+    },
+    fallback: { actionItems: [] }
   });
 
   return normalizeActionItems(result.actionItems);
@@ -226,7 +246,8 @@ export const extractAttendeesAndDecisions = async (noteText) => {
         decisions: { type: "array", items: { type: "string" } }
       },
       required: ["attendees", "decisions"]
-    }
+    },
+    fallback: EMPTY_ATTENDEES_DECISIONS
   });
 
   return {
@@ -253,12 +274,13 @@ export const generateSmartInsights = async (notesText) => {
       },
       required: ["topCategory", "suggestedFocus"]
     },
+    fallback: EMPTY_INSIGHTS,
     maxCompletionTokens: 500
   });
 
   return {
     topCategory: result.topCategory || "General",
-    suggestedFocus: result.suggestedFocus || "Add more notes to unlock stronger patterns."
+    suggestedFocus: result.suggestedFocus || EMPTY_INSIGHTS.suggestedFocus
   };
 };
 

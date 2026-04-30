@@ -405,7 +405,7 @@ export const translations = {
   },
   fr: {
     account: "Compte",
-    aiPlaceholderNotice: "Résultat local temporaire. Prêt à être remplacé plus tard par un vrai fournisseur IA.",
+    aiPlaceholderNotice: "Propulsé par OpenAI via le service IA du backend.",
     aiRequestError: "L'outil IA a échoué. {{message}}",
     aiResult: "Résultat IA",
     aiResultReady: "Le résultat IA est prêt.",
@@ -541,7 +541,7 @@ export const translations = {
   },
   es: {
     account: "Cuenta",
-    aiPlaceholderNotice: "Resultado local provisional. Listo para sustituirse luego por un proveedor real de IA.",
+    aiPlaceholderNotice: "Con tecnología de OpenAI mediante el servicio de IA del backend.",
     aiRequestError: "La herramienta de IA falló. {{message}}",
     aiResult: "Resultado de IA",
     aiResultReady: "El resultado de IA está listo.",
@@ -678,7 +678,7 @@ export const translations = {
   },
   pt: {
     account: "Conta",
-    aiPlaceholderNotice: "Resultado local temporário. Pronto para substituir por um provedor real de IA depois.",
+    aiPlaceholderNotice: "Com tecnologia OpenAI pelo serviço de IA do backend.",
     aiRequestError: "A ferramenta de IA falhou. {{message}}",
     aiResult: "Resultado da IA",
     aiResultReady: "O resultado da IA está pronto.",
@@ -814,7 +814,7 @@ export const translations = {
   },
   ar: {
     account: "الحساب",
-    aiPlaceholderNotice: "نتيجة محلية مؤقتة. جاهزة للاستبدال لاحقا بمزود ذكاء اصطناعي حقيقي.",
+    aiPlaceholderNotice: "مدعوم من OpenAI عبر خدمة الذكاء الاصطناعي في الخلفية.",
     aiRequestError: "فشلت أداة الذكاء الاصطناعي. {{message}}",
     aiResult: "نتيجة الذكاء الاصطناعي",
     aiResultReady: "نتيجة الذكاء الاصطناعي جاهزة.",

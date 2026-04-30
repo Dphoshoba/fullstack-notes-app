@@ -364,13 +364,19 @@ If login works but refresh/logout cookies do not behave correctly, check:
 
 ### Security Checklist
 
-- Use strong, unique values for `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET`.
-- Never commit `.env` files to Git.
-- Keep `COOKIE_SECURE=true` in production.
-- Keep refresh tokens in HTTP-only cookies.
-- Keep access tokens short-lived.
-- Restrict MongoDB Atlas network access as much as your host allows.
-- Use a database user with only the permissions the app needs.
-- Store all production secrets in Render and Netlify environment settings.
-- Rotate secrets if they are exposed.
+- Confirm `.env` is ignored by Git before adding real secrets. This repo ignores `.env` by default.
+- Never commit secrets, API keys, JWT secrets, database passwords, or Stripe keys.
+- Use strong, unique values for `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET`; production secrets should be at least 32 characters and must not use the example values.
+- Keep `ACCESS_TOKEN_EXPIRES_IN` short, such as `15m`.
+- Keep refresh tokens in HTTP-only cookies and set `COOKIE_SECURE=true` in production.
+- Set `CLIENT_ORIGIN` to the exact deployed frontend origin. Do not leave broad or wildcard CORS origins in production.
+- Set `STRIPE_WEBHOOK_SECRET` and verify Stripe webhook signatures before trusting billing events.
+- Keep `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, and `STRIPE_WEBHOOK_SECRET` only in backend environment settings. The frontend must never receive Stripe secret keys.
+- Do not trust the frontend for plan changes. Premium status should change only from verified Stripe webhooks.
+- Restrict MongoDB Atlas Network Access as much as your host allows.
+- Use a MongoDB database user with only the permissions the app needs.
+- Keep file uploads limited to approved types: PDF, JPG, JPEG, PNG, WEBP, DOC, DOCX, TXT, and MD.
+- Keep upload size limits enabled and review the limit before accepting larger files.
+- Store production secrets in Render and Netlify environment settings, not in source files.
+- Rotate secrets immediately if they are exposed.
 - Do not use demo seed accounts in a real production database.

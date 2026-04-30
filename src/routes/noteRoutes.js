@@ -11,6 +11,7 @@ import { createComment, listComments } from "../controllers/commentController.js
 import { createAttachment, listAttachments } from "../controllers/attachmentController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { uploadLimiter } from "../middleware/rateLimiters.js";
 import { validate } from "../middleware/validate.js";
 import {
   createNoteSchema,
@@ -34,6 +35,7 @@ router.get("/:noteId/attachments", validate(noteAttachmentsSchema), asyncHandler
 router.post(
   "/:noteId/attachments",
   validate(noteAttachmentsSchema),
+  uploadLimiter,
   uploadAttachment.single("file"),
   asyncHandler(createAttachment)
 );

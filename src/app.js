@@ -2,11 +2,11 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
+import { authLimiter, billingLimiter, globalLimiter, uploadLimiter } from "./middleware/rateLimiters.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import attachmentRoutes from "./routes/attachmentRoutes.js";
@@ -42,24 +42,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(requestLogger);
 
-app.use(
-  rateLimit({
-    windowMs: 10 * 60 * 1000,
-    limit: 1000,
-    message: {
-      success: false,
-      message: "Too many requests. Please wait a moment and try again."
-    },
-    standardHeaders: "draft-7",
-    legacyHeaders: false
-  })
-);
+app.use(globalLimiter);
 
 app.use("/api/health", healthRoutes);
 app.use("/api/ai", aiRoutes);
-app.use("/api/attachments", attachmentRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/billing", billingRoutes);
+app.use("/api/attachments", uploadLimiter, attachmentRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/billing", billingLimiter, billingRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/users", userRoutes);

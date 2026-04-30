@@ -40,6 +40,16 @@ const removeUploadedFile = async (fileName) => {
   await fs.unlink(path.join(uploadsDir, fileName)).catch(() => {});
 };
 
+const safeStoredFileName = (fileName) => {
+  const normalized = path.basename(fileName || "");
+
+  if (!normalized || normalized !== fileName) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid attachment file name");
+  }
+
+  return normalized;
+};
+
 export const listAttachments = async (req, res) => {
   await getAccessibleNote(req.user, req.params.noteId);
 
@@ -78,7 +88,8 @@ export const createAttachment = async (req, res) => {
 };
 
 export const downloadAttachment = async (req, res) => {
-  const attachment = await Attachment.findOne({ fileName: req.params.fileName });
+  const fileName = safeStoredFileName(req.params.fileName);
+  const attachment = await Attachment.findOne({ fileName });
 
   if (!attachment) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Attachment not found");

@@ -148,9 +148,11 @@ export const createWorkspaceInvite = async (req, res) => {
   const token = nanoid(36);
   const inviteLink = getInviteLink(token);
   const workspace = await Organization.findById(req.user.organizationId).select("name");
+  const invitedEmail = req.body.email;
+  const workspaceName = workspace?.name || "your workspace";
   const invite = await WorkspaceInvite.create({
     workspaceId: req.user.organizationId,
-    invitedEmail: req.body.email,
+    invitedEmail,
     invitedBy: req.user.id,
     workspaceRole: req.body.role,
     token,
@@ -161,11 +163,17 @@ export const createWorkspaceInvite = async (req, res) => {
 
   try {
     emailSent = await sendWorkspaceInviteEmail({
-      to: invite.invitedEmail,
+      to: invitedEmail,
       inviterName: req.user.name,
-      workspaceName: workspace?.name || "your workspace",
+      workspaceName,
       inviteLink
     });
+
+    if (emailSent) {
+      console.log(`Invite email sent to: ${invitedEmail}`);
+    } else {
+      console.warn("Workspace invite email could not be sent.");
+    }
   } catch {
     console.warn("Workspace invite email could not be sent.");
   }

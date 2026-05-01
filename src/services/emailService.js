@@ -66,13 +66,19 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   }
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: env.EMAIL_FROM,
       to,
       subject,
       html,
       text
     });
+
+    if (result?.error) {
+      console.warn("Transactional email could not be sent.");
+      return false;
+    }
+
     return true;
   } catch {
     console.warn("Transactional email could not be sent.");

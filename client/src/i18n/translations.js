@@ -270,6 +270,7 @@ export const translations = {
     invitedEmail: "Invited email",
     loginToAcceptInvite: "Log in with the invited email address to accept this workspace invite.",
     manageBilling: "Manage billing",
+    markAllAsRead: "Mark all as read",
     markAsRead: "Mark as read",
     meetingDate: "Meeting date",
     meetingNote: "Meeting",
@@ -293,6 +294,7 @@ export const translations = {
     noteRequiredFields: "Title, body, and category are required.",
     noteType: "Note type",
     noteTypeFilter: "Note type filter",
+    notification: "Notification",
     notifications: "Notifications",
     notesCount: "{{count}} notes",
     notesCreatedThisWeek: "Created this week",
@@ -1275,6 +1277,15 @@ Object.assign(translations.ar, {
   welcomeGuidePrompt: "مرحباً! هل تريد دليلاً سريعاً لاستخدام التطبيق؟"
 });
 
+Object.assign(translations.ar, {
+  notifications: "Notifications",
+  notification: "Notification",
+  loadingNotifications: "Loading notifications...",
+  noNotifications: "No notifications yet.",
+  markAllAsRead: "Mark all as read",
+  markAsRead: "Mark as read"
+});
+
 Object.assign(translations.kri, {
   backToDashboard: "Go bak dashboard",
   guide: "Guide",
@@ -1334,8 +1345,10 @@ Object.assign(translations.fr, {
   meetingNotes: "Notes de reunion",
   standardNotes: "Notes standard",
   notifications: "Notifications",
+  notification: "Notification",
   loadingNotifications: "Chargement des notifications...",
   noNotifications: "Aucune notification pour le moment.",
+  markAllAsRead: "Tout marquer comme lu",
   markAsRead: "Marquer comme lu"
 });
 
@@ -1360,8 +1373,10 @@ Object.assign(translations.es, {
   meetingNotes: "Notas de reunion",
   standardNotes: "Notas estandar",
   notifications: "Notificaciones",
+  notification: "Notificacion",
   loadingNotifications: "Cargando notificaciones...",
   noNotifications: "No hay notificaciones todavia.",
+  markAllAsRead: "Marcar todo como leido",
   markAsRead: "Marcar como leida"
 });
 
@@ -1386,8 +1401,10 @@ Object.assign(translations.pt, {
   meetingNotes: "Notas de reuniao",
   standardNotes: "Notas padrao",
   notifications: "Notificacoes",
+  notification: "Notificacao",
   loadingNotifications: "Carregando notificacoes...",
   noNotifications: "Ainda sem notificacoes.",
+  markAllAsRead: "Marcar todas como lidas",
   markAsRead: "Marcar como lida"
 });
 
@@ -1434,7 +1451,9 @@ Object.assign(translations.kri, {
   meetingNotes: "Meeting notes",
   standardNotes: "Standard notes",
   notifications: "Notifications",
+  notification: "Notification",
   loadingNotifications: "Loading notifications...",
   noNotifications: "No notifications yet.",
+  markAllAsRead: "Mark all as read",
   markAsRead: "Mark as read"
 });

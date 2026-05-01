@@ -5,6 +5,7 @@ import { StatusCodes } from "http-status-codes";
 
 import { Attachment } from "../models/Attachment.js";
 import { Note } from "../models/Note.js";
+import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadsDir } from "../middleware/uploadAttachment.js";
 
@@ -80,6 +81,20 @@ export const createAttachment = async (req, res) => {
     url: `/api/attachments/${req.file.filename}`
   });
   await attachment.populate("uploadedBy", "name email");
+
+  if (note.owner.toString() !== req.user.id) {
+    await createNotification({
+      userId: note.owner,
+      type: "attachment_uploaded",
+      title: "New attachment",
+      message: `${req.user.name} uploaded "${attachment.originalName}" to "${note.title}".`,
+      metadata: {
+        noteId: note.id,
+        attachmentId: attachment.id,
+        uploadedBy: req.user.id
+      }
+    });
+  }
 
   return res.status(StatusCodes.CREATED).json({
     success: true,

@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
 import { AI_USAGE_LIMITS } from "../models/User.js";
+import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const getPlanLimit = (plan) => AI_USAGE_LIMITS[plan] ?? AI_USAGE_LIMITS.free;
@@ -15,6 +16,17 @@ export const enforceAiUsage = async (req, res, next) => {
       plan === "free"
         ? "Free AI limit reached. Upgrade to continue."
         : "AI usage limit reached.";
+    await createNotification({
+      userId: req.user.id,
+      type: "ai_usage_limit_reached",
+      title: "AI usage limit reached",
+      message,
+      metadata: {
+        plan,
+        aiUsageCount,
+        aiUsageLimit
+      }
+    });
     return next(new ApiError(StatusCodes.FORBIDDEN, message));
   }
 

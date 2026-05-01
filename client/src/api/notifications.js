@@ -11,3 +11,10 @@ export async function markNotificationRead(id) {
   });
   return payload.data;
 }
+
+export async function markAllNotificationsRead() {
+  const payload = await apiRequest("/api/notifications/read-all", {
+    method: "PATCH"
+  });
+  return payload.data;
+}

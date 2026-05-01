@@ -131,7 +131,11 @@ export const handleStripeWebhook = async (req, res) => {
       await createNotification({
         userId,
         type: "subscription_upgrade",
-        message: "Your subscription was upgraded to Premium."
+        title: "Premium upgrade successful",
+        message: "Your subscription was upgraded to Premium.",
+        metadata: {
+          stripeCustomerId: stripeCustomerId || ""
+        }
       });
     }
   }

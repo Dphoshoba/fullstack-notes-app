@@ -32,3 +32,24 @@ export const markNotificationRead = async (req, res) => {
     data: notification
   });
 };
+
+export const markAllNotificationsRead = async (req, res) => {
+  await Notification.updateMany(
+    {
+      userId: req.user.id,
+      read: false
+    },
+    {
+      $set: { read: true }
+    }
+  );
+
+  const notifications = await Notification.find({ userId: req.user.id })
+    .sort({ createdAt: -1 })
+    .limit(50);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: notifications
+  });
+};

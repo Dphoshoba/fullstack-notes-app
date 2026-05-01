@@ -43,7 +43,11 @@ import {
 import { fetchAnalyticsSummary, trackEvent } from "../api/analytics.js";
 import { createCheckoutSession, createPortalSession, fetchBillingStatus } from "../api/billing.js";
 import { createComment, createNote, deleteNote, fetchNotes, updateNote } from "../api/notes.js";
-import { fetchNotifications, markNotificationRead } from "../api/notifications.js";
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead
+} from "../api/notifications.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
 import { Button } from "../components/Button.jsx";
@@ -351,6 +355,7 @@ export default function DashboardPage() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
   const [markingNotificationId, setMarkingNotificationId] = useState("");
+  const [markingAllNotifications, setMarkingAllNotifications] = useState(false);
   const [showGuideOnboarding, setShowGuideOnboarding] = useState(
     () => localStorage.getItem(GUIDE_ONBOARDING_KEY) !== "true"
   );
@@ -567,6 +572,24 @@ export default function DashboardPage() {
       setNotificationsError(err.message);
     } finally {
       setMarkingNotificationId("");
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    if (!unreadNotificationsCount) {
+      return;
+    }
+
+    setMarkingAllNotifications(true);
+    setNotificationsError("");
+
+    try {
+      const updatedNotifications = await markAllNotificationsRead();
+      setNotifications(updatedNotifications);
+    } catch (err) {
+      setNotificationsError(err.message);
+    } finally {
+      setMarkingAllNotifications(false);
     }
   };
 
@@ -1147,19 +1170,34 @@ export default function DashboardPage() {
                   role="menu"
                   aria-label={t("notifications")}
                 >
-                  <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       {t("notifications")}
                     </p>
-                    <button
-                      type="button"
-                      onClick={loadNotifications}
-                      disabled={notificationsLoading}
-                      className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${notificationsLoading ? "animate-spin" : ""}`} />
-                      {t("refresh")}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={handleMarkAllNotificationsRead}
+                        disabled={!unreadNotificationsCount || markingAllNotifications}
+                        className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        {markingAllNotifications ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        )}
+                        {t("markAllAsRead")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={loadNotifications}
+                        disabled={notificationsLoading}
+                        className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${notificationsLoading ? "animate-spin" : ""}`} />
+                        {t("refresh")}
+                      </button>
+                    </div>
                   </div>
                   {notificationsLoading ? (
                     <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-slate-600">
@@ -1193,7 +1231,10 @@ export default function DashboardPage() {
                               aria-hidden="true"
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium leading-5 text-slate-800">
+                              <p className="text-sm font-semibold leading-5 text-slate-900">
+                                {notification.title || t("notification")}
+                              </p>
+                              <p className="mt-1 text-sm font-medium leading-5 text-slate-700">
                                 {notification.message}
                               </p>
                               <p className="mt-1 text-xs text-slate-500">

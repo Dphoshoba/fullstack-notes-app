@@ -204,7 +204,12 @@ export const acceptWorkspaceInvite = async (req, res) => {
     await createNotification({
       userId: invite.invitedBy,
       type: "workspace_invite_accepted",
-      message: `${req.user.name} accepted your workspace invite for ${invite.workspaceId.name}.`
+      title: "Workspace invite accepted",
+      message: `${req.user.name} accepted your workspace invite for ${invite.workspaceId.name}.`,
+      metadata: {
+        workspaceId: invite.workspaceId.id,
+        acceptedBy: req.user.id
+      }
     });
   }
 

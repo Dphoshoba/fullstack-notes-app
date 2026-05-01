@@ -71,7 +71,13 @@ export const createComment = async (req, res) => {
     await createNotification({
       userId: note.owner,
       type: "new_comment",
-      message: `${req.user.name} commented on "${note.title}".`
+      title: "New comment",
+      message: `${req.user.name} commented on "${note.title}".`,
+      metadata: {
+        noteId: note.id,
+        commentId: comment.id,
+        commentedBy: req.user.id
+      }
     });
   }
 

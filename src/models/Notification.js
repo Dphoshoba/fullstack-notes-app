@@ -15,11 +15,22 @@ const notificationSchema = new mongoose.Schema(
       maxlength: 80,
       index: true
     },
+    title: {
+      type: String,
+      required: true,
+      default: "Notification",
+      trim: true,
+      maxlength: 160
+    },
     message: {
       type: String,
       required: true,
       trim: true,
       maxlength: 500
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
     },
     read: {
       type: Boolean,
@@ -28,7 +39,7 @@ const notificationSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: { createdAt: true, updatedAt: false },
+    timestamps: true,
     toJSON: {
       transform: (_doc, ret) => {
         ret.id = ret._id.toString();

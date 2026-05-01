@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import { Organization } from "../models/Organization.js";
 import { User } from "../models/User.js";
 import { WorkspaceInvite } from "../models/WorkspaceInvite.js";
+import { sendWorkspaceInviteEmail } from "../services/emailService.js";
 import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -145,6 +146,8 @@ export const createWorkspaceInvite = async (req, res) => {
   }
 
   const token = nanoid(36);
+  const inviteLink = getInviteLink(token);
+  const workspace = await Organization.findById(req.user.organizationId).select("name");
   const invite = await WorkspaceInvite.create({
     workspaceId: req.user.organizationId,
     invitedEmail: req.body.email,
@@ -154,11 +157,18 @@ export const createWorkspaceInvite = async (req, res) => {
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   });
 
+  void sendWorkspaceInviteEmail({
+    to: invite.invitedEmail,
+    inviterName: req.user.name,
+    workspaceName: workspace?.name || "your workspace",
+    inviteLink
+  });
+
   return res.status(StatusCodes.CREATED).json({
     success: true,
     data: {
       invite,
-      inviteLink: getInviteLink(token)
+      inviteLink
     }
   });
 };

@@ -55,6 +55,12 @@ COOKIE_SECURE=false
 STRIPE_SECRET_KEY=sk_test_replace_me
 STRIPE_PRICE_ID=price_replace_me
 STRIPE_WEBHOOK_SECRET=whsec_replace_me
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=smtp-user
+SMTP_PASS=smtp-password
+EMAIL_FROM="Notes Workspace <no-reply@example.com>"
 OPENAI_API_KEY=sk_replace_me
 OPENAI_MODEL=gpt-5.2
 ```
@@ -236,6 +242,32 @@ GET /api/analytics/summary
 - Returns total events, landing page views, register clicks, login clicks, upgrade clicks, and most common paths.
 - The Dashboard Admin modal displays a simple analytics summary card for admins.
 
+## Email Notifications
+
+The backend can send simple transactional emails with Nodemailer. Email sending is non-blocking: if SMTP is missing or an email fails, the original invite, comment, attachment, or billing request still succeeds.
+
+Set these backend environment variables:
+
+```bash
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=smtp-user
+SMTP_PASS=smtp-password
+EMAIL_FROM="Notes Workspace <no-reply@example.com>"
+CLIENT_ORIGIN=https://your-frontend.example.com
+```
+
+Emails are sent for:
+
+- Workspace invites
+- New comments on a user’s note
+- Attachments uploaded to a user’s note
+- Premium upgrade success
+- Billing issues such as failed invoice payment or subscription cancellation
+
+For Gmail, create an App Password and use it as `SMTP_PASS`; do not use your normal Google account password. For production, use a dedicated transactional email provider such as SendGrid, Mailgun, Postmark, Amazon SES, or your host’s SMTP service.
+
 ## Seed Demo User
 
 ```bash
@@ -335,6 +367,7 @@ Backend environment variables:
 - `COOKIE_SECURE=true` in production.
 - `OPENAI_API_KEY` is set for real AI-powered summaries, tag suggestions, meeting minutes, and action item extraction.
 - `OPENAI_MODEL` is set if you want to override the default AI model.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and `EMAIL_FROM` are set if email notifications are enabled.
 
 Frontend environment variables:
 
@@ -465,6 +498,7 @@ If login works but refresh/logout cookies do not behave correctly, check:
 - Set `CLIENT_ORIGIN` to the exact deployed frontend origin. Do not leave broad or wildcard CORS origins in production.
 - Set `STRIPE_WEBHOOK_SECRET` and verify Stripe webhook signatures before trusting billing events.
 - Keep `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, and `STRIPE_WEBHOOK_SECRET` only in backend environment settings. The frontend must never receive Stripe secret keys.
+- Keep SMTP credentials only in backend environment settings. Never commit `SMTP_PASS` or provider API passwords.
 - Do not trust the frontend for plan changes. Premium status should change only from verified Stripe webhooks.
 - Restrict MongoDB Atlas Network Access as much as your host allows.
 - Use a MongoDB database user with only the permissions the app needs.

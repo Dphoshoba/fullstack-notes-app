@@ -200,6 +200,22 @@ Workspace owners and managers can create invitation links from Settings.
 
 The invited person must log in with the same email address that was invited. Invites expire after seven days or after they are accepted.
 
+If email notifications are configured, the invited person also receives an email with the invite link.
+
+## Email Notifications
+
+The app may send email notifications for important events.
+
+You may receive an email when:
+
+- Someone invites you to a workspace.
+- Someone comments on one of your notes.
+- Someone uploads an attachment to one of your notes.
+- Your Premium upgrade succeeds.
+- Your billing needs attention.
+
+Email notifications are sent in addition to in-app notifications. If email is not configured by the app owner, you will still see supported notifications inside the app.
+
 ## Settings
 
 Use Settings to manage account and workspace preferences.

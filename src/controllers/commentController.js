@@ -2,8 +2,12 @@ import { StatusCodes } from "http-status-codes";
 
 import { Comment } from "../models/Comment.js";
 import { Note } from "../models/Note.js";
+import { User } from "../models/User.js";
+import { sendNewCommentEmail } from "../services/emailService.js";
 import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
+
+const getNoteLink = () => `${process.env.CLIENT_ORIGIN?.split(",")[0] || "http://localhost:5173"}/dashboard`;
 
 const canManageWorkspace = (user) => ["owner", "manager"].includes(user.workspaceRole);
 
@@ -68,6 +72,8 @@ export const createComment = async (req, res) => {
   await comment.populate("userId", "name email");
 
   if (note.owner.toString() !== req.user.id) {
+    const owner = await User.findById(note.owner).select("email name");
+
     await createNotification({
       userId: note.owner,
       type: "new_comment",
@@ -79,6 +85,15 @@ export const createComment = async (req, res) => {
         commentedBy: req.user.id
       }
     });
+
+    if (owner?.email) {
+      void sendNewCommentEmail({
+        to: owner.email,
+        commenterName: req.user.name,
+        noteTitle: note.title,
+        noteLink: getNoteLink()
+      });
+    }
   }
 
   return res.status(StatusCodes.CREATED).json({

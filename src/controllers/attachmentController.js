@@ -5,9 +5,13 @@ import { StatusCodes } from "http-status-codes";
 
 import { Attachment } from "../models/Attachment.js";
 import { Note } from "../models/Note.js";
+import { User } from "../models/User.js";
+import { sendAttachmentUploadedEmail } from "../services/emailService.js";
 import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadsDir } from "../middleware/uploadAttachment.js";
+
+const getNoteLink = () => `${process.env.CLIENT_ORIGIN?.split(",")[0] || "http://localhost:5173"}/dashboard`;
 
 const canManageWorkspace = (user) => ["owner", "manager"].includes(user.workspaceRole);
 
@@ -83,6 +87,8 @@ export const createAttachment = async (req, res) => {
   await attachment.populate("uploadedBy", "name email");
 
   if (note.owner.toString() !== req.user.id) {
+    const owner = await User.findById(note.owner).select("email name");
+
     await createNotification({
       userId: note.owner,
       type: "attachment_uploaded",
@@ -94,6 +100,15 @@ export const createAttachment = async (req, res) => {
         uploadedBy: req.user.id
       }
     });
+
+    if (owner?.email) {
+      void sendAttachmentUploadedEmail({
+        to: owner.email,
+        uploaderName: req.user.name,
+        noteTitle: note.title,
+        noteLink: getNoteLink()
+      });
+    }
   }
 
   return res.status(StatusCodes.CREATED).json({

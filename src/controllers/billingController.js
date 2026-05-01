@@ -3,6 +3,7 @@ import Stripe from "stripe";
 
 import { env } from "../config/env.js";
 import { AI_USAGE_LIMITS, User } from "../models/User.js";
+import { sendBillingIssueEmail, sendPremiumUpgradeEmail } from "../services/emailService.js";
 import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -18,6 +19,20 @@ const getStripe = () => {
 
 const getCheckoutCustomerId = (session) =>
   typeof session.customer === "string" ? session.customer : session.customer?.id;
+
+const getEventCustomerId = (object) =>
+  typeof object.customer === "string" ? object.customer : object.customer?.id;
+
+const findUserForBillingObject = async (object) => {
+  const userId = object.metadata?.userId || object.client_reference_id;
+
+  if (userId) {
+    return User.findById(userId);
+  }
+
+  const stripeCustomerId = getEventCustomerId(object);
+  return stripeCustomerId ? User.findOne({ stripeCustomerId }) : null;
+};
 
 export const createCheckoutSession = async (req, res) => {
   if (!env.STRIPE_PRICE_ID) {
@@ -123,11 +138,11 @@ export const handleStripeWebhook = async (req, res) => {
     const stripeCustomerId = getCheckoutCustomerId(session);
 
     if (userId) {
-      await User.findByIdAndUpdate(userId, {
+      const user = await User.findByIdAndUpdate(userId, {
         plan: "premium",
         aiUsageLimit: AI_USAGE_LIMITS.premium,
         ...(stripeCustomerId ? { stripeCustomerId } : {})
-      });
+      }, { new: true });
       await createNotification({
         userId,
         type: "subscription_upgrade",
@@ -136,6 +151,23 @@ export const handleStripeWebhook = async (req, res) => {
         metadata: {
           stripeCustomerId: stripeCustomerId || ""
         }
+      });
+      if (user?.email) {
+        void sendPremiumUpgradeEmail({
+          to: user.email,
+          userName: user.name
+        });
+      }
+    }
+  }
+
+  if (event.type === "invoice.payment_failed" || event.type === "customer.subscription.deleted") {
+    const user = await findUserForBillingObject(event.data.object);
+
+    if (user?.email) {
+      void sendBillingIssueEmail({
+        to: user.email,
+        userName: user.name
       });
     }
   }

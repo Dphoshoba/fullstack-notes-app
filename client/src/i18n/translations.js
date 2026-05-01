@@ -356,7 +356,7 @@ export const translations = {
     workspaceCreated: "Workspace created.",
     workspaceMemberAdded: "Workspace member added.",
     workspaceInvite: "Workspace invite",
-    workspaceInviteCreated: "Workspace invite created.",
+    workspaceInviteCreated: "Invite created and email sent.",
     userSettings: "User settings",
     noteVisibility: "Note visibility",
     owner: "Owner",

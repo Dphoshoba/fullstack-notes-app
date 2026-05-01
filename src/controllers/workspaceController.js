@@ -157,7 +157,7 @@ export const createWorkspaceInvite = async (req, res) => {
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   });
 
-  void sendWorkspaceInviteEmail({
+  const emailSent = await sendWorkspaceInviteEmail({
     to: invite.invitedEmail,
     inviterName: req.user.name,
     workspaceName: workspace?.name || "your workspace",
@@ -168,7 +168,8 @@ export const createWorkspaceInvite = async (req, res) => {
     success: true,
     data: {
       invite,
-      inviteLink
+      inviteLink,
+      emailSent
     }
   });
 };

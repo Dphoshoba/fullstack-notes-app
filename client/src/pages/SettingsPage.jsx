@@ -1,6 +1,6 @@
 import { Copy, Loader2, Mail, Plus, Save, Settings, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { fetchUserSettings } from "../api/users.js";
 import {
@@ -16,6 +16,7 @@ import { useI18n } from "../context/I18nContext.jsx";
 export default function SettingsPage() {
   const { user, updateSettings } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
+  const navigate = useNavigate();
   const [name, setName] = useState(user?.name || "");
   const [preferredLanguage, setPreferredLanguage] = useState(user?.preferredLanguage || language);
   const [defaultNoteScope, setDefaultNoteScope] = useState(user?.defaultNoteScope || "private");
@@ -36,6 +37,26 @@ export default function SettingsPage() {
   const canManageMembers = ["owner", "manager"].includes(workspaceInfo.role);
   const hasWorkspace = Boolean(workspaceInfo.workspace);
 
+  const handleRequestError = useCallback(
+    (err) => {
+      if (err.status === 401 || err.code === "AUTH_EXPIRED") {
+        const message = t("pleaseLogInAgain");
+        setError(message);
+        navigate("/login", {
+          replace: true,
+          state: {
+            from: { pathname: "/settings" },
+            message
+          }
+        });
+        return;
+      }
+
+      setError(err.message);
+    },
+    [navigate, t]
+  );
+
   const loadSettings = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -52,11 +73,11 @@ export default function SettingsPage() {
         setMembers(nextMembers);
       }
     } catch (err) {
-      setError(err.message);
+      handleRequestError(err);
     } finally {
       setLoading(false);
     }
-  }, [language]);
+  }, [handleRequestError, language]);
 
   useEffect(() => {
     loadSettings();
@@ -78,7 +99,7 @@ export default function SettingsPage() {
       setDefaultNoteScope(updated.defaultNoteScope || "private");
       setMessage(t("settingsSaved"));
     } catch (err) {
-      setError(err.message);
+      handleRequestError(err);
     } finally {
       setSaving(false);
     }
@@ -97,7 +118,7 @@ export default function SettingsPage() {
       setDefaultNoteScope("workspace");
       setMessage(t("workspaceCreated"));
     } catch (err) {
-      setError(err.message);
+      handleRequestError(err);
     } finally {
       setWorkspaceSaving(false);
     }
@@ -116,7 +137,7 @@ export default function SettingsPage() {
       setMembers(nextMembers);
       setMessage(t("workspaceMemberAdded"));
     } catch (err) {
-      setError(err.message);
+      handleRequestError(err);
     } finally {
       setMemberSaving(false);
     }
@@ -135,7 +156,7 @@ export default function SettingsPage() {
       setInviteForm({ email: "", role: "staff" });
       setMessage(invite.emailSent ? t("workspaceInviteCreated") : t("workspaceInviteEmailFailed"));
     } catch (err) {
-      setError(err.message);
+      handleRequestError(err);
     } finally {
       setInviteSaving(false);
     }

@@ -302,6 +302,7 @@ export const translations = {
     notes: "Notes",
     password: "Password",
     pageStatus: "Page {{page}} / {{pages}}",
+    pleaseLogInAgain: "Please log in again.",
     pinThisNote: "Pin this note",
     pinned: "Pinned",
     pinnedNotes: "Pinned notes",

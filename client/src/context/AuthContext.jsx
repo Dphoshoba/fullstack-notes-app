@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { fetchCurrentUser, loginUser, logoutUser, registerUser } from "../api/auth.js";
-import { tokenStorage } from "../api/http.js";
+import { AUTH_EXPIRED_EVENT, tokenStorage } from "../api/http.js";
 import { updateMyProfile, updateUserSettings } from "../api/users.js";
 
 const AuthContext = createContext(null);
@@ -9,6 +9,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [booting, setBooting] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -22,6 +23,7 @@ export function AuthProvider({ children }) {
         setUser(currentUser);
       } catch {
         tokenStorage.clear();
+        setSessionExpired(true);
       } finally {
         setBooting(false);
       }
@@ -30,22 +32,36 @@ export function AuthProvider({ children }) {
     loadUser();
   }, []);
 
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      setSessionExpired(true);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       booting,
+      sessionExpired,
       isAuthenticated: Boolean(user),
       async login(credentials) {
         const loggedInUser = await loginUser(credentials);
         setUser(loggedInUser);
+        setSessionExpired(false);
       },
       async register(input) {
         const registeredUser = await registerUser(input);
         setUser(registeredUser);
+        setSessionExpired(false);
       },
       async logout() {
         await logoutUser();
         setUser(null);
+        setSessionExpired(false);
       },
       async updateProfile(input) {
         const updatedUser = await updateMyProfile(input);
@@ -58,7 +74,7 @@ export function AuthProvider({ children }) {
         return updatedUser;
       }
     }),
-    [booting, user]
+    [booting, sessionExpired, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

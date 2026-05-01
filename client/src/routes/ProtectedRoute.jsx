@@ -6,7 +6,7 @@ import { useI18n } from "../context/I18nContext.jsx";
 
 export function ProtectedRoute({ children }) {
   const location = useLocation();
-  const { booting, isAuthenticated } = useAuth();
+  const { booting, isAuthenticated, sessionExpired } = useAuth();
   const { t } = useI18n();
 
   if (booting) {
@@ -21,7 +21,16 @@ export function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{
+          from: location,
+          message: sessionExpired ? t("pleaseLogInAgain") : ""
+        }}
+      />
+    );
   }
 
   return children;

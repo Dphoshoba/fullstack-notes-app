@@ -23,6 +23,7 @@ export default function LoginPage() {
   }
 
   const from = location.state?.from?.pathname || "/dashboard";
+  const authMessage = location.state?.message || "";
 
   const updateField = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -77,6 +78,9 @@ export default function LoginPage() {
           required
         />
 
+        {authMessage ? (
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{authMessage}</p>
+        ) : null}
         {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
         <Button type="submit" loading={loading} className="w-full">

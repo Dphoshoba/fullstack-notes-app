@@ -157,12 +157,18 @@ export const createWorkspaceInvite = async (req, res) => {
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
   });
 
-  const emailSent = await sendWorkspaceInviteEmail({
-    to: invite.invitedEmail,
-    inviterName: req.user.name,
-    workspaceName: workspace?.name || "your workspace",
-    inviteLink
-  });
+  let emailSent = false;
+
+  try {
+    emailSent = await sendWorkspaceInviteEmail({
+      to: invite.invitedEmail,
+      inviterName: req.user.name,
+      workspaceName: workspace?.name || "your workspace",
+      inviteLink
+    });
+  } catch {
+    console.warn("Workspace invite email could not be sent.");
+  }
 
   return res.status(StatusCodes.CREATED).json({
     success: true,

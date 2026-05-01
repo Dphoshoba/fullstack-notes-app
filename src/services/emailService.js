@@ -1,40 +1,31 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 import { env } from "../config/env.js";
 
-let transporter;
+let resendClient;
 let warnedMissingConfig = false;
 
 const appName = "Notes Workspace";
 
 const getClientOrigin = () => env.CLIENT_ORIGIN.split(",")[0];
 
-const isEmailConfigured = () =>
-  Boolean(env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS && env.EMAIL_FROM);
+const isEmailConfigured = () => Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
 
-const getTransporter = () => {
+const getResendClient = () => {
   if (!isEmailConfigured()) {
     if (!warnedMissingConfig) {
-      console.warn("Email service is not configured. Transactional email skipped.");
+      console.warn("Resend email service is not configured. Transactional email skipped.");
       warnedMissingConfig = true;
     }
 
     return null;
   }
 
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.SMTP_HOST,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_SECURE,
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS
-      }
-    });
+  if (!resendClient) {
+    resendClient = new Resend(env.RESEND_API_KEY);
   }
 
-  return transporter;
+  return resendClient;
 };
 
 const escapeHtml = (value = "") =>
@@ -68,14 +59,14 @@ const layout = ({ title, body, ctaLabel, ctaUrl }) => {
 };
 
 export const sendEmail = async ({ to, subject, html, text }) => {
-  const mailer = getTransporter();
+  const resend = getResendClient();
 
-  if (!mailer || !to || !subject) {
+  if (!resend || !to || !subject) {
     return false;
   }
 
   try {
-    await mailer.sendMail({
+    await resend.emails.send({
       from: env.EMAIL_FROM,
       to,
       subject,

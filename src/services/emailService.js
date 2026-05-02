@@ -75,13 +75,13 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     });
 
     if (result?.error) {
-      console.warn("Transactional email could not be sent.");
+      console.warn("Transactional email could not be sent:", result.error.message || "Unknown Resend error");
       return false;
     }
 
     return true;
-  } catch {
-    console.warn("Transactional email could not be sent.");
+  } catch (error) {
+    console.warn("Transactional email could not be sent:", error.message);
     return false;
   }
 };

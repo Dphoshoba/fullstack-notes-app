@@ -714,10 +714,10 @@ function NoteCard({
 
   return (
     <article
-      className={`rounded-lg border p-5 shadow-sm transition ${
+      className={`premium-card premium-card-hover p-5 ${
         note.pinned
-          ? "border-emerald-300 bg-emerald-50/70 shadow-emerald-950/5"
-          : "border-slate-200 bg-white"
+          ? "border-emerald-300 bg-emerald-50/80 shadow-emerald-950/10"
+          : ""
       }`}
     >
       <div className="flex items-start justify-between gap-4">
@@ -726,7 +726,7 @@ function NoteCard({
             {note.pinned ? <Pin className="h-4 w-4 text-emerald-700" /> : null}
             <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-slate-950">{note.title}</h3>
             {note.pinned ? (
-              <span className="shrink-0 rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white">
+              <span className="shrink-0 rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white shadow-sm shadow-emerald-950/15">
                 {t("pinned")}
               </span>
             ) : null}
@@ -815,7 +815,7 @@ function NoteCard({
           type="button"
           onClick={() => onRunAiAction?.("summary", note)}
           disabled={aiActionDisabled}
-          className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
           aria-label={`${t("summarizeThisNote")}: ${note.title}`}
           title={usageLimitReached ? t("upgradeToContinue") : t("summarizeThisNote")}
         >
@@ -826,7 +826,7 @@ function NoteCard({
           type="button"
           onClick={() => onRunAiAction?.("tags", note)}
           disabled={aiActionDisabled}
-          className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
           aria-label={`${t("suggestTagsForThisNote")}: ${note.title}`}
           title={usageLimitReached ? t("upgradeToContinue") : t("suggestTagsForThisNote")}
         >
@@ -839,7 +839,7 @@ function NoteCard({
         <button
           type="button"
           onClick={() => setDetailsOpen((current) => !current)}
-          className="inline-flex min-h-9 w-full flex-wrap items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
+          className="premium-button inline-flex min-h-9 w-full flex-wrap items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 sm:w-auto"
           aria-expanded={detailsOpen}
         >
           <MessageSquare className="h-4 w-4" />
@@ -1167,7 +1167,7 @@ export function NoteListSkeleton({ count = 6 }) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+          className="premium-card p-5"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1 space-y-3">
@@ -1218,8 +1218,8 @@ export function NoteList({
     const EmptyIcon = emptyVariant === "search" ? SearchX : FileText;
 
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+      <div className="premium-card border-dashed border-slate-300 bg-white/90 px-6 py-14 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
           <EmptyIcon className="h-5 w-5" />
         </div>
         <p className="mt-4 text-sm font-semibold text-slate-900">{emptyTitle}</p>

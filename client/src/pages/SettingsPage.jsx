@@ -179,20 +179,20 @@ export default function SettingsPage() {
           </div>
           <Link
             to="/dashboard"
-            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800"
           >
             {t("backToDashboard")}
           </Link>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-8 text-sm text-slate-600">
+          <div className="premium-panel flex items-center justify-center gap-2 p-8 text-sm text-slate-600">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t("loading")}
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="premium-panel p-5">
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5 text-emerald-700" />
                 <h2 className="text-lg font-semibold text-slate-950">{t("userSettings")}</h2>
@@ -204,7 +204,7 @@ export default function SettingsPage() {
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     required
-                    className="mt-2 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    className="premium-input mt-2 h-10 w-full px-3 text-sm"
                   />
                 </label>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                   <select
                     value={preferredLanguage}
                     onChange={(event) => setPreferredLanguage(event.target.value)}
-                    className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    className="premium-input mt-2 h-10 w-full px-3 text-sm"
                   >
                     {languages.map((item) => (
                       <option key={item.code} value={item.code}>
@@ -233,7 +233,7 @@ export default function SettingsPage() {
                     value={hasWorkspace ? defaultNoteScope : "private"}
                     onChange={(event) => setDefaultNoteScope(event.target.value)}
                     disabled={!hasWorkspace}
-                    className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
+                    className="premium-input mt-2 h-10 w-full px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     <option value="private">{t("privateNote")}</option>
                     <option value="workspace">{t("workspaceNote")}</option>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                  className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:opacity-60"
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   {t("save")}
@@ -253,7 +253,7 @@ export default function SettingsPage() {
               </form>
             </section>
 
-            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="premium-panel p-5">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-emerald-700" />
                 <h2 className="text-lg font-semibold text-slate-950">{t("workspace")}</h2>
@@ -267,13 +267,13 @@ export default function SettingsPage() {
                       value={workspaceName}
                       onChange={(event) => setWorkspaceName(event.target.value)}
                       required
-                      className="mt-2 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                      className="premium-input mt-2 h-10 w-full px-3 text-sm"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={workspaceSaving}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                    className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800 disabled:opacity-60"
                   >
                     {workspaceSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                     {t("createWorkspace")}
@@ -291,7 +291,7 @@ export default function SettingsPage() {
 
                   {canManageMembers ? (
                     <>
-                      <form onSubmit={submitInvite} className="grid gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 sm:grid-cols-2">
+                      <form onSubmit={submitInvite} className="grid gap-3 rounded-md border border-emerald-200 bg-emerald-50/80 p-4 shadow-inner shadow-emerald-950/[0.03] sm:grid-cols-2">
                         <div className="sm:col-span-2">
                           <p className="text-sm font-semibold text-slate-950">{t("inviteMember")}</p>
                           <p className="mt-1 text-sm text-slate-600">{t("inviteMemberDescription")}</p>
@@ -302,12 +302,12 @@ export default function SettingsPage() {
                           required
                           type="email"
                           placeholder={t("email")}
-                          className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                          className="premium-input h-10 px-3 text-sm"
                         />
                         <select
                           value={inviteForm.role}
                           onChange={(event) => setInviteForm((current) => ({ ...current, role: event.target.value }))}
-                          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                          className="premium-input h-10 px-3 text-sm"
                         >
                           <option value="staff">{t("staff")}</option>
                           <option value="manager">{t("manager")}</option>
@@ -315,7 +315,7 @@ export default function SettingsPage() {
                         <button
                           type="submit"
                           disabled={inviteSaving}
-                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60 sm:col-span-2"
+                          className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800 disabled:opacity-60 sm:col-span-2"
                         >
                           {inviteSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                           {t("createInvite")}
@@ -353,7 +353,7 @@ export default function SettingsPage() {
                           onChange={(event) => setMemberForm((current) => ({ ...current, name: event.target.value }))}
                           required
                           placeholder={t("name")}
-                          className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                        className="premium-input h-10 px-3 text-sm"
                         />
                         <input
                           value={memberForm.email}
@@ -361,12 +361,12 @@ export default function SettingsPage() {
                           required
                           type="email"
                           placeholder={t("email")}
-                          className="h-10 rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                          className="premium-input h-10 px-3 text-sm"
                         />
                         <select
                           value={memberForm.role}
                           onChange={(event) => setMemberForm((current) => ({ ...current, role: event.target.value }))}
-                          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                          className="premium-input h-10 px-3 text-sm"
                         >
                           <option value="staff">{t("staff")}</option>
                           <option value="manager">{t("manager")}</option>
@@ -374,7 +374,7 @@ export default function SettingsPage() {
                         <button
                           type="submit"
                           disabled={memberSaving}
-                          className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                          className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:opacity-60"
                         >
                           {memberSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                           {t("addMember")}

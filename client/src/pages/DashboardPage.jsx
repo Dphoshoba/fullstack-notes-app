@@ -1156,7 +1156,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-emerald-700">Notes API</p>
@@ -1394,10 +1394,10 @@ export default function DashboardPage() {
 
       {showFirstTimeOnboarding ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-          <div className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+          <div className="onboarding-enter premium-panel border-emerald-200 bg-white p-4 shadow-emerald-950/5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
                   <CheckCircle2 className="h-5 w-5" />
                 </span>
                 <div>
@@ -1431,21 +1431,21 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={startFirstNoteOnboarding}
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                  className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
                 >
                   {t("createFirstNote")}
                 </button>
                 <button
                   type="button"
                   onClick={startInviteOnboarding}
-                  className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="premium-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
                 >
                   {t("inviteTeam")}
                 </button>
                 <button
                   type="button"
                   onClick={completeFirstTimeOnboarding}
-                  className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                  className="premium-button inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
                 >
                   {t("skipForNow")}
                 </button>
@@ -1457,7 +1457,7 @@ export default function DashboardPage() {
 
       {showGuideOnboarding ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+          <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-emerald-700">
@@ -1508,7 +1508,7 @@ export default function DashboardPage() {
             return (
               <div
                 key={stat.label}
-                className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+                className="premium-card premium-card-hover p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-slate-600">{stat.label}</p>
@@ -1533,7 +1533,7 @@ export default function DashboardPage() {
           })}
         </div>
 
-        <section className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="premium-panel mt-4 p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-950">{t("productInsights")}</h2>
@@ -1596,7 +1596,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8">
-        <aside ref={createNoteRef} className="h-fit scroll-mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <aside ref={createNoteRef} className="premium-panel h-fit scroll-mt-6 p-5">
           <h2 className="text-lg font-semibold text-slate-950">{t("createNote")}</h2>
           <p className="mt-1 text-sm text-slate-500">{t("notes")}</p>
           <div className="mt-5">
@@ -1617,7 +1617,7 @@ export default function DashboardPage() {
         </aside>
 
         <section>
-          <div className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="premium-panel mb-5 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -1643,7 +1643,7 @@ export default function DashboardPage() {
                 </select>
               </label>
             </div>
-            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50/80 px-3 py-3 shadow-inner shadow-slate-950/[0.02]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</p>
@@ -1664,7 +1664,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={manageBilling}
                     disabled={portalLoading}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="premium-button inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {portalLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1678,7 +1678,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={startUpgrade}
                     disabled={upgradeLoading}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="premium-button inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     {t("upgrade")}
@@ -1715,7 +1715,7 @@ export default function DashboardPage() {
                         })}
                   </span>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200/70">
                   <div
                     className={`h-full rounded-full ${
                       usageLimitReached ? "bg-red-600" : "bg-emerald-600"
@@ -1735,7 +1735,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => runAiAction("summary")}
                 disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "summary" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 {t("summarizeSelectedNote")}
@@ -1744,7 +1744,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => runAiAction("tags")}
                 disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "tags" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
                 {t("suggestTags")}
@@ -1753,7 +1753,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => runAiAction("insights")}
                 disabled={Boolean(aiLoadingAction) || usageLimitReached}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "insights" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
                 {t("generateSmartInsights")}
@@ -1762,7 +1762,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => runAiAction("meeting-minutes")}
                 disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-minutes" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 {t("convertToMeetingMinutes")}
@@ -1771,7 +1771,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => runAiAction("meeting-actions")}
                 disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-actions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {t("extractActionItems")}
@@ -1780,7 +1780,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => runAiAction("meeting-attendees-decisions")}
                 disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-attendees-decisions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
                 {t("extractAttendeesDecisions")}
@@ -1792,7 +1792,7 @@ export default function DashboardPage() {
               </p>
             ) : null}
             {aiResult ? (
-              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/60 p-4">
+              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm shadow-emerald-950/[0.04]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-emerald-900">{t("aiResult")}</p>
@@ -1942,7 +1942,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="premium-panel mb-4 p-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <p className="text-sm font-semibold text-slate-700">{t("quickFilters")}</p>
               <div className="flex flex-wrap gap-2">
@@ -2015,7 +2015,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-2 xl:grid-cols-5">
+          <div className="premium-panel mb-4 grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
             <div>
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
               <p className="text-sm text-slate-500">
@@ -2139,7 +2139,7 @@ export default function DashboardPage() {
             />
           )}
           {!loading && pagination.total > 0 ? (
-            <div className="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="premium-panel mt-5 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-medium text-slate-600">
                 {t("pageStatus", { page: pagination.page, pages: totalPages })}
               </p>
@@ -2357,7 +2357,7 @@ export default function DashboardPage() {
       {adminOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
           <section
-            className="max-h-[calc(100vh-3rem)] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-soft"
+            className="max-h-[calc(100vh-3rem)] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white p-5 shadow-soft shadow-slate-950/20"
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-title"

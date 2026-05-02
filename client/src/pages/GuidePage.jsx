@@ -167,7 +167,7 @@ function SectionCard({ section }) {
   return (
     <article
       id={section.id}
-      className="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+      className="premium-card premium-card-hover scroll-mt-6 p-5"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
@@ -181,7 +181,7 @@ function SectionCard({ section }) {
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         {section.groups.map((group) => (
-          <div key={group.titleKey} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+          <div key={group.titleKey} className="rounded-md border border-slate-200 bg-slate-50/80 p-4 shadow-inner shadow-slate-950/[0.02]">
             <h3 className="text-sm font-semibold text-slate-950">{t(group.titleKey)}</h3>
             <ul className="mt-3 space-y-2">
               {group.items.map((key) => (
@@ -223,20 +223,20 @@ export default function GuidePage() {
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link
               to="/dashboard"
-              className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="premium-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
             >
               {t("backToDashboard")}
             </Link>
             <Link
               to="/dashboard"
-              className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
             >
               {t("guideOpenDashboard")}
             </Link>
           </div>
         </div>
 
-        <section className="rounded-lg border border-emerald-200 bg-white p-5 shadow-sm">
+        <section className="premium-panel border-emerald-200 p-5 shadow-emerald-950/5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
               <Sparkles className="h-5 w-5" />
@@ -248,7 +248,7 @@ export default function GuidePage() {
           </div>
           <ol className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {quickStartKeys.map((key, index) => (
-              <li key={key} className="flex gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+              <li key={key} className="flex gap-3 rounded-md border border-slate-200 bg-slate-50/80 p-3 shadow-sm shadow-slate-950/[0.02] transition hover:border-emerald-200 hover:bg-emerald-50/50">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-950 text-xs font-bold text-white">
                   {index + 1}
                 </span>
@@ -259,7 +259,7 @@ export default function GuidePage() {
         </section>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
-          <aside className="h-fit rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-6">
+          <aside className="premium-panel h-fit p-4 lg:sticky lg:top-6">
             <div className="flex items-center gap-2">
               <HelpCircle className="h-4 w-4 text-emerald-700" />
               <h2 className="text-sm font-semibold text-slate-950">{t("guideContentsTitle")}</h2>
@@ -290,7 +290,7 @@ export default function GuidePage() {
 
             <section
               id="faq"
-              className="scroll-mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+              className="premium-card scroll-mt-6 p-5"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700">
@@ -303,7 +303,7 @@ export default function GuidePage() {
               </div>
               <div className="mt-5 grid gap-3 md:grid-cols-2">
                 {faqKeys.map((key) => (
-                  <div key={key} className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                  <div key={key} className="rounded-md border border-slate-200 bg-slate-50/80 p-4 shadow-sm shadow-slate-950/[0.02]">
                     <p className="text-sm font-medium leading-6 text-slate-700">{t(key)}</p>
                   </div>
                 ))}

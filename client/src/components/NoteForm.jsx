@@ -114,7 +114,7 @@ export function NoteForm({
           name="noteType"
           value={values.noteType}
           onChange={updateField}
-          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          className="premium-input mt-2 h-11 w-full px-3 text-sm"
         >
           <option value="standard">{t("standardNote")}</option>
           <option value="meeting">{t("meetingNote")}</option>
@@ -175,7 +175,7 @@ export function NoteForm({
           value={values.title}
           onChange={updateField}
           required
-          className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          className="premium-input mt-2 h-11 w-full px-3 text-sm"
           placeholder={t("title")}
         />
       </div>
@@ -191,7 +191,7 @@ export function NoteForm({
           onChange={updateField}
           required
           rows="5"
-          className="mt-2 w-full resize-none rounded-md border border-slate-300 px-3 py-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          className="premium-input mt-2 w-full resize-none px-3 py-3 text-sm"
           placeholder={t("body")}
         />
       </div>
@@ -206,7 +206,7 @@ export function NoteForm({
           value={hasWorkspace ? values.visibility : "private"}
           onChange={updateField}
           disabled={!hasWorkspace}
-          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
+          className="premium-input mt-2 h-11 w-full px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
         >
           <option value="private">{t("privateNote")}</option>
           <option value="workspace">{t("workspaceNote")}</option>
@@ -226,7 +226,7 @@ export function NoteForm({
           value={values.category}
           onChange={updateField}
           required
-          className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          className="premium-input mt-2 h-11 w-full px-3 text-sm"
           placeholder={t("category")}
         />
       </div>
@@ -240,7 +240,7 @@ export function NoteForm({
           name="tags"
           value={values.tags}
           onChange={updateField}
-          className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+          className="premium-input mt-2 h-11 w-full px-3 text-sm"
           placeholder={t("tags")}
         />
       </div>
@@ -269,7 +269,7 @@ export function NoteForm({
 
       {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 
-      <Button type="submit" loading={saving} className="w-full bg-emerald-700 hover:bg-emerald-800">
+      <Button type="submit" loading={saving} className="w-full bg-emerald-700 shadow-emerald-950/10 hover:bg-emerald-800">
         <Plus className="h-4 w-4" />
         {t("createNote")}
       </Button>

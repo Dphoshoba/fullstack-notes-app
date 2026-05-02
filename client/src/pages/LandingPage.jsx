@@ -98,8 +98,8 @@ const pricingPlans = [
 function CtaLink({ children, onClick, to, variant = "primary" }) {
   const className =
     variant === "primary"
-      ? "inline-flex h-11 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-100"
-      : "inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100";
+      ? "premium-button inline-flex h-11 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+      : "premium-button inline-flex h-11 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950 focus:outline-none focus:ring-4 focus:ring-slate-100";
 
   return (
     <Link to={to} onClick={onClick} className={className}>
@@ -144,7 +144,7 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
         <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-2 text-sm font-bold text-slate-950">
             <span className="flex h-9 w-9 items-center justify-center rounded-md bg-emerald-700 text-white">
@@ -169,7 +169,7 @@ export default function LandingPage() {
             <Link
               to="/register"
               onClick={() => trackClick("click_register", { location: "header" })}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800"
             >
               Register
             </Link>
@@ -177,19 +177,19 @@ export default function LandingPage() {
         </nav>
       </header>
 
-      <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur">
+      <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 rounded-lg border border-slate-200/80 bg-white/95 p-2 shadow-2xl shadow-slate-950/20 backdrop-blur">
         <div className="grid gap-2 sm:grid-cols-2">
           <Link
             to="/register"
             onClick={() => trackClick("click_get_started", { location: "sticky_start_free" })}
-            className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
           >
             Start Free
           </Link>
           <Link
             to="/register"
             onClick={() => trackClick("click_upgrade", { location: "sticky_try_premium" })}
-            className="inline-flex h-10 items-center justify-center rounded-md border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+            className="premium-button inline-flex h-10 items-center justify-center rounded-md border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-100"
           >
             Try Premium
           </Link>
@@ -278,12 +278,12 @@ export default function LandingPage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Enter your email to get started"
-                className="h-12 min-w-0 flex-1 rounded-md border border-white/20 bg-white px-4 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20"
+                className="h-12 min-w-0 flex-1 rounded-md border border-white/20 bg-white px-4 text-sm font-medium text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20"
                 autoComplete="email"
               />
               <button
                 type="submit"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/30"
+                className="premium-button inline-flex h-12 items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 text-sm font-semibold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/30"
               >
                 Get Started Free
                 <ArrowRight className="h-4 w-4" />
@@ -303,14 +303,14 @@ export default function LandingPage() {
 
       <section className="border-b border-slate-200 bg-white px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+          <div className="premium-card premium-card-hover bg-slate-50 p-5">
             <Users className="h-6 w-6 text-emerald-700" />
             <h2 className="mt-3 text-lg font-bold text-slate-950">Built for individuals and teams</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Start with private notes, then bring your office into shared workspaces when collaboration grows.
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+          <div className="premium-card premium-card-hover bg-slate-50 p-5">
             <Shield className="h-6 w-6 text-emerald-700" />
             <h2 className="mt-3 text-lg font-bold text-slate-950">Secure, fast, and scalable</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -328,7 +328,7 @@ export default function LandingPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {["Meeting notes live in one place.", "Action items get lost after calls.", "Files, comments, and context split across tools."].map((item) => (
-              <div key={item} className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm font-medium leading-6 text-slate-700">
+              <div key={item} className="premium-card premium-card-hover bg-slate-50 p-4 text-sm font-medium leading-6 text-slate-700">
                 {item}
               </div>
             ))}
@@ -356,7 +356,7 @@ export default function LandingPage() {
               const Icon = feature.icon;
 
               return (
-                <article key={feature.title} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <article key={feature.title} className="premium-card premium-card-hover p-5">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
                     <Icon className="h-5 w-5" />
                   </span>
@@ -371,7 +371,7 @@ export default function LandingPage() {
 
       <section className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-3">
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
+          <article className="premium-card premium-card-hover p-6 lg:col-span-2">
             <NotebookTabs className="h-8 w-8 text-indigo-700" />
             <h2 className="mt-4 text-2xl font-bold text-slate-950">Meeting Notes</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -393,7 +393,7 @@ export default function LandingPage() {
               <ArrowRight className="h-4 w-4" />
             </Link>
           </article>
-          <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <article className="premium-card premium-card-hover p-6">
             <Bot className="h-8 w-8 text-emerald-700" />
             <h2 className="mt-4 text-2xl font-bold text-slate-950">AI Tools</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -429,7 +429,7 @@ export default function LandingPage() {
             ].map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div key={item.label} className="premium-card premium-card-hover bg-slate-50 p-4">
                   <Icon className="h-5 w-5 text-emerald-700" />
                   <p className="mt-3 text-sm font-semibold text-slate-800">{item.label}</p>
                 </div>
@@ -451,7 +451,7 @@ export default function LandingPage() {
               <article
                 key={plan.name}
                 className={`relative rounded-lg border p-6 shadow-sm ${
-                  plan.featured ? "border-emerald-400 bg-emerald-50/70 shadow-emerald-950/10" : "border-slate-200 bg-white"
+                  plan.featured ? "border-emerald-400 bg-emerald-50/70 shadow-emerald-950/10" : "border-slate-200 bg-white shadow-slate-950/5"
                 }`}
               >
                 {plan.featured ? (
@@ -506,7 +506,7 @@ export default function LandingPage() {
           />
           <div className="mt-12 grid gap-4 md:grid-cols-2">
             {faqItems.map((item) => (
-              <article key={item.question} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
+              <article key={item.question} className="premium-card premium-card-hover bg-slate-50 p-5">
                 <div className="flex gap-3">
                   <HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
                   <div>
@@ -521,7 +521,7 @@ export default function LandingPage() {
       </section>
 
       <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-slate-950 px-6 py-12 text-center shadow-sm">
+        <div className="mx-auto max-w-5xl rounded-lg border border-slate-800 bg-slate-950 px-6 py-12 text-center shadow-2xl shadow-slate-950/20">
           <h2 className="text-3xl font-bold text-white">Ready to organize your notes and meetings?</h2>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-300">
             Start free, explore the guide, and upgrade when your team is ready for more AI-powered knowledge work.

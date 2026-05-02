@@ -7,10 +7,21 @@ import { sendEmail } from "../services/emailService.js";
 
 const router = Router();
 
-router.use(authenticate);
+const logAuthHeader = (req, _res, next) => {
+  console.log("Auth header received:", Boolean(req.get("authorization")));
+  next();
+};
+
+const logAuthenticatedUser = (req, _res, next) => {
+  console.log("User authenticated:", req.user?.id);
+  next();
+};
 
 router.post(
   "/send-test-email",
+  logAuthHeader,
+  authenticate,
+  logAuthenticatedUser,
   asyncHandler(async (req, res) => {
     const { to } = req.body;
 

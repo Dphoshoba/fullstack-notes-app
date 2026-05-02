@@ -9,7 +9,7 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
   const header = req.get("authorization");
 
   if (!header?.startsWith("Bearer ")) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Missing bearer token");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid or expired access token");
   }
 
   const token = header.slice("Bearer ".length);
@@ -24,7 +24,7 @@ export const authenticate = asyncHandler(async (req, _res, next) => {
   const user = await User.findById(payload.sub);
 
   if (!user) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "User no longer exists");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid or expired access token");
   }
 
   req.user = user;

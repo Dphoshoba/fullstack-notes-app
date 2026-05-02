@@ -358,7 +358,7 @@ export const translations = {
     workspaceMemberAdded: "Workspace member added.",
     workspaceInvite: "Workspace invite",
     workspaceInviteCreated: "Invite link created and email sent.",
-    workspaceInviteEmailFailed: "Invite link created, but email could not be sent. You can copy the link manually.",
+    workspaceInviteEmailFailed: "Invite link created, but email could not be sent.",
     userSettings: "User settings",
     noteVisibility: "Note visibility",
     owner: "Owner",

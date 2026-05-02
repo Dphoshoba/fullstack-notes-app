@@ -164,7 +164,7 @@ export const createWorkspaceInvite = async (req, res) => {
   try {
     emailSent = await sendWorkspaceInviteEmail({
       to: invitedEmail,
-      inviterName: req.user.name,
+      inviterName: req.user.name || req.user.email,
       workspaceName,
       inviteLink
     });
@@ -174,8 +174,8 @@ export const createWorkspaceInvite = async (req, res) => {
     } else {
       console.warn("Workspace invite email could not be sent.");
     }
-  } catch {
-    console.warn("Workspace invite email could not be sent.");
+  } catch (error) {
+    console.warn("Workspace invite email could not be sent:", error.message);
   }
 
   return res.status(StatusCodes.CREATED).json({

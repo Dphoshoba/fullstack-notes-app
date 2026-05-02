@@ -75,7 +75,7 @@ export const updateUserSettings = async (req, res) => {
 
   const allowedUpdates = {};
 
-  for (const key of ["name", "preferredLanguage", "defaultNoteScope"]) {
+  for (const key of ["name", "preferredLanguage", "defaultNoteScope", "onboardingCompleted"]) {
     if (req.body[key] !== undefined) {
       allowedUpdates[key] = req.body[key];
     }

@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "./Button.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
@@ -25,12 +25,27 @@ export function NoteForm({
   onCreateError,
   onCreateSuccess,
   hasWorkspace = false,
-  defaultVisibility = "private"
+  defaultVisibility = "private",
+  prefillValues = null
 }) {
   const { t } = useI18n();
   const [values, setValues] = useState({ ...initialValues, visibility: defaultVisibility });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!prefillValues) {
+      return;
+    }
+
+    setValues((current) => ({
+      ...current,
+      ...prefillValues,
+      visibility: hasWorkspace
+        ? prefillValues.visibility || current.visibility || defaultVisibility
+        : "private"
+    }));
+  }, [defaultVisibility, hasWorkspace, prefillValues]);
 
   const updateField = (event) => {
     const { name, value, type, checked } = event.target;

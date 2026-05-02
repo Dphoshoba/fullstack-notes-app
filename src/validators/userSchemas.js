@@ -14,7 +14,8 @@ export const updateUserSettingsSchema = Joi.object({
   body: Joi.object({
     name: Joi.string().trim().min(2).max(80),
     preferredLanguage: Joi.string().trim().min(2).max(10),
-    defaultNoteScope: Joi.string().valid("private", "workspace")
+    defaultNoteScope: Joi.string().valid("private", "workspace"),
+    onboardingCompleted: Joi.boolean()
   })
     .min(1)
     .required()

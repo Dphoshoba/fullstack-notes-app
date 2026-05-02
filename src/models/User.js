@@ -60,6 +60,10 @@ const userSchema = new mongoose.Schema(
       enum: ["private", "workspace"],
       default: "private"
     },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false
+    },
     plan: {
       type: String,
       enum: USER_PLANS,

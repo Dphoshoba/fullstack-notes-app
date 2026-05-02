@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { Attachment } from "../models/Attachment.js";
 import { Comment } from "../models/Comment.js";
 import { Note } from "../models/Note.js";
+import { User } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -178,6 +179,11 @@ export const createNote = async (req, res) => {
     organizationId: visibility === "workspace" ? req.user.organizationId : null,
     owner: req.user.id
   });
+
+  if (!req.user.onboardingCompleted) {
+    req.user.onboardingCompleted = true;
+    await User.findByIdAndUpdate(req.user.id, { onboardingCompleted: true });
+  }
 
   return res.status(StatusCodes.CREATED).json({
     success: true,

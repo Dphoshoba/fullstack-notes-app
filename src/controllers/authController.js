@@ -1,6 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { nanoid } from "nanoid";
 
+import { Organization } from "../models/Organization.js";
 import { RefreshToken } from "../models/RefreshToken.js";
 import { User } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -12,6 +13,14 @@ import {
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/tokens.js";
 
 const refreshTokenDays = 7;
+
+const slugify = (value) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
 
 const createTokenPair = async (user) => {
   const tokenId = nanoid();
@@ -29,20 +38,35 @@ const createTokenPair = async (user) => {
   };
 };
 
-const sendAuthResponse = async (res, user, statusCode = StatusCodes.OK) => {
+const sendAuthResponse = async (res, user, statusCode = StatusCodes.OK, workspace = null) => {
   const tokens = await createTokenPair(user);
   setRefreshTokenCookie(res, tokens.refreshToken);
 
   return res.status(statusCode).json({
     success: true,
     user,
+    workspace,
     accessToken: tokens.accessToken
   });
 };
 
 export const register = async (req, res) => {
   const user = await User.create(req.body);
-  return sendAuthResponse(res, user, StatusCodes.CREATED);
+  const workspaceName = `${user.name}'s Workspace`;
+  const baseSlug = slugify(workspaceName) || "workspace";
+  const workspace = await Organization.create({
+    name: workspaceName,
+    slug: `${baseSlug}-${nanoid(6).toLowerCase()}`,
+    owner: user.id,
+    members: [user.id]
+  });
+
+  user.organizationId = workspace.id;
+  user.workspaceRole = "owner";
+  user.defaultNoteScope = "workspace";
+  await user.save();
+
+  return sendAuthResponse(res, user, StatusCodes.CREATED, workspace);
 };
 
 export const login = async (req, res) => {

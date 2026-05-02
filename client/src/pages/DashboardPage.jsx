@@ -59,6 +59,7 @@ import { useI18n } from "../context/I18nContext.jsx";
 const NOTES_LIMIT = 12;
 const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
 const GUIDE_ONBOARDING_KEY = "notes_api_guide_onboarding_seen";
+const FIRST_TIME_ONBOARDING_KEY = "notes_api_first_time_onboarding_done";
 const DETAIL_ERROR_MESSAGES = new Set([
   "Comments could not be loaded",
   "Attachments could not be loaded",
@@ -296,7 +297,7 @@ const formatDisplayDate = (value) => {
 };
 
 export default function DashboardPage() {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, updateSettings } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
   const navigate = useNavigate();
   const [notes, setNotes] = useState([]);
@@ -359,9 +360,14 @@ export default function DashboardPage() {
   const [showGuideOnboarding, setShowGuideOnboarding] = useState(
     () => localStorage.getItem(GUIDE_ONBOARDING_KEY) !== "true"
   );
+  const [onboardingHidden, setOnboardingHidden] = useState(
+    () => localStorage.getItem(FIRST_TIME_ONBOARDING_KEY) === "true"
+  );
+  const [notePrefillValues, setNotePrefillValues] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [workspaceInfo, setWorkspaceInfo] = useState({ workspace: null, role: "staff" });
   const notesRequestIdRef = useRef(0);
+  const createNoteRef = useRef(null);
 
   const isSearching = Boolean(searchTerm.trim());
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
@@ -519,6 +525,17 @@ export default function DashboardPage() {
       .filter(Boolean)
       .some((value) => value.toLowerCase().includes(query));
   });
+  const hasCreatedFirstNote = pagination.total > 0 || loadedNotesCount > 0;
+  const inviteTeamStarted = localStorage.getItem("notes_api_onboarding_invite_started") === "true";
+  const onboardingStepsCompleted = [
+    hasCreatedFirstNote,
+    inviteTeamStarted,
+    true
+  ].filter(Boolean).length;
+  const showFirstTimeOnboarding =
+    !onboardingHidden &&
+    user?.onboardingCompleted !== true &&
+    (!hasCreatedFirstNote || user?.onboardingCompleted === false);
 
   useEffect(() => {
     trackEvent("dashboard_view");
@@ -532,6 +549,35 @@ export default function DashboardPage() {
   const rememberGuideOnboarding = () => {
     localStorage.setItem(GUIDE_ONBOARDING_KEY, "true");
     setShowGuideOnboarding(false);
+  };
+
+  const completeFirstTimeOnboarding = useCallback(async () => {
+    localStorage.setItem(FIRST_TIME_ONBOARDING_KEY, "true");
+    setOnboardingHidden(true);
+
+    if (!user?.onboardingCompleted) {
+      try {
+        await updateSettings({ onboardingCompleted: true });
+      } catch {
+        // The local skip should still keep the banner out of the user's way.
+      }
+    }
+  }, [updateSettings, user?.onboardingCompleted]);
+
+  const startFirstNoteOnboarding = () => {
+    setNotePrefillValues({
+      title: "My First Note",
+      body: "Start typing here...",
+      category: "General",
+      noteType: "standard"
+    });
+    createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const startInviteOnboarding = () => {
+    localStorage.setItem("notes_api_onboarding_invite_started", "true");
+    addToast("success", t("inviteSent"));
+    navigate("/settings");
   };
 
   const openGuideFromOnboarding = () => {
@@ -738,6 +784,8 @@ export default function DashboardPage() {
       noteType: note.noteType || "standard",
       visibility: note.visibility || "private"
     });
+    localStorage.setItem(FIRST_TIME_ONBOARDING_KEY, "true");
+    setOnboardingHidden(true);
     setPage(1);
     await loadNotes({ nextPage: 1 });
     return note;
@@ -1344,6 +1392,69 @@ export default function DashboardPage() {
         </div>
       </header>
 
+      {showFirstTimeOnboarding ? (
+        <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="rounded-lg border border-emerald-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-base font-bold text-slate-950">{t("onboardingTitle")}</p>
+                  <p className="mt-1 text-sm text-slate-600">{t("onboardingSubtitle")}</p>
+                  <p className="mt-3 text-sm font-semibold text-emerald-700">
+                    {t("onboardingProgress", { completed: onboardingStepsCompleted, total: 3 })}
+                  </p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    {[
+                      [t("onboardingCreateFirstNote"), hasCreatedFirstNote],
+                      [t("onboardingInviteTeam"), inviteTeamStarted],
+                      [t("onboardingViewDashboard"), true]
+                    ].map(([label, completed]) => (
+                      <div
+                        key={label}
+                        className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
+                          completed
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-slate-200 bg-slate-50 text-slate-600"
+                        }`}
+                      >
+                        <CheckCircle2 className={`h-4 w-4 ${completed ? "text-emerald-700" : "text-slate-300"}`} />
+                        <span className="font-medium">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+                <button
+                  type="button"
+                  onClick={startFirstNoteOnboarding}
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                >
+                  {t("createFirstNote")}
+                </button>
+                <button
+                  type="button"
+                  onClick={startInviteOnboarding}
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  {t("inviteTeam")}
+                </button>
+                <button
+                  type="button"
+                  onClick={completeFirstTimeOnboarding}
+                  className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
+                >
+                  {t("skipForNow")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {showGuideOnboarding ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
@@ -1485,7 +1596,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8">
-        <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <aside ref={createNoteRef} className="h-fit scroll-mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-950">{t("createNote")}</h2>
           <p className="mt-1 text-sm text-slate-500">{t("notes")}</p>
           <div className="mt-5">
@@ -1496,6 +1607,7 @@ export default function DashboardPage() {
               defaultVisibility={
                 hasWorkspace && user?.defaultNoteScope === "workspace" ? "workspace" : "private"
               }
+              prefillValues={notePrefillValues}
               onCreateSuccess={(note) =>
                 addToast("success", t("createdNote", { title: note.title }))
               }

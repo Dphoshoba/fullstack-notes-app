@@ -78,21 +78,97 @@ const faqItems = [
 const pricingPlans = [
   {
     name: "Free",
-    description: "Start organizing personal notes and lightweight work.",
+    description: "Start organizing your own notes and daily work.",
     price: "$0",
-    cta: "Get started",
+    cta: "Get Started Free",
     to: "/register",
-    features: ["Notes", "Basic AI usage", "Personal organization"]
+    features: ["Personal notes", "Limited AI usage", "Basic organization"]
   },
   {
     name: "Premium",
-    description: "Unlock more AI usage and stronger team workflows.",
+    description: "Unlock AI-powered meeting and team workflows.",
     price: "Upgrade",
-    cta: "Upgrade / Premium",
+    cta: "Upgrade to Premium",
     to: "/register",
     featured: true,
-    features: ["More AI usage", "Meeting intelligence", "Workspace collaboration", "Export and billing tools"]
+    features: [
+      "More AI usage",
+      "Meeting intelligence",
+      "Workspace collaboration",
+      "Comments and attachments",
+      "Export tools"
+    ]
   }
+];
+
+const conversionCards = [
+  {
+    icon: Bot,
+    title: "Smart Notes (AI)",
+    copy: "Summarize long notes, suggest clean tags, and turn rough meeting notes into useful next steps."
+  },
+  {
+    icon: Users,
+    title: "Team Workspaces",
+    copy: "Keep private work separate while giving your team one shared place for office knowledge."
+  },
+  {
+    icon: MessageSquare,
+    title: "Invite & Collaborate",
+    copy: "Invite teammates, comment in context, and attach files so decisions stay close to the work."
+  }
+];
+
+const demoSteps = [
+  {
+    icon: FileText,
+    title: "Note creation",
+    copy: "Capture a note with a title, body, category, tags, and visibility in one focused form.",
+    accent: "emerald"
+  },
+  {
+    icon: Bot,
+    title: "AI summary",
+    copy: "Run AI actions directly from your workspace to summarize notes or suggest tags.",
+    accent: "indigo"
+  },
+  {
+    icon: Users,
+    title: "Invite flow",
+    copy: "Create a workspace invite, email the link, and bring teammates into shared notes.",
+    accent: "amber"
+  }
+];
+
+const howItWorksSteps = [
+  {
+    icon: FileText,
+    title: "Create notes",
+    copy: "Capture ideas, tasks, files, and office knowledge with categories, tags, pins, and stars."
+  },
+  {
+    icon: NotebookTabs,
+    title: "Turn meetings into action items",
+    copy: "Use meeting notes and AI actions to convert discussion into decisions, owners, and next steps."
+  },
+  {
+    icon: Users,
+    title: "Invite your team",
+    copy: "Create a workspace, send invites, and keep shared work separate from private notes."
+  },
+  {
+    icon: Bot,
+    title: "Use AI to move faster",
+    copy: "Summarize notes, suggest tags, extract action items, and save useful AI results back into your work."
+  }
+];
+
+const audienceCards = [
+  "Teams",
+  "Small businesses",
+  "Churches/nonprofits",
+  "Creators",
+  "Students/researchers"
 ];
 
 function CtaLink({ children, onClick, to, variant = "primary" }) {
@@ -154,6 +230,7 @@ export default function LandingPage() {
           </Link>
           <div className="hidden items-center gap-6 text-sm font-semibold text-slate-600 md:flex">
             <a href="#features" className="hover:text-slate-950">Features</a>
+            <a href="#demo" className="hover:text-slate-950">Demo</a>
             <a href="#pricing" onClick={() => trackClick("click_pricing", { location: "nav" })} className="hover:text-slate-950">Pricing</a>
             <a href="#faq" className="hover:text-slate-950">FAQ</a>
             <Link to="/guide" className="hover:text-slate-950">Guide</Link>
@@ -262,10 +339,10 @@ export default function LandingPage() {
               Notes, meetings, AI, and team knowledge
             </span>
             <h1 className="mt-6 max-w-4xl text-5xl font-bold leading-tight text-white sm:text-6xl">
-              A smarter workspace for notes, meetings, and team knowledge
+              Organize your work. Collaborate with your team. Move faster.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
-              Capture ideas, organize office knowledge, turn meetings into action items, and use AI to work faster.
+              A smarter workspace for notes, meetings, files, AI summaries, and team knowledge.
             </p>
             <form
               onSubmit={submitEmailCapture}
@@ -291,11 +368,19 @@ export default function LandingPage() {
             </form>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <CtaLink to="/register" onClick={() => trackClick("click_get_started", { location: "hero_cta" })}>
-                Get started
+                Get Started Free
                 <ArrowRight className="h-4 w-4" />
               </CtaLink>
-              <CtaLink to="/login" variant="secondary" onClick={() => trackClick("click_login", { location: "hero_cta" })}>Log in</CtaLink>
-              <CtaLink to="/register" variant="secondary" onClick={() => trackClick("click_upgrade", { location: "hero_cta" })}>Upgrade / Premium</CtaLink>
+              <CtaLink to="/login" variant="secondary" onClick={() => trackClick("click_login", { location: "hero_cta" })}>
+                Log In
+              </CtaLink>
+              <a
+                href="#features"
+                onClick={() => trackClick("click_features", { location: "hero_cta" })}
+                className="premium-button inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white shadow-sm shadow-slate-950/[0.03] transition hover:bg-white hover:text-slate-950 focus:outline-none focus:ring-4 focus:ring-white/20"
+              >
+                See Features
+              </a>
             </div>
           </div>
         </div>
@@ -344,6 +429,117 @@ export default function LandingPage() {
         />
       </section>
 
+      <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <SectionHeading
+            eyebrow="How it works"
+            title="A simple flow from idea to action."
+            copy="Start with one note, then bring in meetings, teammates, and AI when the work needs more structure."
+          />
+          <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {howItWorksSteps.map((step, index) => {
+              const Icon = step.icon;
+
+              return (
+                <article key={step.title} className="premium-card premium-card-hover p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                      Step {index + 1}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-slate-950">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{step.copy}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section id="demo" className="bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <SectionHeading
+            eyebrow="See it in action"
+            title="From first note to team collaboration in one flow."
+            copy="The workspace is designed around the daily loop: capture a note, use AI to sharpen it, then invite the right people to act on it."
+          />
+
+          <div className="mt-12 grid gap-4 lg:grid-cols-3">
+            {demoSteps.map((step, index) => {
+              const Icon = step.icon;
+              const accentClass =
+                step.accent === "indigo"
+                  ? "bg-indigo-50 text-indigo-700 ring-indigo-100"
+                  : step.accent === "amber"
+                    ? "bg-amber-50 text-amber-700 ring-amber-100"
+                    : "bg-emerald-50 text-emerald-700 ring-emerald-100";
+
+              return (
+                <article key={step.title} className="premium-card premium-card-hover overflow-hidden p-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`flex h-11 w-11 items-center justify-center rounded-md ring-1 ${accentClass}`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                      0{index + 1}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-slate-950">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{step.copy}</p>
+                  <div className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-3">
+                    {step.title === "Note creation" ? (
+                      <div className="space-y-2">
+                        <div className="h-3 w-32 rounded bg-slate-300" />
+                        <div className="h-9 rounded-md border border-slate-200 bg-white" />
+                        <div className="h-16 rounded-md border border-slate-200 bg-white" />
+                        <div className="flex gap-2">
+                          <span className="h-6 w-16 rounded-md bg-emerald-100" />
+                          <span className="h-6 w-20 rounded-md bg-slate-200" />
+                        </div>
+                      </div>
+                    ) : null}
+                    {step.title === "AI summary" ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Bot className="h-4 w-4 text-indigo-700" />
+                          <div className="h-3 w-28 rounded bg-indigo-200" />
+                        </div>
+                        <div className="h-2 w-full rounded bg-slate-200" />
+                        <div className="h-2 w-11/12 rounded bg-slate-200" />
+                        <div className="h-2 w-8/12 rounded bg-slate-200" />
+                      </div>
+                    ) : null}
+                    {step.title === "Invite flow" ? (
+                      <div className="space-y-2">
+                        <div className="h-9 rounded-md border border-slate-200 bg-white" />
+                        <div className="flex gap-2">
+                          <div className="h-9 flex-1 rounded-md border border-slate-200 bg-white" />
+                          <div className="h-9 w-24 rounded-md bg-slate-950" />
+                        </div>
+                        <div className="h-7 rounded-md bg-emerald-100" />
+                      </div>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <CtaLink to="/register" onClick={() => trackClick("click_get_started", { location: "demo_section" })}>
+              Get Started Free
+              <ArrowRight className="h-4 w-4" />
+            </CtaLink>
+            <CtaLink to="/login" variant="secondary" onClick={() => trackClick("click_login", { location: "demo_section" })}>
+              Try Demo
+            </CtaLink>
+          </div>
+        </div>
+      </section>
+
       <section id="features" className="bg-white px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeading
@@ -352,6 +548,19 @@ export default function LandingPage() {
             copy="Start with simple notes, then grow into meeting intelligence, shared workspaces, and premium AI usage when your team needs more."
           />
           <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {conversionCards.map((feature) => {
+              const Icon = feature.icon;
+
+              return (
+                <article key={feature.title} className="premium-card premium-card-hover border-emerald-200 bg-emerald-50/40 p-5">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-md bg-white text-emerald-700 ring-1 ring-emerald-100">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-4 text-lg font-semibold text-slate-950">{feature.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{feature.copy}</p>
+                </article>
+              );
+            })}
             {featureHighlights.map((feature) => {
               const Icon = feature.icon;
 
@@ -365,6 +574,24 @@ export default function LandingPage() {
                 </article>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <SectionHeading
+            eyebrow="Who it's for"
+            title="Built for people who need shared knowledge to stay usable."
+            copy="Notes Workspace fits lightweight personal work and practical team coordination without turning into a heavy project management system."
+          />
+          <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {audienceCards.map((audience) => (
+              <article key={audience} className="premium-card premium-card-hover bg-white p-5 text-center">
+                <Users className="mx-auto h-6 w-6 text-emerald-700" />
+                <h3 className="mt-3 text-sm font-bold text-slate-950">{audience}</h3>
+              </article>
+            ))}
           </div>
         </div>
       </section>

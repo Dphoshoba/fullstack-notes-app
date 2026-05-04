@@ -1,6 +1,9 @@
 import { StatusCodes } from "http-status-codes";
 
 import { AnalyticsEvent } from "../models/AnalyticsEvent.js";
+import { Note } from "../models/Note.js";
+import { User } from "../models/User.js";
+import { WorkspaceInvite } from "../models/WorkspaceInvite.js";
 
 const sensitiveKeyPattern = /(password|token|secret|card|payment|jwt|authorization|cookie)/i;
 const trackedSummaryEvents = {
@@ -58,7 +61,16 @@ export const createAnalyticsEvent = async (req, res) => {
 };
 
 export const getAnalyticsSummary = async (_req, res) => {
-  const [totalEvents, summaryCounts, commonPaths] = await Promise.all([
+  const [
+    totalEvents,
+    summaryCounts,
+    commonPaths,
+    totalUsers,
+    totalNotes,
+    invitesSent,
+    invitesAccepted,
+    aiUsage
+  ] = await Promise.all([
     AnalyticsEvent.countDocuments(),
     AnalyticsEvent.aggregate([
       {
@@ -87,6 +99,18 @@ export const getAnalyticsSummary = async (_req, res) => {
       },
       { $sort: { count: -1 } },
       { $limit: 5 }
+    ]),
+    User.countDocuments(),
+    Note.countDocuments(),
+    WorkspaceInvite.countDocuments(),
+    WorkspaceInvite.countDocuments({ status: "accepted" }),
+    User.aggregate([
+      {
+        $group: {
+          _id: null,
+          count: { $sum: "$aiUsageCount" }
+        }
+      }
     ])
   ]);
 
@@ -105,6 +129,11 @@ export const getAnalyticsSummary = async (_req, res) => {
     success: true,
     data: {
       totalEvents,
+      totalUsers,
+      totalNotes,
+      invitesSent,
+      invitesAccepted,
+      aiUsageCount: aiUsage[0]?.count || 0,
       ...counts,
       mostCommonPaths: commonPaths.map((item) => ({
         path: item._id,

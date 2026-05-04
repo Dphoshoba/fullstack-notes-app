@@ -1643,10 +1643,15 @@ export default function DashboardPage() {
                 </select>
               </label>
             </div>
-            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50/80 px-3 py-3 shadow-inner shadow-slate-950/[0.02]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-3 shadow-sm shadow-emerald-950/[0.04]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</p>
+                    <span className="inline-flex rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white shadow-sm shadow-emerald-950/10">
+                      {usage.plan === "premium" ? t("premiumActive") : t("mostPopular")}
+                    </span>
+                  </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {t("currentPlan")}:{" "}
                     <span className="font-semibold capitalize text-slate-950">
@@ -1658,6 +1663,11 @@ export default function DashboardPage() {
                       </span>
                     ) : null}
                   </p>
+                  {usage.plan !== "premium" ? (
+                    <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-emerald-800">
+                      {t("premiumUpgradeReason")}
+                    </p>
+                  ) : null}
                 </div>
                 {usage.plan === "premium" ? (
                   <button
@@ -1678,12 +1688,53 @@ export default function DashboardPage() {
                     type="button"
                     onClick={startUpgrade}
                     disabled={upgradeLoading}
-                    className="premium-button inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {t("upgrade")}
+                    {t("upgradeToPremium")}
                   </button>
                 )}
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div className="rounded-md border border-slate-200 bg-white p-3">
+                  <p className="text-sm font-semibold text-slate-950">{t("freePlan")}</p>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center justify-between gap-3">
+                      <span>{t("aiUsage")}</span>
+                      <span className="font-semibold text-slate-900">{t("freeAiLimit")}</span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3">
+                      <span>{t("notes")}</span>
+                      <span className="font-semibold text-slate-900">{t("basicNotesLimit")}</span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3">
+                      <span>{t("workspace")}</span>
+                      <span className="font-semibold text-slate-900">{t("personalWorkspaceLimit")}</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="rounded-md border border-emerald-300 bg-white p-3 shadow-sm shadow-emerald-950/[0.04]">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-950">{t("premiumPlan")}</p>
+                    <span className="rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white">
+                      {t("mostPopular")}
+                    </span>
+                  </div>
+                  <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                    <li className="flex items-center justify-between gap-3">
+                      <span>{t("aiUsage")}</span>
+                      <span className="font-semibold text-emerald-800">{t("premiumAiLimit")}</span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3">
+                      <span>{t("notes")}</span>
+                      <span className="font-semibold text-emerald-800">{t("unlimitedNotesLimit")}</span>
+                    </li>
+                    <li className="flex items-center justify-between gap-3">
+                      <span>{t("workspace")}</span>
+                      <span className="font-semibold text-emerald-800">{t("teamWorkspaceLimit")}</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
               <div className="mt-3">
                 <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
@@ -2393,9 +2444,9 @@ export default function DashboardPage() {
             <section className="mt-4 rounded-md border border-slate-200 bg-white p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-950">Analytics summary</h3>
+                  <h3 className="text-sm font-semibold text-slate-950">{t("analyticsDashboard")}</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    First-party funnel events. Sensitive data is not tracked.
+                    {t("analyticsDashboardDescription")}
                   </p>
                 </div>
                 <button
@@ -2415,23 +2466,44 @@ export default function DashboardPage() {
                 </p>
               ) : null}
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 {[
-                  ["Total events", analyticsSummary?.totalEvents || 0],
-                  ["Landing views", analyticsSummary?.landingPageViews || 0],
-                  ["Register clicks", analyticsSummary?.registerClicks || 0],
-                  ["Upgrade clicks", analyticsSummary?.upgradeClicks || 0]
+                  [t("totalUsers"), analyticsSummary?.totalUsers || 0],
+                  [t("totalNotes"), analyticsSummary?.totalNotes || 0],
+                  [t("invitesSent"), analyticsSummary?.invitesSent || 0],
+                  [t("invitesAccepted"), analyticsSummary?.invitesAccepted || 0],
+                  [t("aiUsageCount"), analyticsSummary?.aiUsageCount || 0]
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-                    <p className="mt-2 text-xl font-bold text-slate-950">{analyticsLoading ? "..." : value}</p>
+                    <p className="mt-2 text-xl font-bold text-slate-950">
+                      {analyticsLoading ? "..." : Number(value).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  [t("totalEvents"), analyticsSummary?.totalEvents || 0],
+                  [t("landingViews"), analyticsSummary?.landingPageViews || 0],
+                  [t("registerClicks"), analyticsSummary?.registerClicks || 0],
+                  [t("upgradeClicks"), analyticsSummary?.upgradeClicks || 0]
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className="mt-1 text-base font-bold text-slate-950">
+                      {analyticsLoading ? "..." : Number(value).toLocaleString()}
+                    </p>
                   </div>
                 ))}
               </div>
 
               {analyticsSummary?.mostCommonPaths?.length ? (
                 <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Most common paths</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {t("mostCommonPaths")}
+                  </p>
                   <div className="mt-3 space-y-2">
                     {analyticsSummary.mostCommonPaths.map((item) => (
                       <div key={item.path} className="flex items-center justify-between gap-3 text-sm">

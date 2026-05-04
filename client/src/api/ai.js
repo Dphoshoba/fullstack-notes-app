@@ -16,6 +16,46 @@ export async function suggestTags(noteId) {
   return data.data;
 }
 
+export async function improveWriting(noteId) {
+  const data = await apiRequest("/api/ai/improve-writing", {
+    method: "POST",
+    body: JSON.stringify({ noteId })
+  });
+  return data.data;
+}
+
+export async function extractTasks(noteId) {
+  const data = await apiRequest("/api/ai/extract-tasks", {
+    method: "POST",
+    body: JSON.stringify({ noteId })
+  });
+  return data.data;
+}
+
+export async function createExecutiveSummary(noteId) {
+  const data = await apiRequest("/api/ai/executive-summary", {
+    method: "POST",
+    body: JSON.stringify({ noteId })
+  });
+  return data.data;
+}
+
+export async function createFollowUpEmail(noteId) {
+  const data = await apiRequest("/api/ai/follow-up-email", {
+    method: "POST",
+    body: JSON.stringify({ noteId })
+  });
+  return data.data;
+}
+
+export async function generateStudyNotes(noteId) {
+  const data = await apiRequest("/api/ai/study-notes", {
+    method: "POST",
+    body: JSON.stringify({ noteId })
+  });
+  return data.data;
+}
+
 export async function convertToMeetingMinutes(noteId) {
   const data = await apiRequest("/api/ai/convert-to-meeting-minutes", {
     method: "POST",

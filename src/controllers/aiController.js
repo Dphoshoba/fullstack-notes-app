@@ -2,10 +2,15 @@ import { StatusCodes } from "http-status-codes";
 
 import { Note } from "../models/Note.js";
 import {
+  createExecutiveSummary as createNoteExecutiveSummary,
+  createFollowUpEmail as createNoteFollowUpEmail,
   convertToMeetingMinutes as convertNoteToMeetingMinutes,
   extractActionItems as extractNoteActionItems,
   extractAttendeesAndDecisions as extractNoteAttendeesAndDecisions,
+  extractTasks as extractNoteTasks,
   generateSmartInsights,
+  generateStudyNotes as generateNoteStudyNotes,
+  improveWriting as improveNoteWriting,
   suggestTags as suggestNoteTags,
   summarizeNote as summarizeNoteText
 } from "../services/aiService.js";
@@ -59,6 +64,26 @@ const actionItemsToText = (actionItems) =>
         .join("\n")
     : "No action items captured yet.";
 
+const tasksToText = (tasks) =>
+  tasks.length
+    ? tasks
+        .map((item) =>
+          [
+            `- ${item.text}`,
+            item.owner ? `Owner: ${item.owner}` : "",
+            item.dueDate ? `Due: ${item.dueDate}` : "",
+            item.priority ? `Priority: ${item.priority}` : "",
+            item.status ? `Status: ${item.status}` : ""
+          ]
+            .filter(Boolean)
+            .join(" | ")
+        )
+        .join("\n")
+    : "No tasks captured yet.";
+
+const followUpEmailToText = (email) =>
+  [`Subject: ${email.subject || ""}`, "", email.body || ""].join("\n");
+
 export const summarizeNote = async (req, res) => {
   const note = await noteLookup(req);
   const summary = await summarizeNoteText(noteToAiText(note));
@@ -91,6 +116,93 @@ export const suggestTags = async (req, res) => {
       source: "openai",
       note: notePayload(note),
       suggestedTags,
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const improveWriting = async (req, res) => {
+  const note = await noteLookup(req);
+  const cleanedBody = await improveNoteWriting(noteToAiText(note));
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "improve-writing",
+      provider: "openai",
+      source: "openai",
+      note: notePayload(note),
+      cleanedBody,
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const extractTasks = async (req, res) => {
+  const note = await noteLookup(req);
+  const tasks = await extractNoteTasks(noteToAiText(note));
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "extract-tasks",
+      provider: "openai",
+      source: "openai",
+      note: notePayload(note),
+      tasks,
+      cleanedBody: tasksToText(tasks),
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const createExecutiveSummary = async (req, res) => {
+  const note = await noteLookup(req);
+  const cleanedBody = await createNoteExecutiveSummary(noteToAiText(note));
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "executive-summary",
+      provider: "openai",
+      source: "openai",
+      note: notePayload(note),
+      cleanedBody,
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const createFollowUpEmail = async (req, res) => {
+  const note = await noteLookup(req);
+  const email = await createNoteFollowUpEmail(noteToAiText(note));
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "follow-up-email",
+      provider: "openai",
+      source: "openai",
+      note: notePayload(note),
+      email,
+      cleanedBody: followUpEmailToText(email),
+      replaceableWithAi: true
+    }
+  });
+};
+
+export const generateStudyNotes = async (req, res) => {
+  const note = await noteLookup(req);
+  const cleanedBody = await generateNoteStudyNotes(noteToAiText(note));
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "study-notes",
+      provider: "openai",
+      source: "openai",
+      note: notePayload(note),
+      cleanedBody,
       replaceableWithAi: true
     }
   });

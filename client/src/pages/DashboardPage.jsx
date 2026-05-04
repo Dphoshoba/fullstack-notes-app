@@ -16,6 +16,7 @@ import {
   HelpCircle,
   Loader2,
   LogOut,
+  Mail,
   MessageSquare,
   Pin,
   RefreshCw,
@@ -35,10 +36,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
+  createExecutiveSummary,
+  createFollowUpEmail,
   convertToMeetingMinutes,
   extractActionItems,
   extractAttendeesAndDecisions,
+  extractTasks,
   generateSmartInsights,
+  generateStudyNotes,
+  improveWriting,
   suggestTags,
   summarizeNote
 } from "../api/ai.js";
@@ -890,13 +896,23 @@ export default function DashboardPage() {
           ? await summarizeNote(targetNote.id)
           : action === "tags"
             ? await suggestTags(targetNote.id)
-            : action === "meeting-minutes"
-              ? await convertToMeetingMinutes(targetNote.id)
-              : action === "meeting-actions"
-                ? await extractActionItems(targetNote.id)
-                : action === "meeting-attendees-decisions"
-                  ? await extractAttendeesAndDecisions(targetNote.id)
-                  : await generateSmartInsights();
+            : action === "improve-writing"
+              ? await improveWriting(targetNote.id)
+              : action === "extract-tasks"
+                ? await extractTasks(targetNote.id)
+                : action === "executive-summary"
+                  ? await createExecutiveSummary(targetNote.id)
+                  : action === "follow-up-email"
+                    ? await createFollowUpEmail(targetNote.id)
+                    : action === "study-notes"
+                      ? await generateStudyNotes(targetNote.id)
+                      : action === "meeting-minutes"
+                        ? await convertToMeetingMinutes(targetNote.id)
+                        : action === "meeting-actions"
+                          ? await extractActionItems(targetNote.id)
+                          : action === "meeting-attendees-decisions"
+                            ? await extractAttendeesAndDecisions(targetNote.id)
+                            : await generateSmartInsights();
 
       trackEvent("use_ai_tool", {
         action,
@@ -1850,6 +1866,51 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
+                onClick={() => runAiAction("improve-writing")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "improve-writing" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
+                {t("improveWriting")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("extract-tasks")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "extract-tasks" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {t("extractTasks")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("executive-summary")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "executive-summary" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                {t("executiveSummary")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("follow-up-email")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "follow-up-email" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {t("followUpEmail")}
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("study-notes")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "study-notes" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                {t("studyNotes")}
+              </button>
+              <button
+                type="button"
                 onClick={() => runAiAction("insights")}
                 disabled={Boolean(aiLoadingAction) || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1940,6 +2001,34 @@ export default function DashboardPage() {
                     </p>
                     <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700 sm:col-span-2">
                       {aiResult.insights.suggestedFocus}
+                    </p>
+                  </div>
+                ) : null}
+                {aiResult.tasks?.length ? (
+                  <div className="mt-3 rounded-md bg-white px-3 py-3 ring-1 ring-emerald-100">
+                    <p className="text-xs font-semibold uppercase text-slate-500">{t("tasks")}</p>
+                    <div className="mt-2 space-y-2">
+                      {aiResult.tasks.map((task, index) => (
+                        <div key={`${task.text}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                          <p className="font-semibold text-slate-900">{task.text}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {[task.owner ? `${t("owner")}: ${task.owner}` : "", task.dueDate ? `${t("followUpDate")}: ${task.dueDate}` : "", task.priority ? `${t("priority")}: ${task.priority}` : "", task.status ? `${t("status")}: ${task.status}` : ""]
+                              .filter(Boolean)
+                              .join(" | ")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {aiResult.email ? (
+                  <div className="mt-3 rounded-md bg-white px-3 py-3 ring-1 ring-emerald-100">
+                    <p className="text-xs font-semibold uppercase text-slate-500">{t("followUpEmail")}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-950">
+                      {t("subject")}: {aiResult.email.subject || t("unknown")}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                      {aiResult.email.body}
                     </p>
                   </div>
                 ) : null}

@@ -16,6 +16,10 @@ const EMPTY_ATTENDEES_DECISIONS = {
   attendees: [],
   decisions: []
 };
+const EMPTY_FOLLOW_UP_EMAIL = {
+  subject: "",
+  body: ""
+};
 const EMPTY_INSIGHTS = {
   topCategory: "General",
   suggestedFocus: "Review your recent notes to identify the next useful priority."
@@ -142,6 +146,111 @@ export const suggestTags = async (noteText) => {
   });
 
   return cleanStringArray(result.tags, 6);
+};
+
+export const improveWriting = (noteText) =>
+  runTextPrompt({
+    system: [
+      "You improve writing for a notes app.",
+      "Return clean plain text only.",
+      "Make the note clearer, more concise, and more professional.",
+      "Preserve the user's meaning and do not add facts."
+    ].join(" "),
+    user: `Improve the writing in this note while preserving meaning:\n\n${noteText}`,
+    maxCompletionTokens: 1000
+  });
+
+export const createExecutiveSummary = (noteText) =>
+  runTextPrompt({
+    system: [
+      "You create executive summaries from notes.",
+      "Return clean plain text only.",
+      "Make it concise, decision-oriented, and useful for a busy leader.",
+      "Use short sections when helpful and do not invent facts."
+    ].join(" "),
+    user: `Create an executive summary from this note:\n\n${noteText}`,
+    maxCompletionTokens: 900
+  });
+
+export const generateStudyNotes = (noteText) =>
+  runTextPrompt({
+    system: [
+      "You create study notes from user notes.",
+      "Return clean plain text only.",
+      "Use clear headings, key points, important terms, and review questions.",
+      "Do not invent facts beyond the note."
+    ].join(" "),
+    user: `Turn this note into study notes:\n\n${noteText}`,
+    maxCompletionTokens: 1200
+  });
+
+export const createFollowUpEmail = async (noteText) => {
+  const result = await runJsonPrompt({
+    system: [
+      "You draft follow-up emails from notes.",
+      "Return JSON only.",
+      "Write a clear subject and a concise professional email body.",
+      "Do not invent facts, deadlines, names, or commitments."
+    ].join(" "),
+    user: `Create a follow-up email from this note:\n\n${noteText}`,
+    name: "follow_up_email",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        subject: { type: "string" },
+        body: { type: "string" }
+      },
+      required: ["subject", "body"]
+    },
+    fallback: EMPTY_FOLLOW_UP_EMAIL,
+    maxCompletionTokens: 900
+  });
+
+  return {
+    subject: String(result.subject || "").trim(),
+    body: String(result.body || "").trim()
+  };
+};
+
+export const extractTasks = async (noteText) => {
+  const result = await runJsonPrompt({
+    system: [
+      "You extract practical tasks from notes.",
+      "Return JSON only.",
+      "Use empty strings when owner, due date, or priority is not stated.",
+      "Every task must have status open.",
+      "Priority must be high, medium, low, or an empty string."
+    ].join(" "),
+    user: `Extract tasks from this note:\n\n${noteText}`,
+    name: "note_tasks",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        tasks: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              text: { type: "string" },
+              owner: { type: "string" },
+              dueDate: { type: "string" },
+              priority: { type: "string", enum: ["", "low", "medium", "high"] },
+              status: { type: "string", enum: ["open"] }
+            },
+            required: ["text", "owner", "dueDate", "priority", "status"]
+          }
+        }
+      },
+      required: ["tasks"]
+    },
+    fallback: { tasks: [] },
+    maxCompletionTokens: 1200
+  });
+
+  return normalizeTasks(result.tasks);
 };
 
 export const convertToMeetingMinutes = async (noteText) => {
@@ -290,6 +399,19 @@ const normalizeActionItems = (items) =>
       text: String(item?.text || "").trim(),
       owner: String(item?.owner || "").trim(),
       dueDate: String(item?.dueDate || "").trim(),
+      status: "open"
+    }))
+    .filter((item) => item.text);
+
+const normalizeTasks = (items) =>
+  (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      text: String(item?.text || "").trim(),
+      owner: String(item?.owner || "").trim(),
+      dueDate: String(item?.dueDate || "").trim(),
+      priority: ["low", "medium", "high"].includes(String(item?.priority || "").toLowerCase())
+        ? String(item.priority).toLowerCase()
+        : "",
       status: "open"
     }))
     .filter((item) => item.text);

@@ -1,9 +1,14 @@
 import { Router } from "express";
 
 import {
+  createExecutiveSummary,
+  createFollowUpEmail,
   convertToMeetingMinutes,
   extractActionItems,
   extractAttendeesAndDecisions,
+  extractTasks,
+  generateStudyNotes,
+  improveWriting,
   smartInsights,
   suggestTags,
   summarizeNote
@@ -21,6 +26,11 @@ router.use(asyncHandler(enforceAiUsage));
 
 router.post("/summarize-note", validate(noteAiSchema), asyncHandler(summarizeNote));
 router.post("/suggest-tags", validate(noteAiSchema), asyncHandler(suggestTags));
+router.post("/improve-writing", validate(noteAiSchema), asyncHandler(improveWriting));
+router.post("/extract-tasks", validate(noteAiSchema), asyncHandler(extractTasks));
+router.post("/executive-summary", validate(noteAiSchema), asyncHandler(createExecutiveSummary));
+router.post("/follow-up-email", validate(noteAiSchema), asyncHandler(createFollowUpEmail));
+router.post("/study-notes", validate(noteAiSchema), asyncHandler(generateStudyNotes));
 router.post("/convert-to-meeting-minutes", validate(noteAiSchema), asyncHandler(convertToMeetingMinutes));
 router.post("/extract-action-items", validate(noteAiSchema), asyncHandler(extractActionItems));
 router.post("/extract-attendees-decisions", validate(noteAiSchema), asyncHandler(extractAttendeesAndDecisions));

@@ -11,6 +11,7 @@ import {
   generateSmartInsights,
   generateStudyNotes as generateNoteStudyNotes,
   improveWriting as improveNoteWriting,
+  smartSuggestions as generateSmartSuggestions,
   suggestTags as suggestNoteTags,
   summarizeNote as summarizeNoteText
 } from "../services/aiService.js";
@@ -204,6 +205,25 @@ export const generateStudyNotes = async (req, res) => {
       note: notePayload(note),
       cleanedBody,
       replaceableWithAi: true
+    }
+  });
+};
+
+export const smartSuggestions = async (req, res) => {
+  const suggestions = await generateSmartSuggestions({
+    title: req.body.title,
+    body: req.body.body,
+    noteType: req.body.noteType
+  });
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      type: "smart-suggestions",
+      provider: "openai",
+      source: "openai",
+      suggestions,
+      replaceableWithAi: false
     }
   });
 };

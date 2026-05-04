@@ -1,6 +1,7 @@
-import { Plus } from "lucide-react";
+import { Copy, Loader2, Plus, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { getSmartSuggestions } from "../api/ai.js";
 import { Button } from "./Button.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
@@ -20,6 +21,122 @@ const initialValues = {
   pinned: false
 };
 
+export const suggestionsToText = (suggestions) =>
+  [
+    suggestions.suggestedTitle ? `Suggested title: ${suggestions.suggestedTitle}` : "",
+    suggestions.possibleTags?.length ? `Possible tags: ${suggestions.possibleTags.join(", ")}` : "",
+    suggestions.missingDetails?.length
+      ? `Missing details:\n${suggestions.missingDetails.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    suggestions.actionItems?.length
+      ? `Possible action items:\n${suggestions.actionItems.map((item) => `- ${item}`).join("\n")}`
+      : ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+export function SmartSuggestionsPanel({
+  suggestions,
+  loading,
+  error,
+  copied,
+  onApplyTitle,
+  onApplyTags,
+  onCopy,
+  t
+}) {
+  if (!suggestions && !loading && !error) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-md border border-emerald-200 bg-emerald-50/70 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-emerald-900">{t("smartSuggestions")}</p>
+          <p className="mt-1 text-xs text-emerald-800">{t("smartSuggestionsDescription")}</p>
+        </div>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin text-emerald-700" /> : null}
+      </div>
+
+      {error ? (
+        <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      {suggestions ? (
+        <div className="mt-3 space-y-3 text-sm text-slate-700">
+          {suggestions.suggestedTitle ? (
+            <div className="rounded-md bg-white p-3 ring-1 ring-emerald-100">
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("clearerTitleSuggestion")}</p>
+              <p className="mt-1 font-semibold text-slate-950">{suggestions.suggestedTitle}</p>
+            </div>
+          ) : null}
+          {suggestions.possibleTags?.length ? (
+            <div className="rounded-md bg-white p-3 ring-1 ring-emerald-100">
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("possibleTags")}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {suggestions.possibleTags.map((tag) => (
+                  <span key={tag} className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {suggestions.missingDetails?.length ? (
+            <div className="rounded-md bg-white p-3 ring-1 ring-emerald-100">
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("missingDetails")}</p>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                {suggestions.missingDetails.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {suggestions.actionItems?.length ? (
+            <div className="rounded-md bg-white p-3 ring-1 ring-emerald-100">
+              <p className="text-xs font-semibold uppercase text-slate-500">{t("possibleActionItems")}</p>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                {suggestions.actionItems.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <button
+              type="button"
+              onClick={onApplyTitle}
+              disabled={!suggestions.suggestedTitle}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("applySuggestedTitle")}
+            </button>
+            <button
+              type="button"
+              onClick={onApplyTags}
+              disabled={!suggestions.possibleTags?.length}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {t("applySuggestedTags")}
+            </button>
+            <button
+              type="button"
+              onClick={onCopy}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Copy className="h-4 w-4" />
+              {copied ? t("copiedToClipboard") : t("copySuggestions")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function NoteForm({
   onCreate,
   onCreateError,
@@ -32,6 +149,10 @@ export function NoteForm({
   const [values, setValues] = useState({ ...initialValues, visibility: defaultVisibility });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState("");
+  const [suggestionsCopied, setSuggestionsCopied] = useState(false);
 
   useEffect(() => {
     if (!prefillValues) {
@@ -60,6 +181,54 @@ export function NoteForm({
       ...current,
       body: current.body.trim() ? current.body : meetingTemplate
     }));
+  };
+
+  const requestSmartSuggestions = async () => {
+    setSuggestionsError("");
+    setSuggestionsCopied(false);
+    setSuggestionsLoading(true);
+
+    try {
+      const result = await getSmartSuggestions({
+        title: values.title,
+        body: values.body,
+        noteType: values.noteType
+      });
+      setSuggestions(result.suggestions);
+    } catch (err) {
+      setSuggestionsError(err.message);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const applySuggestedTitle = () => {
+    if (!suggestions?.suggestedTitle) {
+      return;
+    }
+
+    setValues((current) => ({ ...current, title: suggestions.suggestedTitle }));
+  };
+
+  const applySuggestedTags = () => {
+    if (!suggestions?.possibleTags?.length) {
+      return;
+    }
+
+    setValues((current) => ({ ...current, tags: suggestions.possibleTags.join(", ") }));
+  };
+
+  const copySuggestions = async () => {
+    if (!suggestions) {
+      return;
+    }
+
+    try {
+      await window.navigator.clipboard.writeText(suggestionsToText(suggestions));
+      setSuggestionsCopied(true);
+    } catch {
+      setSuggestionsError(t("copyFailed"));
+    }
   };
 
   const submit = async (event) => {
@@ -94,6 +263,9 @@ export function NoteForm({
           .filter(Boolean)
       });
       setValues({ ...initialValues, visibility: hasWorkspace ? defaultVisibility : "private" });
+      setSuggestions(null);
+      setSuggestionsError("");
+      setSuggestionsCopied(false);
       onCreateSuccess?.(note);
     } catch (err) {
       setError(err.message);
@@ -242,6 +414,28 @@ export function NoteForm({
           onChange={updateField}
           className="premium-input mt-2 h-11 w-full px-3 text-sm"
           placeholder={t("tags")}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={requestSmartSuggestions}
+          disabled={suggestionsLoading || (!values.title.trim() && !values.body.trim())}
+          className="premium-button inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {suggestionsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {t("getSmartSuggestions")}
+        </button>
+        <SmartSuggestionsPanel
+          suggestions={suggestions}
+          loading={suggestionsLoading}
+          error={suggestionsError}
+          copied={suggestionsCopied}
+          onApplyTitle={applySuggestedTitle}
+          onApplyTags={applySuggestedTags}
+          onCopy={copySuggestions}
+          t={t}
         />
       </div>
 

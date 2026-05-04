@@ -20,6 +20,12 @@ const EMPTY_FOLLOW_UP_EMAIL = {
   subject: "",
   body: ""
 };
+const EMPTY_SMART_SUGGESTIONS = {
+  missingDetails: [],
+  possibleTags: [],
+  suggestedTitle: "",
+  actionItems: []
+};
 const EMPTY_INSIGHTS = {
   topCategory: "General",
   suggestedFocus: "Review your recent notes to identify the next useful priority."
@@ -251,6 +257,58 @@ export const extractTasks = async (noteText) => {
   });
 
   return normalizeTasks(result.tasks);
+};
+
+export const smartSuggestions = async ({ title, body, noteType }) => {
+  const result = await runJsonPrompt({
+    system: [
+      "You provide short smart suggestions while a user writes a note.",
+      "Return JSON only.",
+      "Keep suggestions concise, practical, and based only on the provided draft.",
+      "Do not invent people, dates, commitments, or facts.",
+      "Use empty arrays when nothing useful is found."
+    ].join(" "),
+    user: [
+      `Title: ${title || ""}`,
+      `Note type: ${noteType || "standard"}`,
+      "",
+      "Body:",
+      body || ""
+    ].join("\n"),
+    name: "smart_suggestions",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        missingDetails: {
+          type: "array",
+          maxItems: 5,
+          items: { type: "string" }
+        },
+        possibleTags: {
+          type: "array",
+          maxItems: 6,
+          items: { type: "string" }
+        },
+        suggestedTitle: { type: "string" },
+        actionItems: {
+          type: "array",
+          maxItems: 5,
+          items: { type: "string" }
+        }
+      },
+      required: ["missingDetails", "possibleTags", "suggestedTitle", "actionItems"]
+    },
+    fallback: EMPTY_SMART_SUGGESTIONS,
+    maxCompletionTokens: 900
+  });
+
+  return {
+    missingDetails: cleanStringArray(result.missingDetails, 5),
+    possibleTags: cleanStringArray(result.possibleTags, 6).map((tag) => tag.toLowerCase()),
+    suggestedTitle: String(result.suggestedTitle || "").trim(),
+    actionItems: cleanStringArray(result.actionItems, 5)
+  };
 };
 
 export const convertToMeetingMinutes = async (noteText) => {

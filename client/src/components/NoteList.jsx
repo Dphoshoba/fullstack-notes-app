@@ -1,7 +1,8 @@
-import { Bot, Copy, Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Share2, Star, Tags, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { Bot, Copy, Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Share2, Sparkles, Star, Tags, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { getSmartSuggestions } from "../api/ai.js";
 import {
   createComment,
   deleteAttachment,
@@ -12,6 +13,7 @@ import {
   uploadAttachment,
   updateComment
 } from "../api/notes.js";
+import { SmartSuggestionsPanel, suggestionsToText } from "./NoteForm.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 
 const noteTimestamp = (note) => new Date(note.updatedAt || note.createdAt || 0).getTime();
@@ -985,6 +987,10 @@ function EditNoteModal({
   const [form, setForm] = useState(() => noteToForm(note));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState("");
+  const [suggestionsCopied, setSuggestionsCopied] = useState(false);
 
   const updateField = (event) => {
     const { name, type, value, checked } = event.target;
@@ -1000,6 +1006,54 @@ function EditNoteModal({
       ...current,
       body: current.body.trim() ? current.body : meetingTemplate
     }));
+  };
+
+  const requestSmartSuggestions = async () => {
+    setSuggestionsError("");
+    setSuggestionsCopied(false);
+    setSuggestionsLoading(true);
+
+    try {
+      const result = await getSmartSuggestions({
+        title: form.title,
+        body: form.body,
+        noteType: form.noteType
+      });
+      setSuggestions(result.suggestions);
+    } catch (err) {
+      setSuggestionsError(err.message);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const applySuggestedTitle = () => {
+    if (!suggestions?.suggestedTitle) {
+      return;
+    }
+
+    setForm((current) => ({ ...current, title: suggestions.suggestedTitle }));
+  };
+
+  const applySuggestedTags = () => {
+    if (!suggestions?.possibleTags?.length) {
+      return;
+    }
+
+    setForm((current) => ({ ...current, tags: suggestions.possibleTags.join(", ") }));
+  };
+
+  const copySuggestions = async () => {
+    if (!suggestions) {
+      return;
+    }
+
+    try {
+      await window.navigator.clipboard.writeText(suggestionsToText(suggestions));
+      setSuggestionsCopied(true);
+    } catch {
+      setSuggestionsError(t("copyFailed"));
+    }
   };
 
   const closeModal = () => {
@@ -1196,6 +1250,28 @@ function EditNoteModal({
                 placeholder={t("tagsHint")}
               />
             </label>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <button
+              type="button"
+              onClick={requestSmartSuggestions}
+              disabled={suggestionsLoading || (!form.title.trim() && !form.body.trim())}
+              className="premium-button inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {suggestionsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {t("getSmartSuggestions")}
+            </button>
+            <SmartSuggestionsPanel
+              suggestions={suggestions}
+              loading={suggestionsLoading}
+              error={suggestionsError}
+              copied={suggestionsCopied}
+              onApplyTitle={applySuggestedTitle}
+              onApplyTags={applySuggestedTags}
+              onCopy={copySuggestions}
+              t={t}
+            />
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">

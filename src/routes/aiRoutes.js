@@ -10,6 +10,7 @@ import {
   generateStudyNotes,
   improveWriting,
   smartInsights,
+  smartSuggestions,
   suggestTags,
   summarizeNote
 } from "../controllers/aiController.js";
@@ -17,7 +18,7 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { enforceAiUsage } from "../middleware/enforceAiUsage.js";
 import { validate } from "../middleware/validate.js";
-import { noteAiSchema, smartInsightsSchema } from "../validators/aiSchemas.js";
+import { noteAiSchema, smartInsightsSchema, smartSuggestionsSchema } from "../validators/aiSchemas.js";
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.post("/extract-tasks", validate(noteAiSchema), asyncHandler(extractTasks)
 router.post("/executive-summary", validate(noteAiSchema), asyncHandler(createExecutiveSummary));
 router.post("/follow-up-email", validate(noteAiSchema), asyncHandler(createFollowUpEmail));
 router.post("/study-notes", validate(noteAiSchema), asyncHandler(generateStudyNotes));
+router.post("/smart-suggestions", validate(smartSuggestionsSchema), asyncHandler(smartSuggestions));
 router.post("/convert-to-meeting-minutes", validate(noteAiSchema), asyncHandler(convertToMeetingMinutes));
 router.post("/extract-action-items", validate(noteAiSchema), asyncHandler(extractActionItems));
 router.post("/extract-attendees-decisions", validate(noteAiSchema), asyncHandler(extractAttendeesAndDecisions));

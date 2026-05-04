@@ -87,3 +87,11 @@ export async function generateSmartInsights() {
   });
   return data.data;
 }
+
+export async function getSmartSuggestions({ title, body, noteType }) {
+  const data = await apiRequest("/api/ai/smart-suggestions", {
+    method: "POST",
+    body: JSON.stringify({ title, body, noteType })
+  });
+  return data.data;
+}

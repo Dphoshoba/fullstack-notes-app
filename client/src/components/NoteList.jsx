@@ -1,5 +1,6 @@
-import { Bot, Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Star, Tags, Trash2, Upload, X } from "lucide-react";
+import { Bot, Copy, Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Share2, Star, Tags, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   createComment,
@@ -23,6 +24,42 @@ const sortNotes = (notes) =>
 
     return noteTimestamp(b) - noteTimestamp(a);
   });
+
+const sharedFromFooter = "Shared from Notes Workspace";
+
+const noteToShareText = (note) => [
+  `Title: ${note.title || ""}`,
+  `Content: ${note.body || ""}`,
+  "",
+  sharedFromFooter
+].join("\n");
+
+const noteToPlainText = (note) => [
+  note.title || "Untitled note",
+  "",
+  note.body || "",
+  "",
+  sharedFromFooter
+].join("\n");
+
+const safeFilename = (value) =>
+  (value || "note")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 60) || "note";
+
+const downloadTextFile = ({ contents, filename }) => {
+  const blob = new window.Blob([contents], { type: "text/plain;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
 
 const noteToForm = (note) => ({
   title: note.title || "",
@@ -668,6 +705,8 @@ function NoteCard({
   onUpdate,
   onUpdateError,
   onUpdateSuccess,
+  onShareSuccess,
+  onShareError,
   onRunAiAction,
   aiLoadingAction,
   usageLimitReached,
@@ -710,6 +749,31 @@ function NoteCard({
     } finally {
       setSaving(false);
     }
+  };
+
+  const copyText = async (text) => {
+    try {
+      await window.navigator.clipboard.writeText(text);
+      onShareSuccess?.(t("copiedToClipboard"));
+    } catch {
+      onShareError?.(t("copyFailed"));
+    }
+  };
+
+  const copyNote = () => {
+    copyText(noteToPlainText(note));
+  };
+
+  const shareNote = () => {
+    copyText(noteToShareText(note));
+  };
+
+  const exportNoteAsText = () => {
+    downloadTextFile({
+      contents: noteToPlainText(note),
+      filename: `${safeFilename(note.title)}.txt`
+    });
+    onShareSuccess?.(t("exportSuccess", { format: "TXT" }));
   };
 
   return (
@@ -811,6 +875,33 @@ function NoteCard({
       ) : null}
 
       <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <button
+          type="button"
+          onClick={copyNote}
+          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+          title={t("copyNote")}
+        >
+          <Copy className="h-3.5 w-3.5" />
+          {t("copyNote")}
+        </button>
+        <button
+          type="button"
+          onClick={shareNote}
+          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+          title={t("shareNote")}
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          {t("shareNote")}
+        </button>
+        <button
+          type="button"
+          onClick={exportNoteAsText}
+          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+          title={t("exportAsText")}
+        >
+          <Download className="h-3.5 w-3.5" />
+          {t("exportAsText")}
+        </button>
         <button
           type="button"
           onClick={() => onRunAiAction?.("summary", note)}
@@ -1202,9 +1293,13 @@ export function NoteList({
   deletingId,
   emptyTitle = "No notes yet",
   emptyDescription = "Create your first note from the form.",
+  emptyActionLabel = "",
+  emptyActionTo = "",
   emptyVariant = "notes",
   onUpdateError,
   onUpdateSuccess,
+  onShareSuccess,
+  onShareError,
   onRunAiAction,
   aiLoadingAction,
   usageLimitReached,
@@ -1226,6 +1321,15 @@ export function NoteList({
         <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
           {emptyDescription}
         </p>
+        {emptyActionLabel && emptyActionTo ? (
+          <Link
+            to={emptyActionTo}
+            className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
+          >
+            <UserPlus className="h-4 w-4" />
+            {emptyActionLabel}
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -1242,6 +1346,8 @@ export function NoteList({
             onUpdate={onUpdate}
             onUpdateError={onUpdateError}
             onUpdateSuccess={onUpdateSuccess}
+            onShareSuccess={onShareSuccess}
+            onShareError={onShareError}
             onRunAiAction={onRunAiAction}
             aiLoadingAction={aiLoadingAction}
             usageLimitReached={usageLimitReached}

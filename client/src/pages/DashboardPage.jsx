@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  Copy,
   CreditCard,
   Download,
   Edit3,
@@ -26,6 +27,7 @@ import {
   Trash2,
   TrendingUp,
   User,
+  UserPlus,
   Users,
   X
 } from "lucide-react";
@@ -181,6 +183,8 @@ const aiResultToText = (result) => {
 
   return "";
 };
+
+const sharedFromFooter = "Shared from Notes Workspace";
 
 const isMeetingAiResult = (result) =>
   ["meeting-minutes", "meeting-action-items", "meeting-attendees-decisions"].includes(result?.type);
@@ -1031,6 +1035,19 @@ export default function DashboardPage() {
     }
   };
 
+  const copyAiResult = async () => {
+    if (!selectedAiResultText) {
+      return;
+    }
+
+    try {
+      await window.navigator.clipboard.writeText(`${selectedAiResultText}\n\n${sharedFromFooter}`);
+      addToast("success", t("copiedToClipboard"));
+    } catch {
+      addToast("error", t("copyFailed"));
+    }
+  };
+
   const startUpgrade = async () => {
     trackEvent("click_upgrade", { location: "dashboard_plan_usage" });
     setUpgradeLoading(true);
@@ -1375,6 +1392,13 @@ export default function DashboardPage() {
               <Settings className="h-4 w-4 text-slate-700" />
               {t("settings")}
             </Link>
+            <Link
+              to="/settings"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-100"
+            >
+              <UserPlus className="h-4 w-4 text-emerald-700" />
+              {t("invite")}
+            </Link>
             {isAdmin ? (
               <Button
                 onClick={() => setAdminOpen(true)}
@@ -1450,6 +1474,30 @@ export default function DashboardPage() {
                   {t("skipForNow")}
                 </button>
               </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {usage.plan !== "premium" ? (
+        <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+          <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-emerald-700 ring-1 ring-emerald-100">
+                  <UserPlus className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">{t("inviteGrowthBanner")}</p>
+                  <p className="mt-1 text-sm text-slate-600">{t("inviteGrowthBannerDescription")}</p>
+                </div>
+              </div>
+              <Link
+                to="/settings"
+                className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
+              >
+                {t("bringYourTeamIn")}
+              </Link>
             </div>
           </div>
         </section>
@@ -1923,6 +1971,15 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
                 <div className="mt-4 flex flex-col gap-2 border-t border-emerald-200 pt-4 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={copyAiResult}
+                    disabled={!selectedAiResultText || Boolean(aiSavingAction)}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {t("copyResult")}
+                  </button>
                   {meetingAiResult ? (
                     <>
                       <button
@@ -2172,6 +2229,10 @@ export default function DashboardPage() {
               deletingId={deletingId}
               emptyTitle={notesEmptyState.title}
               emptyDescription={notesEmptyState.description}
+              emptyActionLabel={
+                notesEmptyState.variant === "notes" ? t("inviteTeamToStartCollaborating") : ""
+              }
+              emptyActionTo="/settings"
               emptyVariant={notesEmptyState.variant}
               hasWorkspace={hasWorkspace}
               onRunAiAction={runAiAction}
@@ -2186,6 +2247,8 @@ export default function DashboardPage() {
                     : t("updateNoteError", { message: err.message })
                 )
               }
+              onShareSuccess={(message) => addToast("success", message)}
+              onShareError={(message) => addToast("error", message)}
               currentUser={user}
             />
           )}

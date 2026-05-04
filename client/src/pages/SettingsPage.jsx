@@ -154,7 +154,7 @@ export default function SettingsPage() {
       const invite = await createWorkspaceInvite(inviteForm);
       setInviteLink(invite.inviteLink);
       setInviteForm({ email: "", role: "staff" });
-      setMessage(invite.emailSent ? t("workspaceInviteCreated") : t("workspaceInviteEmailFailed"));
+      setMessage(invite.emailSent ? t("inviteGrowthSuccess") : t("workspaceInviteEmailFailed"));
     } catch (err) {
       handleRequestError(err);
     } finally {

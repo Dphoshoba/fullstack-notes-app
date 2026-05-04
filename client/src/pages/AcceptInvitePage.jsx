@@ -41,7 +41,7 @@ export default function AcceptInvitePage() {
 
     try {
       await acceptWorkspaceInvite(token);
-      setMessage(t("inviteAccepted"));
+      setMessage(t("teamGrowing"));
     } catch (err) {
       setError(err.message);
     } finally {

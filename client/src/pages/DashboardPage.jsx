@@ -68,6 +68,19 @@ const NOTES_LIMIT = 12;
 const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
 const GUIDE_ONBOARDING_KEY = "notes_api_guide_onboarding_seen";
 const FIRST_TIME_ONBOARDING_KEY = "notes_api_first_time_onboarding_done";
+const MOCK_AI_INSIGHTS = {
+  productivitySummary:
+    "The workspace is active and trending consistent. Recent note activity indicates steady progress across planning and execution tasks.",
+  focusAreas: ["Prioritize pinned tasks", "Consolidate weekly planning notes", "Review unresolved discussion threads"],
+  followUpSuggestions: [
+    "Schedule a weekly review for top priority notes.",
+    "Group related notes under a shared category for faster lookup."
+  ],
+  openActionItems: [
+    "Finalize action owners for this week's tasks.",
+    "Close completed items and archive outdated notes."
+  ]
+};
 const DETAIL_ERROR_MESSAGES = new Set([
   "Comments could not be loaded",
   "Attachments could not be loaded",
@@ -345,6 +358,9 @@ export default function DashboardPage() {
   const [analyticsSummary, setAnalyticsSummary] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsError, setAnalyticsError] = useState("");
+  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
+  const [aiInsightsError, setAiInsightsError] = useState("");
+  const [aiInsightsData, setAiInsightsData] = useState(null);
   const [updatingRoleId, setUpdatingRoleId] = useState("");
   const [selectedAiNoteId, setSelectedAiNoteId] = useState("");
   const [aiLoadingAction, setAiLoadingAction] = useState("");
@@ -1158,6 +1174,32 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const generateAiInsights = useCallback(async () => {
+    setAiInsightsError("");
+    setAiInsightsLoading(true);
+
+    try {
+      await new Promise((resolve) => window.setTimeout(resolve, 900));
+
+      if (!notes.length) {
+        setAiInsightsData(null);
+        return;
+      }
+
+      setAiInsightsData({
+        productivitySummary: MOCK_AI_INSIGHTS.productivitySummary,
+        focusAreas: MOCK_AI_INSIGHTS.focusAreas,
+        followUpSuggestions: MOCK_AI_INSIGHTS.followUpSuggestions,
+        openActionItems: MOCK_AI_INSIGHTS.openActionItems
+      });
+    } catch {
+      setAiInsightsError("Could not generate AI insights right now. Please try again.");
+      setAiInsightsData(null);
+    } finally {
+      setAiInsightsLoading(false);
+    }
+  }, [notes.length]);
+
   const handleRoleChange = async (targetUser, role) => {
     if (!canEditRoles || targetUser.id === user?.id || role === targetUser.role) {
       return;
@@ -1656,6 +1698,83 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="premium-panel mt-4 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-950">AI Insights</h2>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                Mock insights preview for dashboard experience.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={generateAiInsights}
+              loading={aiInsightsLoading}
+              className="h-9 px-3 text-xs"
+            >
+              Generate AI Insights
+            </Button>
+          </div>
+
+          {aiInsightsError ? (
+            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {aiInsightsError}
+            </p>
+          ) : null}
+
+          {!aiInsightsLoading && !aiInsightsError && !aiInsightsData ? (
+            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+              No insights yet. Generate AI Insights to view placeholder dashboard insights.
+            </div>
+          ) : null}
+
+          {aiInsightsLoading ? (
+            <div className="mt-4 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating insights...
+            </div>
+          ) : null}
+
+          {!aiInsightsLoading && !aiInsightsError && aiInsightsData ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Productivity Summary
+                </p>
+                <p className="mt-2 text-sm text-slate-700">{aiInsightsData.productivitySummary}</p>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus Areas</p>
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {aiInsightsData.focusAreas.map((item) => (
+                    <li key={item}>- {item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Follow-up Suggestions
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {aiInsightsData.followUpSuggestions.map((item) => (
+                    <li key={item}>- {item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Open Action Items
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {aiInsightsData.openActionItems.map((item) => (
+                    <li key={item}>- {item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
 

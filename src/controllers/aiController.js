@@ -342,62 +342,19 @@ export const smartInsights = async (req, res) => {
 };
 
 export const insightsDashboard = async (req, res) => {
-  const ownerId = req.user.id;
-  const [totalNotes, meetingNotesCount] = await Promise.all([
-    Note.countDocuments({ owner: ownerId }),
-    Note.countDocuments({ owner: ownerId, noteType: "meeting" })
-  ]);
-  const standardNotesCount = Math.max(totalNotes - meetingNotesCount, 0);
-
-  const topCategoriesRaw = await Note.aggregate([
-    { $match: { owner: req.user._id } },
-    { $group: { _id: { $ifNull: ["$category", "General"] }, count: { $sum: 1 } } },
-    { $sort: { count: -1, _id: 1 } },
-    { $limit: 5 }
-  ]);
-  const topCategories = topCategoriesRaw.map((item) => ({
-    category: item._id || "General",
-    count: item.count
-  }));
-
-  const recentNotes = await Note.find({ owner: ownerId })
-    .sort({ updatedAt: -1 })
-    .limit(12)
-    .select("title tags category")
-    .lean();
-
-  const recentTopics = [];
-  const seenTopics = new Set();
-  for (const note of recentNotes) {
-    const candidates = [note.title, ...(Array.isArray(note.tags) ? note.tags : []), note.category || "General"];
-    for (const candidate of candidates) {
-      const topic = String(candidate || "").trim();
-      if (!topic) {
-        continue;
-      }
-      const normalized = topic.toLowerCase();
-      if (seenTopics.has(normalized)) {
-        continue;
-      }
-      seenTopics.add(normalized);
-      recentTopics.push(topic);
-      if (recentTopics.length >= 8) {
-        break;
-      }
-    }
-    if (recentTopics.length >= 8) {
-      break;
-    }
+  if (!req.user?.id) {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Authentication required");
   }
 
   return res.status(StatusCodes.OK).json({
-    success: true,
-    data: {
-      totalNotes,
-      meetingNotesCount,
-      standardNotesCount,
-      topCategories,
-      recentTopics
-    }
+    totalNotes: 0,
+    meetingNotesCount: 0,
+    standardNotesCount: 0,
+    topCategories: [],
+    recentTopics: [],
+    openActionItems: [],
+    suggestedFocusAreas: [],
+    productivitySummary: "",
+    followUpSuggestions: []
   });
 };

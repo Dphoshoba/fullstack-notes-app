@@ -24,8 +24,8 @@ import { noteAiSchema, smartInsightsSchema, smartSuggestionsSchema } from "../va
 const router = Router();
 
 router.use(authenticate);
-router.get("/insights-dashboard", asyncHandler(insightsDashboard));
 router.use(asyncHandler(enforceAiUsage));
+router.get("/insights-dashboard", asyncHandler(insightsDashboard));
 
 router.post("/summarize-note", validate(noteAiSchema), asyncHandler(summarizeNote));
 router.post("/suggest-tags", validate(noteAiSchema), asyncHandler(suggestTags));

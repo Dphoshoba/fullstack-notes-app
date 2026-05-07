@@ -8,6 +8,7 @@ import {
   extractActionItems as extractNoteActionItems,
   extractAttendeesAndDecisions as extractNoteAttendeesAndDecisions,
   extractTasks as extractNoteTasks,
+  generateInsightsDashboardNarrative,
   generateSmartInsights,
   generateStudyNotes as generateNoteStudyNotes,
   improveWriting as improveNoteWriting,
@@ -346,15 +347,96 @@ export const insightsDashboard = async (req, res) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Authentication required");
   }
 
+  const ownerId = req.user.id;
+  const [totalNotes, meetingNotesCount, topCategoriesRaw, recentNotes] = await Promise.all([
+    Note.countDocuments({ owner: ownerId }),
+    Note.countDocuments({ owner: ownerId, noteType: "meeting" }),
+    Note.aggregate([
+      { $match: { owner: req.user._id } },
+      { $group: { _id: { $ifNull: ["$category", "General"] }, count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 5 }
+    ]),
+    Note.find({ owner: ownerId })
+      .sort({ updatedAt: -1 })
+      .limit(20)
+      .select("title body tags category noteType")
+      .lean()
+  ]);
+  const standardNotesCount = Math.max(totalNotes - meetingNotesCount, 0);
+  const topCategories = topCategoriesRaw.map((item) => ({
+    category: item._id || "General",
+    count: item.count
+  }));
+
+  const recentTopics = [];
+  const seenTopics = new Set();
+  for (const note of recentNotes.slice(0, 12)) {
+    const candidates = [note.title, ...(Array.isArray(note.tags) ? note.tags : []), note.category || "General"];
+    for (const candidate of candidates) {
+      const topic = String(candidate || "").trim();
+      if (!topic) {
+        continue;
+      }
+      const normalized = topic.toLowerCase();
+      if (seenTopics.has(normalized)) {
+        continue;
+      }
+      seenTopics.add(normalized);
+      recentTopics.push(topic);
+      if (recentTopics.length >= 8) {
+        break;
+      }
+    }
+    if (recentTopics.length >= 8) {
+      break;
+    }
+  }
+
+  let productivitySummary = "";
+  let suggestedFocusAreas = [];
+  let followUpSuggestions = [];
+  if (recentNotes.length) {
+    const notesText = recentNotes
+      .slice(0, 12)
+      .map((note) =>
+        [
+          `Title: ${String(note.title || "").slice(0, 120)}`,
+          `Category: ${String(note.category || "General").slice(0, 60)}`,
+          `Type: ${note.noteType === "meeting" ? "meeting" : "standard"}`,
+          `Tags: ${Array.isArray(note.tags) ? note.tags.slice(0, 5).join(", ") : ""}`,
+          `Body: ${String(note.body || "").slice(0, 360)}`
+        ]
+          .filter(Boolean)
+          .join("\n")
+      )
+      .join("\n\n---\n\n");
+
+    try {
+      const generated = await generateInsightsDashboardNarrative(notesText);
+      productivitySummary = generated.productivitySummary;
+      suggestedFocusAreas = generated.suggestedFocusAreas;
+      followUpSuggestions = generated.followUpSuggestions;
+    } catch {
+      // Keep endpoint resilient and avoid exposing provider failures.
+      productivitySummary =
+        "Insight generation is temporarily unavailable. Your note metrics are still up to date.";
+      suggestedFocusAreas = [];
+      followUpSuggestions = [];
+    }
+  } else {
+    productivitySummary = "Add a few notes to unlock personalized productivity insights.";
+  }
+
   return res.status(StatusCodes.OK).json({
-    totalNotes: 0,
-    meetingNotesCount: 0,
-    standardNotesCount: 0,
-    topCategories: [],
-    recentTopics: [],
+    totalNotes,
+    meetingNotesCount,
+    standardNotesCount,
+    topCategories,
+    recentTopics,
     openActionItems: [],
-    suggestedFocusAreas: [],
-    productivitySummary: "",
-    followUpSuggestions: []
+    suggestedFocusAreas,
+    productivitySummary,
+    followUpSuggestions
   });
 };

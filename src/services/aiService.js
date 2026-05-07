@@ -30,6 +30,11 @@ const EMPTY_INSIGHTS = {
   topCategory: "General",
   suggestedFocus: "Review your recent notes to identify the next useful priority."
 };
+const EMPTY_DASHBOARD_INSIGHTS = {
+  productivitySummary: "",
+  suggestedFocusAreas: [],
+  followUpSuggestions: []
+};
 
 let client;
 
@@ -448,6 +453,50 @@ export const generateSmartInsights = async (notesText) => {
   return {
     topCategory: result.topCategory || "General",
     suggestedFocus: result.suggestedFocus || EMPTY_INSIGHTS.suggestedFocus
+  };
+};
+
+export const generateInsightsDashboardNarrative = async (notesText) => {
+  const result = await runJsonPrompt({
+    system: [
+      "You generate concise and professional dashboard insights from user notes.",
+      "Return JSON only.",
+      "Do not include sensitive personal data.",
+      "Use neutral, practical language.",
+      "If context is weak, return short generic guidance."
+    ].join(" "),
+    user: [
+      "Analyze these recent notes and provide dashboard-ready insights:",
+      "",
+      notesText
+    ].join("\n"),
+    name: "insights_dashboard",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        productivitySummary: { type: "string", maxLength: 280 },
+        suggestedFocusAreas: {
+          type: "array",
+          maxItems: 3,
+          items: { type: "string", maxLength: 120 }
+        },
+        followUpSuggestions: {
+          type: "array",
+          maxItems: 3,
+          items: { type: "string", maxLength: 140 }
+        }
+      },
+      required: ["productivitySummary", "suggestedFocusAreas", "followUpSuggestions"]
+    },
+    fallback: EMPTY_DASHBOARD_INSIGHTS,
+    maxCompletionTokens: 450
+  });
+
+  return {
+    productivitySummary: String(result.productivitySummary || "").trim(),
+    suggestedFocusAreas: cleanStringArray(result.suggestedFocusAreas, 3),
+    followUpSuggestions: cleanStringArray(result.followUpSuggestions, 3)
   };
 };
 

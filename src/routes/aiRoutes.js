@@ -7,6 +7,7 @@ import {
   extractActionItems,
   extractAttendeesAndDecisions,
   extractTasks,
+  insightsDashboard,
   generateStudyNotes,
   improveWriting,
   smartInsights,
@@ -23,6 +24,7 @@ import { noteAiSchema, smartInsightsSchema, smartSuggestionsSchema } from "../va
 const router = Router();
 
 router.use(authenticate);
+router.get("/insights-dashboard", asyncHandler(insightsDashboard));
 router.use(asyncHandler(enforceAiUsage));
 
 router.post("/summarize-note", validate(noteAiSchema), asyncHandler(summarizeNote));

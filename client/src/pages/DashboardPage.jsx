@@ -42,6 +42,7 @@ import {
   extractActionItems,
   extractAttendeesAndDecisions,
   extractTasks,
+  fetchInsightsDashboard,
   generateSmartInsights,
   generateStudyNotes,
   improveWriting,
@@ -68,19 +69,6 @@ const NOTES_LIMIT = 12;
 const DEFAULT_CATEGORIES = ["General", "Work", "Personal", "Ideas", "Tasks"];
 const GUIDE_ONBOARDING_KEY = "notes_api_guide_onboarding_seen";
 const FIRST_TIME_ONBOARDING_KEY = "notes_api_first_time_onboarding_done";
-const MOCK_AI_INSIGHTS = {
-  productivitySummary:
-    "The workspace is active and trending consistent. Recent note activity indicates steady progress across planning and execution tasks.",
-  focusAreas: ["Prioritize pinned tasks", "Consolidate weekly planning notes", "Review unresolved discussion threads"],
-  followUpSuggestions: [
-    "Schedule a weekly review for top priority notes.",
-    "Group related notes under a shared category for faster lookup."
-  ],
-  openActionItems: [
-    "Finalize action owners for this week's tasks.",
-    "Close completed items and archive outdated notes."
-  ]
-};
 const DETAIL_ERROR_MESSAGES = new Set([
   "Comments could not be loaded",
   "Attachments could not be loaded",
@@ -1179,26 +1167,19 @@ export default function DashboardPage() {
     setAiInsightsLoading(true);
 
     try {
-      await new Promise((resolve) => window.setTimeout(resolve, 900));
-
-      if (!notes.length) {
-        setAiInsightsData(null);
-        return;
-      }
-
-      setAiInsightsData({
-        productivitySummary: MOCK_AI_INSIGHTS.productivitySummary,
-        focusAreas: MOCK_AI_INSIGHTS.focusAreas,
-        followUpSuggestions: MOCK_AI_INSIGHTS.followUpSuggestions,
-        openActionItems: MOCK_AI_INSIGHTS.openActionItems
-      });
-    } catch {
-      setAiInsightsError("Could not generate AI insights right now. Please try again.");
+      const insights = await fetchInsightsDashboard();
+      const hasContent =
+        Number(insights?.totalNotes || 0) > 0 ||
+        (Array.isArray(insights?.topCategories) && insights.topCategories.length > 0) ||
+        (Array.isArray(insights?.recentTopics) && insights.recentTopics.length > 0);
+      setAiInsightsData(hasContent ? insights : null);
+    } catch (err) {
+      setAiInsightsError(err.message || "Could not load AI insights right now. Please try again.");
       setAiInsightsData(null);
     } finally {
       setAiInsightsLoading(false);
     }
-  }, [notes.length]);
+  }, []);
 
   const handleRoleChange = async (targetUser, role) => {
     if (!canEditRoles || targetUser.id === user?.id || role === targetUser.role) {
@@ -1726,7 +1707,7 @@ export default function DashboardPage() {
 
           {!aiInsightsLoading && !aiInsightsError && !aiInsightsData ? (
             <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
-              No insights yet. Generate AI Insights to view placeholder dashboard insights.
+              No insights yet. Generate AI Insights to load dashboard insights.
             </div>
           ) : null}
 
@@ -1741,36 +1722,49 @@ export default function DashboardPage() {
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Productivity Summary
+                  Totals
                 </p>
-                <p className="mt-2 text-sm text-slate-700">{aiInsightsData.productivitySummary}</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Notes</p>
+                    <p className="mt-1 text-lg font-bold text-slate-950">
+                      {Number(aiInsightsData.totalNotes || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Meeting Notes</p>
+                    <p className="mt-1 text-lg font-bold text-slate-950">
+                      {Number(aiInsightsData.meetingNotesCount || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Standard Notes</p>
+                    <p className="mt-1 text-lg font-bold text-slate-950">
+                      {Number(aiInsightsData.standardNotesCount || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
               </div>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus Areas</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top Categories</p>
                 <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {aiInsightsData.focusAreas.map((item) => (
-                    <li key={item}>- {item}</li>
-                  ))}
+                  {(Array.isArray(aiInsightsData.topCategories) ? aiInsightsData.topCategories : []).length ? (
+                    aiInsightsData.topCategories.map((item) => (
+                      <li key={`${item.category}-${item.count}`}>- {item.category}: {item.count}</li>
+                    ))
+                  ) : (
+                    <li>- No categories yet.</li>
+                  )}
                 </ul>
               </div>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Follow-up Suggestions
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Topics</p>
                 <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {aiInsightsData.followUpSuggestions.map((item) => (
-                    <li key={item}>- {item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Open Action Items
-                </p>
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {aiInsightsData.openActionItems.map((item) => (
-                    <li key={item}>- {item}</li>
-                  ))}
+                  {(Array.isArray(aiInsightsData.recentTopics) ? aiInsightsData.recentTopics : []).length ? (
+                    aiInsightsData.recentTopics.map((item) => <li key={item}>- {item}</li>)
+                  ) : (
+                    <li>- No recent topics yet.</li>
+                  )}
                 </ul>
               </div>
             </div>

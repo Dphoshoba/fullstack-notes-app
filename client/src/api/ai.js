@@ -95,3 +95,8 @@ export async function getSmartSuggestions({ title, body, noteType }) {
   });
   return data.data;
 }
+
+export async function fetchInsightsDashboard() {
+  const data = await apiRequest("/api/ai/insights-dashboard");
+  return data.data;
+}

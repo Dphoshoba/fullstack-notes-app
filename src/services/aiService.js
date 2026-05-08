@@ -35,13 +35,23 @@ const EMPTY_DASHBOARD_INSIGHTS = {
   suggestedFocusAreas: [],
   followUpSuggestions: []
 };
+const DASHBOARD_PARSE_FALLBACK = {
+  ...EMPTY_DASHBOARD_INSIGHTS,
+  __fallbackReason: "json_parse_or_empty"
+};
 
 let client;
 
+const safeLog = (level, message, metadata = {}) => {
+  const logger = console[level] || console.log;
+  logger(`[aiService] ${message}`, metadata);
+};
+
 const getClient = () => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = env.OPENAI_API_KEY;
 
   if (!apiKey) {
+    safeLog("error", "OPENAI_API_KEY missing");
     throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, AI_UNAVAILABLE_MESSAGE);
   }
 
@@ -60,16 +70,24 @@ const cleanStringArray = (items, maxItems) =>
     .filter(Boolean)
     .slice(0, maxItems);
 
-const parseJson = (value, fallback) => {
+const parseJson = (value, fallback, contextName = "unknown") => {
   try {
     return JSON.parse(value || JSON.stringify(fallback));
   } catch {
+    safeLog("warn", "JSON parsing failed, using fallback", {
+      contextName,
+      contentPreview: String(value || "").slice(0, 200)
+    });
     return fallback;
   }
 };
 
 const runTextPrompt = async ({ system, user, maxCompletionTokens = 700 }) => {
   try {
+    safeLog("info", "OpenAI text request start", {
+      model: env.OPENAI_MODEL,
+      promptLength: String(user || "").length
+    });
     const response = await getClient().chat.completions.create({
       model: env.OPENAI_MODEL,
       messages: [
@@ -85,12 +103,25 @@ const runTextPrompt = async ({ system, user, maxCompletionTokens = 700 }) => {
       throw error;
     }
 
+    safeLog("error", "OpenAI text request failed", {
+      model: env.OPENAI_MODEL,
+      status: error?.status,
+      code: error?.code,
+      type: error?.type,
+      message: String(error?.message || "unknown").slice(0, 300)
+    });
+
     throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
   }
 };
 
 const runJsonPrompt = async ({ system, user, name, schema, fallback, maxCompletionTokens = 1200 }) => {
   try {
+    safeLog("info", "OpenAI json request start", {
+      name,
+      model: env.OPENAI_MODEL,
+      promptLength: String(user || "").length
+    });
     const response = await getClient().chat.completions.create({
       model: env.OPENAI_MODEL,
       messages: [
@@ -108,11 +139,20 @@ const runJsonPrompt = async ({ system, user, name, schema, fallback, maxCompleti
       max_completion_tokens: maxCompletionTokens
     });
 
-    return parseJson(response.choices?.[0]?.message?.content, fallback);
+    return parseJson(response.choices?.[0]?.message?.content, fallback, name);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
+
+    safeLog("error", "OpenAI json request failed", {
+      name,
+      model: env.OPENAI_MODEL,
+      status: error?.status,
+      code: error?.code,
+      type: error?.type,
+      message: String(error?.message || "unknown").slice(0, 300)
+    });
 
     throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
   }
@@ -457,47 +497,133 @@ export const generateSmartInsights = async (notesText) => {
 };
 
 export const generateInsightsDashboardNarrative = async (notesText) => {
-  const result = await runJsonPrompt({
-    system: [
-      "You generate concise and professional dashboard insights from user notes.",
-      "Return JSON only.",
-      "Do not include sensitive personal data.",
-      "Use neutral, practical language.",
-      "If context is weak, return short generic guidance."
-    ].join(" "),
-    user: [
-      "Analyze these recent notes and provide dashboard-ready insights:",
-      "",
-      notesText
-    ].join("\n"),
-    name: "insights_dashboard",
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        productivitySummary: { type: "string", maxLength: 280 },
-        suggestedFocusAreas: {
-          type: "array",
-          maxItems: 3,
-          items: { type: "string", maxLength: 120 }
+  try {
+    const result = await runJsonPrompt({
+      system: [
+        "You generate concise and professional dashboard insights from user notes.",
+        "Return JSON only.",
+        "Do not include sensitive personal data.",
+        "Use neutral, practical language.",
+        "If context is weak, return short generic guidance."
+      ].join(" "),
+      user: [
+        "Analyze these recent notes and provide dashboard-ready insights:",
+        "",
+        notesText
+      ].join("\n"),
+      name: "insights_dashboard",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          productivitySummary: { type: "string", maxLength: 280 },
+          suggestedFocusAreas: {
+            type: "array",
+            maxItems: 3,
+            items: { type: "string", maxLength: 120 }
+          },
+          followUpSuggestions: {
+            type: "array",
+            maxItems: 3,
+            items: { type: "string", maxLength: 140 }
+          }
         },
-        followUpSuggestions: {
-          type: "array",
-          maxItems: 3,
-          items: { type: "string", maxLength: 140 }
-        }
+        required: ["productivitySummary", "suggestedFocusAreas", "followUpSuggestions"]
       },
-      required: ["productivitySummary", "suggestedFocusAreas", "followUpSuggestions"]
-    },
-    fallback: EMPTY_DASHBOARD_INSIGHTS,
-    maxCompletionTokens: 450
-  });
+      fallback: DASHBOARD_PARSE_FALLBACK,
+      maxCompletionTokens: 450
+    });
 
-  return {
-    productivitySummary: String(result.productivitySummary || "").trim(),
-    suggestedFocusAreas: cleanStringArray(result.suggestedFocusAreas, 3),
-    followUpSuggestions: cleanStringArray(result.followUpSuggestions, 3)
-  };
+    const payload = {
+      productivitySummary: String(result.productivitySummary || "").trim(),
+      suggestedFocusAreas: cleanStringArray(result.suggestedFocusAreas, 3),
+      followUpSuggestions: cleanStringArray(result.followUpSuggestions, 3)
+    };
+
+    if (
+      result.__fallbackReason === "json_parse_or_empty" ||
+      (!payload.productivitySummary &&
+        payload.suggestedFocusAreas.length === 0 &&
+        payload.followUpSuggestions.length === 0)
+    ) {
+      safeLog("warn", "Insights JSON response unusable, using text fallback");
+      throw new Error("INSIGHTS_JSON_UNUSABLE");
+    }
+
+    return payload;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    safeLog("warn", "Insights JSON pipeline failed, attempting text fallback", {
+      message: String(error?.message || "unknown").slice(0, 200)
+    });
+
+    const fallbackText = await runTextPrompt({
+      system: [
+        "You generate concise and professional dashboard insights from user notes.",
+        "Return plain text only using exactly these sections:",
+        "Summary:",
+        "Focus Areas:",
+        "Follow-up Suggestions:",
+        "Use 1 short summary sentence and up to 3 bullets for each list section.",
+        "Do not include sensitive personal data."
+      ].join(" "),
+      user: [
+        "Analyze these recent notes and provide concise dashboard insights.",
+        "",
+        notesText
+      ].join("\n"),
+      maxCompletionTokens: 420
+    });
+
+    const lines = String(fallbackText || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const focusAreas = [];
+    const followUps = [];
+    let summary = "";
+    let mode = "summary";
+    for (const line of lines) {
+      const lower = line.toLowerCase();
+      if (lower.startsWith("summary:")) {
+        mode = "summary";
+        const text = line.slice("summary:".length).trim();
+        if (text) {
+          summary = text;
+        }
+        continue;
+      }
+      if (lower.startsWith("focus areas:")) {
+        mode = "focus";
+        continue;
+      }
+      if (lower.startsWith("follow-up suggestions:") || lower.startsWith("follow up suggestions:")) {
+        mode = "follow";
+        continue;
+      }
+
+      const item = line.replace(/^[-*]\s*/, "").trim();
+      if (!item) {
+        continue;
+      }
+      if (mode === "summary" && !summary) {
+        summary = item;
+      } else if (mode === "focus" && focusAreas.length < 3) {
+        focusAreas.push(item);
+      } else if (mode === "follow" && followUps.length < 3) {
+        followUps.push(item);
+      }
+    }
+
+    return {
+      productivitySummary: summary,
+      suggestedFocusAreas: cleanStringArray(focusAreas, 3),
+      followUpSuggestions: cleanStringArray(followUps, 3)
+    };
+  }
 };
 
 const normalizeActionItems = (items) =>

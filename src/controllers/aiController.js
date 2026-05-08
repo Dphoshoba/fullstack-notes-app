@@ -397,6 +397,11 @@ export const insightsDashboard = async (req, res) => {
   let suggestedFocusAreas = [];
   let followUpSuggestions = [];
   if (recentNotes.length) {
+    console.info("[aiInsights] OpenAI request start", {
+      userId: req.user.id,
+      notesAnalyzed: Math.min(recentNotes.length, 12)
+    });
+
     const notesText = recentNotes
       .slice(0, 12)
       .map((note) =>
@@ -418,6 +423,9 @@ export const insightsDashboard = async (req, res) => {
       suggestedFocusAreas = generated.suggestedFocusAreas;
       followUpSuggestions = generated.followUpSuggestions;
     } catch {
+      console.error("[aiInsights] OpenAI generation failed, using fallback", {
+        userId: req.user.id
+      });
       // Keep endpoint resilient and avoid exposing provider failures.
       productivitySummary =
         "Insight generation is temporarily unavailable. Your note metrics are still up to date.";

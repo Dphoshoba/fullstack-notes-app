@@ -100,3 +100,11 @@ export async function fetchInsightsDashboard() {
   const data = await apiRequest("/api/ai/insights-dashboard");
   return data.data;
 }
+
+export async function generateMeetingIntelligence({ noteId, content }) {
+  const data = await apiRequest("/api/ai/meeting-intelligence", {
+    method: "POST",
+    body: JSON.stringify({ noteId, content })
+  });
+  return data.data;
+}

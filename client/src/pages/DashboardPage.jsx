@@ -43,6 +43,7 @@ import {
   extractAttendeesAndDecisions,
   extractTasks,
   fetchInsightsDashboard,
+  generateMeetingIntelligence,
   generateSmartInsights,
   generateStudyNotes,
   improveWriting,
@@ -188,13 +189,33 @@ const aiResultToText = (result) => {
     ].filter(Boolean).join("\n");
   }
 
+  if (result.type === "meeting-intelligence") {
+    return [
+      "Meeting Intelligence",
+      result.executiveSummary ? `Executive summary: ${result.executiveSummary}` : "",
+      result.meetingType ? `Meeting type: ${result.meetingType}` : "",
+      result.priorityLevel ? `Priority level: ${result.priorityLevel}` : "",
+      result.attendees?.length ? `Attendees:\n${result.attendees.map((item) => `- ${item}`).join("\n")}` : "",
+      result.decisions?.length ? `Decisions:\n${result.decisions.map((item) => `- ${item}`).join("\n")}` : "",
+      result.actionItems?.length ? `Action items:\n${result.actionItems.map((item) => `- ${item}`).join("\n")}` : "",
+      result.blockers?.length ? `Blockers:\n${result.blockers.map((item) => `- ${item}`).join("\n")}` : "",
+      result.risks?.length ? `Risks:\n${result.risks.map((item) => `- ${item}`).join("\n")}` : "",
+      result.deadlines?.length ? `Deadlines:\n${result.deadlines.map((item) => `- ${item}`).join("\n")}` : "",
+      result.followUps?.length ? `Follow-ups:\n${result.followUps.map((item) => `- ${item}`).join("\n")}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
   return "";
 };
 
 const sharedFromFooter = "Shared from Notes Workspace";
 
 const isMeetingAiResult = (result) =>
-  ["meeting-minutes", "meeting-action-items", "meeting-attendees-decisions"].includes(result?.type);
+  ["meeting-minutes", "meeting-action-items", "meeting-attendees-decisions", "meeting-intelligence"].includes(
+    result?.type
+  );
 
 const mergeMeetingMeta = (currentMeta = {}, nextMeta = {}) => ({
   ...currentMeta,
@@ -916,7 +937,42 @@ export default function DashboardPage() {
                           ? await extractActionItems(targetNote.id)
                           : action === "meeting-attendees-decisions"
                             ? await extractAttendeesAndDecisions(targetNote.id)
+                            : action === "meeting-intelligence"
+                              ? (() => {
+                                  const content = [
+                                    `Title: ${targetNote.title || ""}`,
+                                    `Category: ${targetNote.category || "General"}`,
+                                    `Note type: ${targetNote.noteType || "standard"}`,
+                                    "",
+                                    "Body:",
+                                    targetNote.body || ""
+                                  ].join("\n");
+
+                                  return generateMeetingIntelligence({
+                                    noteId: targetNote.id,
+                                    content
+                                  });
+                                })()
                             : await generateSmartInsights();
+      const normalizedResult =
+        action === "meeting-intelligence"
+          ? {
+              ...result,
+              type: "meeting-intelligence",
+              provider: "openai",
+              meetingMeta: {
+                attendees: result.attendees || [],
+                decisions: result.decisions || [],
+                actionItems: (result.actionItems || []).map((text) => ({
+                  text,
+                  owner: "",
+                  dueDate: "",
+                  status: "open"
+                })),
+                sourceType: "ai-openai"
+              }
+            }
+          : result;
 
       trackEvent("use_ai_tool", {
         action,
@@ -925,7 +981,7 @@ export default function DashboardPage() {
       if (targetNote?.id) {
         setSelectedAiNoteId(targetNote.id);
       }
-      setAiResult(result);
+      setAiResult(normalizedResult);
       await loadUsage();
       addToast("success", t("aiResultReady"));
     } catch (err) {
@@ -2058,11 +2114,26 @@ export default function DashboardPage() {
                 {aiLoadingAction === "meeting-attendees-decisions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
                 {t("extractAttendeesDecisions")}
               </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("meeting-intelligence")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiLoadingAction === "meeting-intelligence" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
+                Meeting intelligence
+              </button>
             </div>
             {aiError ? (
               <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                 {aiError}
               </p>
+            ) : null}
+            {aiLoadingAction === "meeting-intelligence" ? (
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50/70 p-4 text-sm text-emerald-900">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating meeting intelligence...
+              </div>
             ) : null}
             {aiResult ? (
               <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/70 p-4 shadow-sm shadow-emerald-950/[0.04]">
@@ -2172,6 +2243,46 @@ export default function DashboardPage() {
                     ) : null}
                   </div>
                 ) : null}
+                {aiResult.type === "meeting-intelligence" ? (
+                  <div className="mt-3 rounded-md bg-white px-3 py-3 ring-1 ring-emerald-100">
+                    <p className="text-xs font-semibold uppercase text-slate-500">Executive summary</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                      {aiResult.executiveSummary || "No summary available."}
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        Meeting type: <strong>{aiResult.meetingType || "Unknown"}</strong>
+                      </p>
+                      <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                        Priority level: <strong>{aiResult.priorityLevel || "Unknown"}</strong>
+                      </p>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {[
+                        ["Attendees", aiResult.attendees || []],
+                        ["Decisions", aiResult.decisions || []],
+                        ["Action items", aiResult.actionItems || []],
+                        ["Blockers", aiResult.blockers || []],
+                        ["Risks", aiResult.risks || []],
+                        ["Deadlines", aiResult.deadlines || []],
+                        ["Follow-ups", aiResult.followUps || []]
+                      ].map(([label, items]) => (
+                        <div key={label} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                          {items.length ? (
+                            <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                              {items.map((item) => (
+                                <li key={`${label}-${item}`}>- {item}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="mt-2 text-sm text-slate-500">No items detected.</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <div className="mt-4 flex flex-col gap-2 border-t border-emerald-200 pt-4 sm:flex-row sm:flex-wrap">
                   <button
                     type="button"
@@ -2219,6 +2330,15 @@ export default function DashboardPage() {
                       >
                         <X className="h-4 w-4" />
                         {t("cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={saveAiResultAsComment}
+                        disabled={!canSaveAiAsComment || Boolean(aiSavingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {aiSavingAction === "comment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                        {t("saveAsComment")}
                       </button>
                     </>
                   ) : (

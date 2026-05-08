@@ -19,3 +19,10 @@ export const smartSuggestionsSchema = Joi.object({
     noteType: Joi.string().valid("standard", "meeting").default("standard")
   }).required()
 });
+
+export const meetingIntelligenceSchema = Joi.object({
+  body: Joi.object({
+    noteId: objectId.optional(),
+    content: Joi.string().trim().max(12000).allow("").required()
+  }).required()
+});

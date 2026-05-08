@@ -39,6 +39,18 @@ const DASHBOARD_PARSE_FALLBACK = {
   ...EMPTY_DASHBOARD_INSIGHTS,
   __fallbackReason: "json_parse_or_empty"
 };
+const EMPTY_MEETING_INTELLIGENCE = {
+  attendees: [],
+  decisions: [],
+  actionItems: [],
+  blockers: [],
+  risks: [],
+  deadlines: [],
+  followUps: [],
+  executiveSummary: "",
+  meetingType: "",
+  priorityLevel: ""
+};
 
 let client;
 
@@ -622,6 +634,202 @@ export const generateInsightsDashboardNarrative = async (notesText) => {
       productivitySummary: summary,
       suggestedFocusAreas: cleanStringArray(focusAreas, 3),
       followUpSuggestions: cleanStringArray(followUps, 3)
+    };
+  }
+};
+
+export const generateMeetingIntelligence = async (content) => {
+  const prompt = String(content || "").trim();
+  if (!prompt) {
+    return { ...EMPTY_MEETING_INTELLIGENCE };
+  }
+
+  const jsonFallback = {
+    ...EMPTY_MEETING_INTELLIGENCE,
+    __fallbackReason: "json_parse_or_empty"
+  };
+
+  try {
+    const result = await runJsonPrompt({
+      system: [
+        "You extract concise, structured meeting intelligence.",
+        "Return JSON only.",
+        "Do not invent facts that are not clearly supported by the source.",
+        "Use short professional wording."
+      ].join(" "),
+      user: [
+        "Analyze this meeting content and extract structured intelligence:",
+        "",
+        prompt
+      ].join("\n"),
+      name: "meeting_intelligence",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          attendees: { type: "array", maxItems: 10, items: { type: "string", maxLength: 100 } },
+          decisions: { type: "array", maxItems: 10, items: { type: "string", maxLength: 180 } },
+          actionItems: { type: "array", maxItems: 10, items: { type: "string", maxLength: 180 } },
+          blockers: { type: "array", maxItems: 8, items: { type: "string", maxLength: 180 } },
+          risks: { type: "array", maxItems: 8, items: { type: "string", maxLength: 180 } },
+          deadlines: { type: "array", maxItems: 8, items: { type: "string", maxLength: 120 } },
+          followUps: { type: "array", maxItems: 8, items: { type: "string", maxLength: 180 } },
+          executiveSummary: { type: "string", maxLength: 400 },
+          meetingType: { type: "string", maxLength: 40 },
+          priorityLevel: { type: "string", maxLength: 20 }
+        },
+        required: [
+          "attendees",
+          "decisions",
+          "actionItems",
+          "blockers",
+          "risks",
+          "deadlines",
+          "followUps",
+          "executiveSummary",
+          "meetingType",
+          "priorityLevel"
+        ]
+      },
+      fallback: jsonFallback,
+      maxCompletionTokens: 900
+    });
+
+    const payload = {
+      attendees: cleanStringArray(result.attendees, 10),
+      decisions: cleanStringArray(result.decisions, 10),
+      actionItems: cleanStringArray(result.actionItems, 10),
+      blockers: cleanStringArray(result.blockers, 8),
+      risks: cleanStringArray(result.risks, 8),
+      deadlines: cleanStringArray(result.deadlines, 8),
+      followUps: cleanStringArray(result.followUps, 8),
+      executiveSummary: String(result.executiveSummary || "").trim(),
+      meetingType: String(result.meetingType || "").trim(),
+      priorityLevel: String(result.priorityLevel || "").trim()
+    };
+
+    if (
+      result.__fallbackReason === "json_parse_or_empty" ||
+      (!payload.executiveSummary &&
+        payload.attendees.length === 0 &&
+        payload.decisions.length === 0 &&
+        payload.actionItems.length === 0)
+    ) {
+      safeLog("warn", "Meeting intelligence JSON unusable, using text fallback");
+      throw new Error("MEETING_INTELLIGENCE_JSON_UNUSABLE");
+    }
+
+    return payload;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    safeLog("warn", "Meeting intelligence JSON pipeline failed, attempting text fallback", {
+      message: String(error?.message || "unknown").slice(0, 200)
+    });
+
+    const textResult = await runTextPrompt({
+      system: [
+        "You extract concise meeting intelligence.",
+        "Return plain text only with these exact sections:",
+        "Summary:",
+        "Meeting Type:",
+        "Priority Level:",
+        "Attendees:",
+        "Decisions:",
+        "Action Items:",
+        "Blockers:",
+        "Risks:",
+        "Deadlines:",
+        "Follow Ups:",
+        "Use bullets for list sections."
+      ].join(" "),
+      user: prompt,
+      maxCompletionTokens: 850
+    });
+
+    const parsed = { ...EMPTY_MEETING_INTELLIGENCE };
+    let section = "";
+    for (const rawLine of String(textResult || "").split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) {
+        continue;
+      }
+      const lower = line.toLowerCase();
+      if (lower.startsWith("summary:")) {
+        section = "executiveSummary";
+        const value = line.slice("summary:".length).trim();
+        if (value) {
+          parsed.executiveSummary = value;
+        }
+        continue;
+      }
+      if (lower.startsWith("meeting type:")) {
+        section = "meetingType";
+        parsed.meetingType = line.slice("meeting type:".length).trim();
+        continue;
+      }
+      if (lower.startsWith("priority level:")) {
+        section = "priorityLevel";
+        parsed.priorityLevel = line.slice("priority level:".length).trim();
+        continue;
+      }
+      if (lower.startsWith("attendees:")) {
+        section = "attendees";
+        continue;
+      }
+      if (lower.startsWith("decisions:")) {
+        section = "decisions";
+        continue;
+      }
+      if (lower.startsWith("action items:")) {
+        section = "actionItems";
+        continue;
+      }
+      if (lower.startsWith("blockers:")) {
+        section = "blockers";
+        continue;
+      }
+      if (lower.startsWith("risks:")) {
+        section = "risks";
+        continue;
+      }
+      if (lower.startsWith("deadlines:")) {
+        section = "deadlines";
+        continue;
+      }
+      if (lower.startsWith("follow ups:") || lower.startsWith("follow-ups:")) {
+        section = "followUps";
+        continue;
+      }
+
+      const item = line.replace(/^[-*]\s*/, "").trim();
+      if (!item) {
+        continue;
+      }
+      if (section === "executiveSummary" && !parsed.executiveSummary) {
+        parsed.executiveSummary = item;
+      } else if (section === "meetingType" && !parsed.meetingType) {
+        parsed.meetingType = item;
+      } else if (section === "priorityLevel" && !parsed.priorityLevel) {
+        parsed.priorityLevel = item;
+      } else if (Array.isArray(parsed[section])) {
+        parsed[section].push(item);
+      }
+    }
+
+    return {
+      attendees: cleanStringArray(parsed.attendees, 10),
+      decisions: cleanStringArray(parsed.decisions, 10),
+      actionItems: cleanStringArray(parsed.actionItems, 10),
+      blockers: cleanStringArray(parsed.blockers, 8),
+      risks: cleanStringArray(parsed.risks, 8),
+      deadlines: cleanStringArray(parsed.deadlines, 8),
+      followUps: cleanStringArray(parsed.followUps, 8),
+      executiveSummary: String(parsed.executiveSummary || "").trim(),
+      meetingType: String(parsed.meetingType || "").trim(),
+      priorityLevel: String(parsed.priorityLevel || "").trim()
     };
   }
 };

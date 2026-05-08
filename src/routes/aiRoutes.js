@@ -8,6 +8,7 @@ import {
   extractAttendeesAndDecisions,
   extractTasks,
   insightsDashboard,
+  meetingIntelligence,
   generateStudyNotes,
   improveWriting,
   smartInsights,
@@ -19,7 +20,12 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { enforceAiUsage } from "../middleware/enforceAiUsage.js";
 import { validate } from "../middleware/validate.js";
-import { noteAiSchema, smartInsightsSchema, smartSuggestionsSchema } from "../validators/aiSchemas.js";
+import {
+  meetingIntelligenceSchema,
+  noteAiSchema,
+  smartInsightsSchema,
+  smartSuggestionsSchema
+} from "../validators/aiSchemas.js";
 
 const router = Router();
 
@@ -39,5 +45,6 @@ router.post("/convert-to-meeting-minutes", validate(noteAiSchema), asyncHandler(
 router.post("/extract-action-items", validate(noteAiSchema), asyncHandler(extractActionItems));
 router.post("/extract-attendees-decisions", validate(noteAiSchema), asyncHandler(extractAttendeesAndDecisions));
 router.post("/smart-insights", validate(smartInsightsSchema), asyncHandler(smartInsights));
+router.post("/meeting-intelligence", validate(meetingIntelligenceSchema), asyncHandler(meetingIntelligence));
 
 export default router;

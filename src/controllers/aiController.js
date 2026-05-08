@@ -9,6 +9,7 @@ import {
   extractAttendeesAndDecisions as extractNoteAttendeesAndDecisions,
   extractTasks as extractNoteTasks,
   generateInsightsDashboardNarrative,
+  generateMeetingIntelligence,
   generateSmartInsights,
   generateStudyNotes as generateNoteStudyNotes,
   improveWriting as improveNoteWriting,
@@ -446,5 +447,46 @@ export const insightsDashboard = async (req, res) => {
     suggestedFocusAreas,
     productivitySummary,
     followUpSuggestions
+  });
+};
+
+export const meetingIntelligence = async (req, res) => {
+  const noteId = req.body.noteId || "";
+  const rawContent = String(req.body.content || "").trim();
+  let note = null;
+
+  if (noteId) {
+    note = await Note.findOne({ _id: noteId, owner: req.user.id });
+    if (!note) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
+    }
+  }
+
+  const content = rawContent || (note ? noteToAiText(note) : "");
+  if (!content.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Meeting content is required");
+  }
+
+  let intelligence;
+  try {
+    intelligence = await generateMeetingIntelligence(content);
+  } catch {
+    intelligence = {
+      attendees: [],
+      decisions: [],
+      actionItems: [],
+      blockers: [],
+      risks: [],
+      deadlines: [],
+      followUps: [],
+      executiveSummary: "Meeting intelligence is temporarily unavailable.",
+      meetingType: "",
+      priorityLevel: ""
+    };
+  }
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: intelligence
   });
 };

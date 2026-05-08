@@ -49,3 +49,9 @@ export const meetingFollowUpEmailSchema = Joi.object({
     .or("noteId", "meetingIntelligence", "meetingContent")
     .required()
 });
+
+export const semanticSearchSchema = Joi.object({
+  query: Joi.object({
+    q: Joi.string().trim().max(240).required()
+  }).required()
+});

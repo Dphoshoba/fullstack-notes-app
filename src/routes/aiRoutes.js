@@ -10,6 +10,7 @@ import {
   insightsDashboard,
   meetingFollowUpEmail,
   meetingIntelligence,
+  semanticSearch,
   generateStudyNotes,
   improveWriting,
   smartInsights,
@@ -25,6 +26,7 @@ import {
   meetingFollowUpEmailSchema,
   meetingIntelligenceSchema,
   noteAiSchema,
+  semanticSearchSchema,
   smartInsightsSchema,
   smartSuggestionsSchema
 } from "../validators/aiSchemas.js";
@@ -34,6 +36,7 @@ const router = Router();
 router.use(authenticate);
 router.use(asyncHandler(enforceAiUsage));
 router.get("/insights-dashboard", asyncHandler(insightsDashboard));
+router.get("/semantic-search", validate(semanticSearchSchema), asyncHandler(semanticSearch));
 
 router.post("/summarize-note", validate(noteAiSchema), asyncHandler(summarizeNote));
 router.post("/suggest-tags", validate(noteAiSchema), asyncHandler(suggestTags));

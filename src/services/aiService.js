@@ -56,6 +56,9 @@ const EMPTY_MEETING_FOLLOW_UP_EMAIL = {
   body: "",
   recipients: []
 };
+const EMPTY_SEMANTIC_SEARCH_RANKING = {
+  results: []
+};
 
 let client;
 
@@ -960,6 +963,85 @@ export const generateMeetingFollowUpEmailDraft = async (meetingContextText, reci
       body: bodyLines.join("\n").trim(),
       recipients: cleanStringArray(recipientsSeed, 20)
     };
+  }
+};
+
+export const rankNotesForSemanticSearch = async (query, candidates) => {
+  const cleanQuery = String(query || "").trim();
+  const compactCandidates = (Array.isArray(candidates) ? candidates : []).slice(0, 25);
+  if (!cleanQuery || !compactCandidates.length) {
+    return [];
+  }
+
+  const payload = compactCandidates.map((note) => ({
+    noteId: note.noteId,
+    title: String(note.title || "").slice(0, 120),
+    tags: (Array.isArray(note.tags) ? note.tags : []).slice(0, 6),
+    category: String(note.category || "General").slice(0, 60),
+    noteType: note.noteType === "meeting" ? "meeting" : "standard",
+    snippet: String(note.snippet || "").slice(0, 350),
+    meetingMetaSummary: String(note.meetingMetaSummary || "").slice(0, 220)
+  }));
+
+  try {
+    const result = await runJsonPrompt({
+      system: [
+        "You rank note search results by semantic relevance.",
+        "Return JSON only.",
+        "Use concise professional relevance reasons based only on provided data."
+      ].join(" "),
+      user: JSON.stringify(
+        {
+          query: cleanQuery,
+          candidates: payload,
+          instructions:
+            "Return up to 12 most relevant notes. Score range is 0-100. Higher means more relevant to intent."
+        },
+        null,
+        2
+      ),
+      name: "semantic_note_ranking",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          results: {
+            type: "array",
+            maxItems: 12,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                noteId: { type: "string" },
+                score: { type: "number" },
+                relevanceReason: { type: "string", maxLength: 220 }
+              },
+              required: ["noteId", "score", "relevanceReason"]
+            }
+          }
+        },
+        required: ["results"]
+      },
+      fallback: EMPTY_SEMANTIC_SEARCH_RANKING,
+      maxCompletionTokens: 650
+    });
+
+    return (Array.isArray(result.results) ? result.results : [])
+      .map((item) => ({
+        noteId: String(item.noteId || ""),
+        score: Number.isFinite(Number(item.score)) ? Math.max(0, Math.min(100, Number(item.score))) : 0,
+        relevanceReason: String(item.relevanceReason || "").trim()
+      }))
+      .filter((item) => item.noteId);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    safeLog("warn", "Semantic search AI ranking failed, using keyword fallback", {
+      message: String(error?.message || "unknown").slice(0, 220)
+    });
+    return [];
   }
 };
 

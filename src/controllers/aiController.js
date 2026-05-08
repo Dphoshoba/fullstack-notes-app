@@ -11,6 +11,7 @@ import {
   generateInsightsDashboardNarrative,
   generateMeetingFollowUpEmailDraft,
   generateMeetingIntelligence,
+  rankNotesForSemanticSearch,
   generateSmartInsights,
   generateStudyNotes as generateNoteStudyNotes,
   improveWriting as improveNoteWriting,
@@ -87,6 +88,74 @@ const tasksToText = (tasks) =>
 
 const followUpEmailToText = (email) =>
   [`Subject: ${email.subject || ""}`, "", email.body || ""].join("\n");
+
+const userWorkspaceId = (user) => user.organizationId?.toString();
+
+const buildSemanticVisibilityFilter = (user) => {
+  const privateFilter = {
+    owner: user.id,
+    $or: [{ visibility: "private" }, { visibility: { $exists: false } }]
+  };
+  const workspaceId = userWorkspaceId(user);
+  if (!workspaceId) {
+    return privateFilter;
+  }
+  return {
+    $or: [privateFilter, { visibility: "workspace", organizationId: user.organizationId }]
+  };
+};
+
+const excerptForQuery = (text, query) => {
+  const source = String(text || "").trim();
+  if (!source) {
+    return "";
+  }
+  const needle = String(query || "").trim().toLowerCase();
+  if (!needle) {
+    return source.slice(0, 220);
+  }
+  const index = source.toLowerCase().indexOf(needle);
+  if (index < 0) {
+    return source.slice(0, 220);
+  }
+  const start = Math.max(0, index - 80);
+  const end = Math.min(source.length, index + needle.length + 120);
+  return source.slice(start, end);
+};
+
+const keywordScore = (note, query) => {
+  const terms = String(query || "")
+    .toLowerCase()
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  if (!terms.length) {
+    return 0;
+  }
+  const haystack = [
+    note.title || "",
+    note.body || "",
+    Array.isArray(note.tags) ? note.tags.join(" ") : "",
+    note.category || "",
+    Array.isArray(note.meetingMeta?.attendees) ? note.meetingMeta.attendees.join(" ") : "",
+    Array.isArray(note.meetingMeta?.decisions) ? note.meetingMeta.decisions.join(" ") : "",
+    note.meetingMeta?.agenda || "",
+    note.meetingMeta?.executiveSummary || ""
+  ]
+    .join(" ")
+    .toLowerCase();
+  let score = 0;
+  for (const term of terms) {
+    if (haystack.includes(term)) {
+      score += 12;
+    }
+  }
+  if (note.title && terms.some((term) => String(note.title).toLowerCase().includes(term))) {
+    score += 8;
+  }
+  return Math.min(score, 100);
+};
 
 export const summarizeNote = async (req, res) => {
   const note = await noteLookup(req);
@@ -558,5 +627,80 @@ export const meetingFollowUpEmail = async (req, res) => {
       body: draft.body,
       recipients: draft.recipients
     }
+  });
+};
+
+export const semanticSearch = async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  if (!query) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Search query is required");
+  }
+
+  const notes = await Note.find(buildSemanticVisibilityFilter(req.user))
+    .sort({ updatedAt: -1 })
+    .limit(60)
+    .select("title body tags category noteType meetingMeta updatedAt")
+    .lean();
+
+  if (!notes.length) {
+    return res.status(StatusCodes.OK).json({
+      success: true,
+      data: []
+    });
+  }
+
+  const preRanked = notes
+    .map((note) => ({ note, score: keywordScore(note, query) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 25);
+  const candidatePool = preRanked.length ? preRanked.map((item) => item.note) : notes.slice(0, 20);
+
+  const candidates = candidatePool.map((note) => ({
+    noteId: note._id.toString(),
+    title: note.title || "Untitled",
+    tags: note.tags || [],
+    category: note.category || "General",
+    noteType: note.noteType || "standard",
+    snippet: excerptForQuery(note.body || "", query),
+    meetingMetaSummary:
+      note.noteType === "meeting"
+        ? [
+            note.meetingMeta?.executiveSummary || "",
+            Array.isArray(note.meetingMeta?.decisions) ? note.meetingMeta.decisions.join(" | ") : ""
+          ]
+            .filter(Boolean)
+            .join(" ")
+        : ""
+  }));
+
+  let aiRanking = [];
+  try {
+    aiRanking = await rankNotesForSemanticSearch(query, candidates);
+  } catch {
+    aiRanking = [];
+  }
+
+  const aiRankMap = new Map(aiRanking.map((item) => [item.noteId, item]));
+  const results = candidates
+    .map((candidate, index) => {
+      const aiRank = aiRankMap.get(candidate.noteId);
+      const fallback = preRanked.find((item) => item.note._id.toString() === candidate.noteId);
+      const score = aiRank ? aiRank.score : fallback?.score || Math.max(10, 60 - index * 2);
+      return {
+        noteId: candidate.noteId,
+        title: candidate.title,
+        excerpt: candidate.snippet || String(candidate.meetingMetaSummary || "").slice(0, 220),
+        relevanceReason: aiRank?.relevanceReason || "Keyword and context match from your accessible notes.",
+        score
+      };
+    })
+    .filter((item) => item.excerpt)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 12);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: results
   });
 };

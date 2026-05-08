@@ -67,13 +67,45 @@ const noteSchema = new mongoose.Schema(
         default: ""
       },
       decisions: {
-        type: String,
-        trim: true,
-        maxlength: 5000,
-        default: ""
+        type: mongoose.Schema.Types.Mixed,
+        default: []
       },
       actionItems: {
         type: mongoose.Schema.Types.Mixed,
+        default: ""
+      },
+      blockers: {
+        type: [String],
+        default: []
+      },
+      risks: {
+        type: [String],
+        default: []
+      },
+      deadlines: {
+        type: [String],
+        default: []
+      },
+      followUps: {
+        type: [String],
+        default: []
+      },
+      executiveSummary: {
+        type: String,
+        trim: true,
+        maxlength: 2000,
+        default: ""
+      },
+      meetingType: {
+        type: String,
+        trim: true,
+        maxlength: 60,
+        default: ""
+      },
+      priorityLevel: {
+        type: String,
+        trim: true,
+        maxlength: 30,
         default: ""
       },
       followUpDate: {

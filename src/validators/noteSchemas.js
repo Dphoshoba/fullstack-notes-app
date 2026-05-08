@@ -2,11 +2,15 @@ import Joi from "joi";
 
 const objectId = Joi.string().hex().length(24);
 const optionalDate = Joi.alternatives().try(Joi.date(), Joi.string().trim().allow(""));
+const shortStringArray = (maxItems, maxLength) =>
+  Joi.array().items(Joi.string().trim().max(maxLength)).max(maxItems).default([]);
 const meetingMetaSchema = Joi.object({
   meetingDate: optionalDate,
   attendees: Joi.array().items(Joi.string().trim().max(120)).max(100).default([]),
   agenda: Joi.string().trim().max(5000).allow("").default(""),
-  decisions: Joi.string().trim().max(5000).allow("").default(""),
+  decisions: Joi.alternatives()
+    .try(Joi.string().trim().max(5000).allow(""), Joi.array().items(Joi.string().trim().max(5000)).max(100))
+    .default(""),
   actionItems: Joi.alternatives()
     .try(
       Joi.string().trim().max(5000).allow(""),
@@ -20,6 +24,13 @@ const meetingMetaSchema = Joi.object({
       ).max(100)
     )
     .default(""),
+  blockers: shortStringArray(100, 500),
+  risks: shortStringArray(100, 500),
+  deadlines: shortStringArray(100, 240),
+  followUps: shortStringArray(100, 500),
+  executiveSummary: Joi.string().trim().max(2000).allow("").default(""),
+  meetingType: Joi.string().trim().max(60).allow("").default(""),
+  priorityLevel: Joi.string().trim().max(30).allow("").default(""),
   followUpDate: optionalDate,
   sourceType: Joi.string().trim().max(60).allow("").default("")
 }).default({});
@@ -27,7 +38,10 @@ const updateMeetingMetaSchema = Joi.object({
   meetingDate: optionalDate,
   attendees: Joi.array().items(Joi.string().trim().max(120)).max(100),
   agenda: Joi.string().trim().max(5000).allow(""),
-  decisions: Joi.string().trim().max(5000).allow(""),
+  decisions: Joi.alternatives().try(
+    Joi.string().trim().max(5000).allow(""),
+    Joi.array().items(Joi.string().trim().max(5000)).max(100)
+  ),
   actionItems: Joi.alternatives().try(
     Joi.string().trim().max(5000).allow(""),
     Joi.array().items(
@@ -39,6 +53,13 @@ const updateMeetingMetaSchema = Joi.object({
       })
     ).max(100)
   ),
+  blockers: Joi.array().items(Joi.string().trim().max(500)).max(100),
+  risks: Joi.array().items(Joi.string().trim().max(500)).max(100),
+  deadlines: Joi.array().items(Joi.string().trim().max(240)).max(100),
+  followUps: Joi.array().items(Joi.string().trim().max(500)).max(100),
+  executiveSummary: Joi.string().trim().max(2000).allow(""),
+  meetingType: Joi.string().trim().max(60).allow(""),
+  priorityLevel: Joi.string().trim().max(30).allow(""),
   followUpDate: optionalDate,
   sourceType: Joi.string().trim().max(60).allow("")
 });

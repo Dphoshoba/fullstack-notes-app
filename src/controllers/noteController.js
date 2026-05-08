@@ -28,7 +28,22 @@ const normalizeMeetingMeta = (meetingMeta = {}) => ({
   followUpDate: meetingMeta.followUpDate || null,
   attendees: Array.isArray(meetingMeta.attendees)
     ? meetingMeta.attendees.map((attendee) => attendee.trim()).filter(Boolean)
-    : []
+    : [],
+  blockers: Array.isArray(meetingMeta.blockers)
+    ? meetingMeta.blockers.map((item) => String(item || "").trim()).filter(Boolean)
+    : [],
+  risks: Array.isArray(meetingMeta.risks)
+    ? meetingMeta.risks.map((item) => String(item || "").trim()).filter(Boolean)
+    : [],
+  deadlines: Array.isArray(meetingMeta.deadlines)
+    ? meetingMeta.deadlines.map((item) => String(item || "").trim()).filter(Boolean)
+    : [],
+  followUps: Array.isArray(meetingMeta.followUps)
+    ? meetingMeta.followUps.map((item) => String(item || "").trim()).filter(Boolean)
+    : [],
+  executiveSummary: String(meetingMeta.executiveSummary || "").trim(),
+  meetingType: String(meetingMeta.meetingType || "").trim(),
+  priorityLevel: String(meetingMeta.priorityLevel || "").trim()
 });
 
 const normalizeNoteInput = (input, { defaultNoteType } = {}) => {

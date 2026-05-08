@@ -969,6 +969,13 @@ export default function DashboardPage() {
                   dueDate: "",
                   status: "open"
                 })),
+                blockers: result.blockers || [],
+                risks: result.risks || [],
+                deadlines: result.deadlines || [],
+                followUps: result.followUps || [],
+                executiveSummary: result.executiveSummary || "",
+                meetingType: result.meetingType || "",
+                priorityLevel: result.priorityLevel || "",
                 sourceType: "ai-openai"
               }
             }
@@ -1050,10 +1057,19 @@ export default function DashboardPage() {
         noteType: "meeting",
         meetingMeta: mergeMeetingMeta(selectedAiNote.meetingMeta, aiResult.meetingMeta)
       });
-      addToast("success", t("savedToMeetingDetails"));
+      if (aiResult?.type === "meeting-intelligence") {
+        addToast("success", "Meeting intelligence saved");
+      } else {
+        addToast("success", t("savedToMeetingDetails"));
+      }
     } catch {
-      setAiError(t("couldNotSave"));
-      addToast("error", t("couldNotSave"));
+      if (aiResult?.type === "meeting-intelligence") {
+        setAiError("Could not save meeting intelligence");
+        addToast("error", "Could not save meeting intelligence");
+      } else {
+        setAiError(t("couldNotSave"));
+        addToast("error", t("couldNotSave"));
+      }
     } finally {
       setAiSavingAction("");
     }

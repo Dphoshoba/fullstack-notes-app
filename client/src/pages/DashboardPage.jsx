@@ -501,6 +501,54 @@ export default function DashboardPage() {
     ? Math.min(Math.round((usage.aiUsageCount / usage.aiUsageLimit) * 100), 100)
     : 0;
   const usagePlanLabel = usage.plan === "premium" ? t("premiumPlan") : t("freePlan");
+  const recentMeetingNotes = [...notes]
+    .filter(
+      (note) =>
+        note.noteType === "meeting" ||
+        note.meetingMeta?.executiveSummary ||
+        exportActionItems(note.meetingMeta?.actionItems).length
+    )
+    .sort((a, b) => noteTimestamp(b) - noteTimestamp(a));
+  const commandCenterActionItems = recentMeetingNotes
+    .flatMap((note) => exportActionItems(note.meetingMeta?.actionItems))
+    .map((item) => item.text)
+    .filter(Boolean)
+    .slice(0, 6);
+  const commandCenterDeadlines = recentMeetingNotes
+    .flatMap((note) => {
+      const actionItemDates = exportActionItems(note.meetingMeta?.actionItems)
+        .map((item) => item.dueDate)
+        .filter(Boolean)
+        .map((value) => formatDisplayDate(value));
+      const listedDeadlines = Array.isArray(note.meetingMeta?.deadlines)
+        ? note.meetingMeta.deadlines.filter(Boolean)
+        : [];
+      const followUpDate = note.meetingMeta?.followUpDate ? [formatDisplayDate(note.meetingMeta.followUpDate)] : [];
+      return [...actionItemDates, ...listedDeadlines, ...followUpDate];
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+  const commandCenterFollowUps = (
+    Array.isArray(aiInsightsData?.followUpSuggestions) && aiInsightsData.followUpSuggestions.length
+      ? aiInsightsData.followUpSuggestions
+      : recentMeetingNotes.flatMap((note) =>
+          Array.isArray(note.meetingMeta?.followUps) ? note.meetingMeta.followUps : []
+        )
+  )
+    .filter(Boolean)
+    .slice(0, 6);
+  const recentMeetingSummaries = recentMeetingNotes
+    .map((note) => ({
+      id: note.id,
+      title: note.title || "Untitled meeting",
+      summary: note.meetingMeta?.executiveSummary || note.body || "",
+      updatedAt: note.updatedAt || note.createdAt || ""
+    }))
+    .filter((item) => item.summary)
+    .slice(0, 3);
+  const productivitySnapshot =
+    aiInsightsData?.productivitySummary ||
+    "Generate insights to get a live productivity snapshot based on your workspace notes.";
   const remainingAiUses = Math.max(usage.remainingAiUses ?? usage.aiUsageLimit - usage.aiUsageCount, 0);
   const notesEmptyState = (() => {
     if (isSearching) {
@@ -1841,6 +1889,113 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : null}
+        </section>
+
+        <section className="premium-panel mt-4 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-950">AI Command Center</h2>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                Unified AI summary for insights, priorities, follow-ups, and recent meetings.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={generateAiInsights}
+                disabled={aiInsightsLoading || usageLimitReached}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+              >
+                {aiInsightsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BarChart3 className="h-3.5 w-3.5" />}
+                Generate Insights
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("meeting-intelligence")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-50 disabled:opacity-60"
+              >
+                {aiLoadingAction === "meeting-intelligence" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Bot className="h-3.5 w-3.5" />
+                )}
+                Meeting Intelligence
+              </button>
+              <button
+                type="button"
+                onClick={() => runAiAction("follow-up-email")}
+                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              >
+                {aiLoadingAction === "follow-up-email" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mail className="h-3.5 w-3.5" />
+                )}
+                Create Follow-up Email
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 xl:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Productivity Snapshot</p>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{productivitySnapshot}</p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority Tasks</p>
+              {commandCenterActionItems.length ? (
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {commandCenterActionItems.map((item) => (
+                    <li key={item}>- {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">No action items yet.</p>
+              )}
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Upcoming Deadlines</p>
+              {commandCenterDeadlines.length ? (
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {commandCenterDeadlines.map((item, index) => (
+                    <li key={`${item}-${index}`}>- {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">No deadlines yet.</p>
+              )}
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Suggested Follow-ups</p>
+              {commandCenterFollowUps.length ? (
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  {commandCenterFollowUps.map((item) => (
+                    <li key={item}>- {item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">No follow-up suggestions yet.</p>
+              )}
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 xl:col-span-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Meetings</p>
+              {recentMeetingSummaries.length ? (
+                <div className="mt-2 space-y-2">
+                  {recentMeetingSummaries.map((item) => (
+                    <div key={item.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-slate-600">{item.summary}</p>
+                      <p className="mt-1 text-xs font-medium text-slate-500">{formatDisplayDate(item.updatedAt)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">No meeting summaries available yet.</p>
+              )}
+            </div>
+          </div>
         </section>
       </div>
 

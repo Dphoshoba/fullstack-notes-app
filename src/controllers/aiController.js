@@ -9,6 +9,7 @@ import {
   extractAttendeesAndDecisions as extractNoteAttendeesAndDecisions,
   extractTasks as extractNoteTasks,
   generateInsightsDashboardNarrative,
+  generateMeetingFollowUpEmailDraft,
   generateMeetingIntelligence,
   generateSmartInsights,
   generateStudyNotes as generateNoteStudyNotes,
@@ -488,5 +489,74 @@ export const meetingIntelligence = async (req, res) => {
   return res.status(StatusCodes.OK).json({
     success: true,
     data: intelligence
+  });
+};
+
+export const meetingFollowUpEmail = async (req, res) => {
+  const noteId = req.body.noteId || "";
+  const providedIntelligence = req.body.meetingIntelligence || {};
+  const providedMeetingContent = String(req.body.meetingContent || "").trim();
+  let note = null;
+
+  if (noteId) {
+    note = await Note.findOne({ _id: noteId, owner: req.user.id });
+    if (!note) {
+      throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
+    }
+  }
+
+  const sourceIntelligence = Object.keys(providedIntelligence).length
+    ? providedIntelligence
+    : note?.meetingMeta || {};
+  const recipientsSeed = Array.isArray(sourceIntelligence.attendees)
+    ? sourceIntelligence.attendees
+    : [];
+  const meetingContextText = [
+    note ? `Title: ${note.title || ""}` : "",
+    note ? `Category: ${note.category || "General"}` : "",
+    note ? `Note type: ${note.noteType || "standard"}` : "",
+    sourceIntelligence.executiveSummary ? `Executive summary: ${sourceIntelligence.executiveSummary}` : "",
+    sourceIntelligence.meetingType ? `Meeting type: ${sourceIntelligence.meetingType}` : "",
+    sourceIntelligence.priorityLevel ? `Priority level: ${sourceIntelligence.priorityLevel}` : "",
+    Array.isArray(sourceIntelligence.attendees) && sourceIntelligence.attendees.length
+      ? `Attendees: ${sourceIntelligence.attendees.join(", ")}`
+      : "",
+    Array.isArray(sourceIntelligence.decisions) && sourceIntelligence.decisions.length
+      ? `Decisions:\n${sourceIntelligence.decisions.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    Array.isArray(sourceIntelligence.actionItems) && sourceIntelligence.actionItems.length
+      ? `Action items:\n${sourceIntelligence.actionItems.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    Array.isArray(sourceIntelligence.blockers) && sourceIntelligence.blockers.length
+      ? `Blockers:\n${sourceIntelligence.blockers.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    Array.isArray(sourceIntelligence.risks) && sourceIntelligence.risks.length
+      ? `Risks:\n${sourceIntelligence.risks.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    Array.isArray(sourceIntelligence.deadlines) && sourceIntelligence.deadlines.length
+      ? `Deadlines:\n${sourceIntelligence.deadlines.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    Array.isArray(sourceIntelligence.followUps) && sourceIntelligence.followUps.length
+      ? `Follow-ups:\n${sourceIntelligence.followUps.map((item) => `- ${item}`).join("\n")}`
+      : "",
+    providedMeetingContent ? `Meeting content:\n${providedMeetingContent}` : "",
+    !providedMeetingContent && note?.body ? `Meeting content:\n${note.body}` : ""
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  if (!meetingContextText.trim()) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Meeting content is required");
+  }
+
+  const draft = await generateMeetingFollowUpEmailDraft(meetingContextText, recipientsSeed);
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: {
+      subject: draft.subject,
+      body: draft.body,
+      recipients: draft.recipients
+    }
   });
 };

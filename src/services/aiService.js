@@ -51,6 +51,11 @@ const EMPTY_MEETING_INTELLIGENCE = {
   meetingType: "",
   priorityLevel: ""
 };
+const EMPTY_MEETING_FOLLOW_UP_EMAIL = {
+  subject: "",
+  body: "",
+  recipients: []
+};
 
 let client;
 
@@ -830,6 +835,130 @@ export const generateMeetingIntelligence = async (content) => {
       executiveSummary: String(parsed.executiveSummary || "").trim(),
       meetingType: String(parsed.meetingType || "").trim(),
       priorityLevel: String(parsed.priorityLevel || "").trim()
+    };
+  }
+};
+
+export const generateMeetingFollowUpEmailDraft = async (meetingContextText, recipientsSeed = []) => {
+  const context = String(meetingContextText || "").trim();
+  if (!context) {
+    return {
+      ...EMPTY_MEETING_FOLLOW_UP_EMAIL,
+      recipients: cleanStringArray(recipientsSeed, 20)
+    };
+  }
+
+  const jsonFallback = {
+    ...EMPTY_MEETING_FOLLOW_UP_EMAIL,
+    recipients: cleanStringArray(recipientsSeed, 20),
+    __fallbackReason: "json_parse_or_empty"
+  };
+
+  try {
+    const result = await runJsonPrompt({
+      system: [
+        "You draft professional follow-up emails after meetings.",
+        "Return JSON only.",
+        "Do not invent facts not present in the context.",
+        "Body must include greeting, concise recap, decisions, action items, deadlines or follow-ups, and polite closing."
+      ].join(" "),
+      user: [
+        "Generate a professional meeting follow-up email draft from this context:",
+        "",
+        context
+      ].join("\n"),
+      name: "meeting_follow_up_email",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          subject: { type: "string", maxLength: 180 },
+          body: { type: "string", maxLength: 4000 },
+          recipients: {
+            type: "array",
+            maxItems: 20,
+            items: { type: "string", maxLength: 160 }
+          }
+        },
+        required: ["subject", "body", "recipients"]
+      },
+      fallback: jsonFallback,
+      maxCompletionTokens: 900
+    });
+
+    const payload = {
+      subject: String(result.subject || "").trim(),
+      body: String(result.body || "").trim(),
+      recipients: cleanStringArray(result.recipients, 20)
+    };
+
+    if (result.__fallbackReason === "json_parse_or_empty" || !payload.body) {
+      safeLog("warn", "Meeting follow-up JSON unusable, using text fallback");
+      throw new Error("MEETING_FOLLOWUP_JSON_UNUSABLE");
+    }
+
+    if (!payload.recipients.length) {
+      payload.recipients = cleanStringArray(recipientsSeed, 20);
+    }
+
+    return payload;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    safeLog("warn", "Meeting follow-up JSON pipeline failed, attempting text fallback", {
+      message: String(error?.message || "unknown").slice(0, 200)
+    });
+
+    const fallbackText = await runTextPrompt({
+      system: [
+        "You draft professional follow-up emails after meetings.",
+        "Return plain text only with exactly two sections:",
+        "Subject:",
+        "Body:",
+        "Body must include greeting, concise recap, decisions, action items, deadlines or follow-ups, and polite closing."
+      ].join(" "),
+      user: context,
+      maxCompletionTokens: 850
+    });
+
+    let subject = "";
+    const bodyLines = [];
+    let inBody = false;
+    for (const rawLine of String(fallbackText || "").split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) {
+        if (inBody) {
+          bodyLines.push("");
+        }
+        continue;
+      }
+      const lower = line.toLowerCase();
+      if (lower.startsWith("subject:")) {
+        subject = line.slice("subject:".length).trim();
+        inBody = false;
+        continue;
+      }
+      if (lower.startsWith("body:")) {
+        inBody = true;
+        const firstBodyLine = line.slice("body:".length).trim();
+        if (firstBodyLine) {
+          bodyLines.push(firstBodyLine);
+        }
+        continue;
+      }
+      if (inBody) {
+        bodyLines.push(rawLine);
+      } else if (!subject) {
+        subject = line;
+      }
+    }
+
+    return {
+      subject: subject || "Meeting follow-up",
+      body: bodyLines.join("\n").trim(),
+      recipients: cleanStringArray(recipientsSeed, 20)
     };
   }
 };

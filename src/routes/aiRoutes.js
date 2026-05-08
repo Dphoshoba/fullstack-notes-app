@@ -8,6 +8,7 @@ import {
   extractAttendeesAndDecisions,
   extractTasks,
   insightsDashboard,
+  meetingFollowUpEmail,
   meetingIntelligence,
   generateStudyNotes,
   improveWriting,
@@ -21,6 +22,7 @@ import { authenticate } from "../middleware/authenticate.js";
 import { enforceAiUsage } from "../middleware/enforceAiUsage.js";
 import { validate } from "../middleware/validate.js";
 import {
+  meetingFollowUpEmailSchema,
   meetingIntelligenceSchema,
   noteAiSchema,
   smartInsightsSchema,
@@ -46,5 +48,6 @@ router.post("/extract-action-items", validate(noteAiSchema), asyncHandler(extrac
 router.post("/extract-attendees-decisions", validate(noteAiSchema), asyncHandler(extractAttendeesAndDecisions));
 router.post("/smart-insights", validate(smartInsightsSchema), asyncHandler(smartInsights));
 router.post("/meeting-intelligence", validate(meetingIntelligenceSchema), asyncHandler(meetingIntelligence));
+router.post("/meeting-follow-up-email", validate(meetingFollowUpEmailSchema), asyncHandler(meetingFollowUpEmail));
 
 export default router;

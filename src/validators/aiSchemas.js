@@ -26,3 +26,26 @@ export const meetingIntelligenceSchema = Joi.object({
     content: Joi.string().trim().max(12000).allow("").required()
   }).required()
 });
+
+const meetingIntelligenceObjectSchema = Joi.object({
+  attendees: Joi.array().items(Joi.string().trim().max(120)).max(100).default([]),
+  decisions: Joi.array().items(Joi.string().trim().max(500)).max(100).default([]),
+  actionItems: Joi.array().items(Joi.string().trim().max(500)).max(100).default([]),
+  blockers: Joi.array().items(Joi.string().trim().max(500)).max(100).default([]),
+  risks: Joi.array().items(Joi.string().trim().max(500)).max(100).default([]),
+  deadlines: Joi.array().items(Joi.string().trim().max(240)).max(100).default([]),
+  followUps: Joi.array().items(Joi.string().trim().max(500)).max(100).default([]),
+  executiveSummary: Joi.string().trim().max(2000).allow("").default(""),
+  meetingType: Joi.string().trim().max(60).allow("").default(""),
+  priorityLevel: Joi.string().trim().max(30).allow("").default("")
+}).default({});
+
+export const meetingFollowUpEmailSchema = Joi.object({
+  body: Joi.object({
+    noteId: objectId.optional(),
+    meetingIntelligence: meetingIntelligenceObjectSchema.optional(),
+    meetingContent: Joi.string().trim().max(12000).allow("").default("")
+  })
+    .or("noteId", "meetingIntelligence", "meetingContent")
+    .required()
+});

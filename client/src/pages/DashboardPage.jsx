@@ -12,7 +12,6 @@ import {
   Download,
   Edit3,
   FileText,
-  Folder,
   HelpCircle,
   Loader2,
   LogOut,
@@ -26,7 +25,6 @@ import {
   Shield,
   Star,
   Trash2,
-  TrendingUp,
   User,
   UserPlus,
   Users,
@@ -64,7 +62,8 @@ import { Button } from "../components/Button.jsx";
 import { DashboardSectionNav } from "../components/dashboard/DashboardSectionNav.jsx";
 import {
   DEFAULT_DASHBOARD_SECTION,
-  isDashboardSection
+  DASHBOARD_SECTIONS,
+  normalizeDashboardSection
 } from "../components/dashboard/dashboardSections.js";
 import { SectionEmptyState } from "../components/dashboard/SectionEmptyState.jsx";
 import { WorkspaceDashboardSection } from "../components/dashboard/WorkspaceDashboardSection.jsx";
@@ -323,30 +322,18 @@ const downloadTextFile = ({ contents, filename, type }) => {
   window.URL.revokeObjectURL(url);
 };
 
-const formatDisplayDate = (value) => {
-  if (!value) {
-    return "";
-  }
-
-  return new Date(value).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric"
-  });
-};
-
 export default function DashboardPage() {
   const { user, logout, updateProfile, updateSettings } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get("section");
-  const activeSection = isDashboardSection(sectionParam) ? sectionParam : DEFAULT_DASHBOARD_SECTION;
+  const activeSection = normalizeDashboardSection(sectionParam);
   const isHomeSection = activeSection === "home";
   const isNotesSection = activeSection === "notes";
-  const isAiToolsSection = activeSection === "ai-tools";
+  const isAiWorkspaceSection = activeSection === "ai-workspace";
   const isMeetingsSection = activeSection === "meetings";
-  const isWorkspaceSection = activeSection === "workspace";
+  const isTeamSection = activeSection === "team";
   const isSettingsSection = activeSection === "settings";
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -446,12 +433,6 @@ export default function DashboardPage() {
   const canEditRoles = user?.role === "superadmin";
   const hasWorkspace = Boolean(workspaceInfo.workspace);
   const loadedNotesCount = notes.length;
-  const pinnedNotesCount = notes.filter((note) => note.pinned).length;
-  const starredNotesCount = notes.filter((note) => note.starred).length;
-  const loadedCategories = notes.map((note) => note.category || "General");
-  const categoriesCount = new Set(loadedCategories).size;
-  const pinnedProgress = loadedNotesCount ? Math.round((pinnedNotesCount / loadedNotesCount) * 100) : 0;
-  const starredProgress = loadedNotesCount ? Math.round((starredNotesCount / loadedNotesCount) * 100) : 0;
   const totalPages = Math.max(pagination.pages, 1);
   const unreadNotificationsCount = notifications.filter((notification) => !notification.read).length;
   const categoryOptions = Array.from(
@@ -459,67 +440,6 @@ export default function DashboardPage() {
   )
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
-  const categoryCounts = loadedCategories.reduce((counts, category) => {
-    counts[category] = (counts[category] || 0) + 1;
-    return counts;
-  }, {});
-  const [mostUsedCategory = "", mostUsedCategoryCount = 0] =
-    Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0] || [];
-  const latestCreatedNote = [...notes].sort(
-    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-  )[0];
-  const weekStart = new Date();
-  weekStart.setHours(0, 0, 0, 0);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const notesCreatedThisWeek = notes.filter(
-    (note) => note.createdAt && new Date(note.createdAt).getTime() >= weekStart.getTime()
-  ).length;
-  const weekProgress = loadedNotesCount
-    ? Math.round((notesCreatedThisWeek / loadedNotesCount) * 100)
-    : 0;
-  const statCards = [
-    {
-      label: t("totalNotes"),
-      value: loadedNotesCount,
-      icon: FileText,
-      tone: "emerald",
-      detail: t("currentLoadedNotes")
-    },
-    {
-      label: t("pinnedNotes"),
-      value: pinnedNotesCount,
-      icon: Pin,
-      tone: "emerald",
-      progress: pinnedProgress,
-      detail: pinnedNotesCount
-        ? t("ofLoadedNotes", { percent: pinnedProgress })
-        : t("emptyPinnedNotesDescription")
-    },
-    {
-      label: t("starredNotes"),
-      value: starredNotesCount,
-      icon: Star,
-      tone: "amber",
-      progress: starredProgress,
-      detail: starredNotesCount
-        ? t("ofLoadedNotes", { percent: starredProgress })
-        : t("emptyStarredNotesDescription")
-    },
-    {
-      label: t("categoriesCount"),
-      value: categoriesCount,
-      icon: Folder,
-      tone: "slate",
-      detail: t("currentLoadedNotes")
-    },
-    {
-      label: t("userRole"),
-      value: user?.role || "user",
-      icon: Shield,
-      tone: "slate",
-      detail: t("account")
-    }
-  ];
   const aiNotePickerNotes = isMeetingsSection
     ? notes.filter(
         (note) =>
@@ -559,38 +479,6 @@ export default function DashboardPage() {
     .map((item) => item.text)
     .filter(Boolean)
     .slice(0, 6);
-  const commandCenterDeadlines = recentMeetingNotes
-    .flatMap((note) => {
-      const actionItemDates = exportActionItems(note.meetingMeta?.actionItems)
-        .map((item) => item.dueDate)
-        .filter(Boolean)
-        .map((value) => formatDisplayDate(value));
-      const listedDeadlines = Array.isArray(note.meetingMeta?.deadlines)
-        ? note.meetingMeta.deadlines.filter(Boolean)
-        : [];
-      const followUpDate = note.meetingMeta?.followUpDate ? [formatDisplayDate(note.meetingMeta.followUpDate)] : [];
-      return [...actionItemDates, ...listedDeadlines, ...followUpDate];
-    })
-    .filter(Boolean)
-    .slice(0, 6);
-  const commandCenterFollowUps = (
-    Array.isArray(aiInsightsData?.followUpSuggestions) && aiInsightsData.followUpSuggestions.length
-      ? aiInsightsData.followUpSuggestions
-      : recentMeetingNotes.flatMap((note) =>
-          Array.isArray(note.meetingMeta?.followUps) ? note.meetingMeta.followUps : []
-        )
-  )
-    .filter(Boolean)
-    .slice(0, 6);
-  const recentMeetingSummaries = recentMeetingNotes
-    .map((note) => ({
-      id: note.id,
-      title: note.title || "Untitled meeting",
-      summary: note.meetingMeta?.executiveSummary || note.body || "",
-      updatedAt: note.updatedAt || note.createdAt || ""
-    }))
-    .filter((item) => item.summary)
-    .slice(0, 3);
   const productivitySnapshot =
     aiInsightsData?.productivitySummary ||
     "Generate insights to get a live productivity snapshot based on your workspace notes.";
@@ -1397,8 +1285,10 @@ export default function DashboardPage() {
       <header className="border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-700">Notes API</p>
-            <h1 className="text-2xl font-bold text-slate-950">{t("dashboard")}</h1>
+            <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
+            <h1 className="text-2xl font-bold text-slate-950">
+              {DASHBOARD_SECTIONS.find((section) => section.id === activeSection)?.label || "Home"}
+            </h1>
           </div>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0">
             <label className="flex h-10 min-w-28 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
@@ -1650,6 +1540,10 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-base font-bold text-slate-950">{t("onboardingTitle")}</p>
                   <p className="mt-1 text-sm text-slate-600">{t("onboardingSubtitle")}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Start with a business note, turn meetings into action items with AI, then invite
+                    teammates to share decisions and follow-ups in one workspace.
+                  </p>
                   <p className="mt-3 text-sm font-semibold text-emerald-700">
                     {t("onboardingProgress", { completed: onboardingStepsCompleted, total: 3 })}
                   </p>
@@ -1702,30 +1596,6 @@ export default function DashboardPage() {
         </section>
       ) : null}
 
-      {usage.plan !== "premium" && isHomeSection ? (
-        <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-          <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-emerald-700 ring-1 ring-emerald-100">
-                  <UserPlus className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">{t("inviteGrowthBanner")}</p>
-                  <p className="mt-1 text-sm text-slate-600">{t("inviteGrowthBannerDescription")}</p>
-                </div>
-              </div>
-              <Link
-                to="/settings"
-                className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
-              >
-                {t("bringYourTeamIn")}
-              </Link>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
       {showGuideOnboarding && isHomeSection ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
           <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
@@ -1769,23 +1639,23 @@ export default function DashboardPage() {
           id="dashboard-panel-home"
           role="tabpanel"
           aria-labelledby="dashboard-tab-home"
-          className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8"
+          className="mx-auto max-w-7xl space-y-6 px-4 pt-6 pb-8 sm:px-6 lg:px-8"
         >
-          <section className="premium-panel mb-4 p-5">
-            <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
+          <section className="premium-panel p-6">
+            <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
             <h2 className="mt-1 text-xl font-bold text-slate-950">
               Welcome back{user?.name ? `, ${user.name}` : ""}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Your overview and next steps live here. Use the tabs above for notes, AI tools, meetings,
-              workspace, and settings.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              Capture decisions, run AI on business notes, and keep your team aligned. Each tab below
+              focuses on one job so you can work faster with less clutter.
             </p>
           </section>
 
-          <section className="premium-panel p-4">
+          <section className="premium-panel p-6">
             <h2 className="text-sm font-semibold text-slate-950">Quick actions</h2>
-            <p className="mt-1 text-xs text-slate-500">Jump to the tools you need without clutter.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <p className="mt-1 text-sm text-slate-500">Jump straight to the work that matters.</p>
+            <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => setActiveSection("notes")}
@@ -1796,11 +1666,11 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveSection("ai-tools")}
+                onClick={() => setActiveSection("ai-workspace")}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 <Bot className="h-4 w-4" />
-                Use AI on your notes
+                Use AI to organize business notes
               </button>
               <button
                 type="button"
@@ -1812,7 +1682,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveSection("workspace")}
+                onClick={() => setActiveSection("team")}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 <UserPlus className="h-4 w-4" />
@@ -1821,163 +1691,50 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="premium-panel mt-4 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <section className="premium-panel p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  {t("currentPlan")}:{" "}
-                  <span className="font-semibold capitalize text-slate-950">{usagePlanLabel}</span>
-                </p>
+                <h2 className="text-sm font-semibold text-slate-950">AI Insights</h2>
+                <p className="mt-1 text-sm text-slate-500">Use AI to organize business notes at a glance.</p>
               </div>
-              {usage.plan === "premium" ? (
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={manageBilling}
-                  disabled={portalLoading}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                  onClick={generateAiInsights}
+                  disabled={aiInsightsLoading || usageLimitReached}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
                 >
-                  {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                  {t("manageBilling")}
+                  {aiInsightsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+                  Refresh insights
                 </button>
-              ) : (
                 <button
                   type="button"
-                  onClick={startUpgrade}
-                  disabled={upgradeLoading}
-                  className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                  onClick={() => setActiveSection("ai-workspace")}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
-                  {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  {t("upgradeToPremium")}
+                  <Bot className="h-4 w-4" />
+                  Open AI Workspace
                 </button>
-              )}
-            </div>
-            <div className="mt-3">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-                <span>{t("aiUsage")}</span>
-                <span>
-                  {usageLoading
-                    ? t("loading")
-                    : t("aiUsesRemaining", {
-                        remaining: remainingAiUses,
-                        limit: usage.aiUsageLimit
-                      })}
-                </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${usageLimitReached ? "bg-red-600" : "bg-emerald-600"}`}
-                  style={{ width: `${usageProgress}%` }}
-                />
               </div>
             </div>
+            {aiInsightsError ? (
+              <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {aiInsightsError}
+              </p>
+            ) : null}
+            <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700">
+              {productivitySnapshot}
+            </p>
+            {commandCenterActionItems.length ? (
+              <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                {commandCenterActionItems.slice(0, 3).map((item) => (
+                  <li key={item}>• {item}</li>
+                ))}
+              </ul>
+            ) : null}
           </section>
 
-
-        <section className="premium-panel mt-4 p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-950">AI Command Center</h2>
-              <p className="mt-1 text-xs font-medium text-slate-500">
-                Unified AI summary for insights, priorities, follow-ups, and recent meetings.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={generateAiInsights}
-                disabled={aiInsightsLoading || usageLimitReached}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
-              >
-                {aiInsightsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BarChart3 className="h-3.5 w-3.5" />}
-                Generate Insights
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSection("ai-tools")}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-50"
-              >
-                <Bot className="h-3.5 w-3.5" />
-                Use AI tools
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveSection("meetings")}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Open meetings
-              </button>
-            </div>
-          </div>
-
-          {aiInsightsError ? (
-            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {aiInsightsError}
-            </p>
-          ) : null}
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 xl:col-span-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Productivity Snapshot</p>
-              <p className="mt-2 text-sm leading-6 text-slate-700">{productivitySnapshot}</p>
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Priority Tasks</p>
-              {commandCenterActionItems.length ? (
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {commandCenterActionItems.map((item) => (
-                    <li key={item}>- {item}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-sm text-slate-500">No action items yet.</p>
-              )}
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Upcoming Deadlines</p>
-              {commandCenterDeadlines.length ? (
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {commandCenterDeadlines.map((item, index) => (
-                    <li key={`${item}-${index}`}>- {item}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-sm text-slate-500">No deadlines yet.</p>
-              )}
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Suggested Follow-ups</p>
-              {commandCenterFollowUps.length ? (
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {commandCenterFollowUps.map((item) => (
-                    <li key={item}>- {item}</li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-sm text-slate-500">No follow-up suggestions yet.</p>
-              )}
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 xl:col-span-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Meetings</p>
-              {recentMeetingSummaries.length ? (
-                <div className="mt-2 space-y-2">
-                  {recentMeetingSummaries.map((item) => (
-                    <div key={item.id} className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                      <p className="mt-1 line-clamp-2 text-sm text-slate-600">{item.summary}</p>
-                      <p className="mt-1 text-xs font-medium text-slate-500">{formatDisplayDate(item.updatedAt)}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-2 text-sm text-slate-500">No meeting summaries available yet.</p>
-              )}
-            </div>
-          </div>
-        </section>
-
-          <section className="premium-panel mt-4 p-4">
+          <section className="premium-panel p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950">Recent notes</h2>
@@ -2009,10 +1766,41 @@ export default function DashboardPage() {
               />
             )}
           </section>
+
+          <section className="premium-panel p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">Team workspace</h2>
+                <p className="mt-1 text-sm text-slate-500">Collaborate with your team on shared notes.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSection("team")}
+                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+              >
+                Manage team
+              </button>
+            </div>
+            {hasWorkspace ? (
+              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-base font-semibold text-slate-950">{workspaceInfo.workspace.name}</p>
+                <p className="mt-1 text-sm text-slate-600">
+                  Your role: <span className="font-semibold capitalize">{workspaceInfo.role}</span>
+                </p>
+              </div>
+            ) : (
+              <SectionEmptyState
+                title="No team workspace yet"
+                description="Invite teammates in Settings to share notes and meeting follow-ups."
+                actionLabel="Collaborate with your team"
+                onAction={() => setActiveSection("team")}
+              />
+            )}
+          </section>
         </div>
       ) : null}
 
-      {isWorkspaceSection ? (
+      {isTeamSection ? (
         <WorkspaceDashboardSection
           workspaceInfo={workspaceInfo}
           hasWorkspace={hasWorkspace}
@@ -2030,7 +1818,9 @@ export default function DashboardPage() {
         >
           <div className="premium-panel p-5">
             <h2 className="text-lg font-semibold text-slate-950">{t("settings")}</h2>
-            <p className="mt-1 text-sm text-slate-600">Account, billing, invites, and preferences live in Settings.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Account, billing, plan usage, invites, and preferences live in Settings.
+            </p>
             <div className="mt-5 flex flex-col gap-2 sm:flex-row">
               <Link
                 to="/settings"
@@ -2046,11 +1836,62 @@ export default function DashboardPage() {
                 {t("profile")}
               </button>
             </div>
+            <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {t("currentPlan")}:{" "}
+                    <span className="font-semibold capitalize text-slate-950">{usagePlanLabel}</span>
+                  </p>
+                </div>
+                {usage.plan === "premium" ? (
+                  <button
+                    type="button"
+                    onClick={manageBilling}
+                    disabled={portalLoading}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                    {t("manageBilling")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startUpgrade}
+                    disabled={upgradeLoading}
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                  >
+                    {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {t("upgradeToPremium")}
+                  </button>
+                )}
+              </div>
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                  <span>{t("aiUsage")}</span>
+                  <span>
+                    {usageLoading
+                      ? t("loading")
+                      : t("aiUsesRemaining", {
+                          remaining: remainingAiUses,
+                          limit: usage.aiUsageLimit
+                        })}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                  <div
+                    className={`h-full rounded-full ${usageLimitReached ? "bg-red-600" : "bg-emerald-600"}`}
+                    style={{ width: `${usageProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       ) : null}
 
-      {(isNotesSection || isAiToolsSection || isMeetingsSection) ? (
+      {(isNotesSection || isAiWorkspaceSection || isMeetingsSection) ? (
       <div className={`mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8${isNotesSection ? " lg:grid-cols-[360px_1fr]" : ""}`}>
         {isNotesSection ? (
         <aside ref={createNoteRef} className="premium-panel h-fit scroll-mt-6 p-5">
@@ -2078,113 +1919,33 @@ export default function DashboardPage() {
           id={
             isNotesSection
               ? "dashboard-panel-notes"
-              : isAiToolsSection
-                ? "dashboard-panel-ai-tools"
+              : isAiWorkspaceSection
+                ? "dashboard-panel-ai-workspace"
                 : "dashboard-panel-meetings"
           }
           role="tabpanel"
           aria-labelledby={
             isNotesSection
               ? "dashboard-tab-notes"
-              : isAiToolsSection
-                ? "dashboard-tab-ai-tools"
+              : isAiWorkspaceSection
+                ? "dashboard-tab-ai-workspace"
                 : "dashboard-tab-meetings"
           }
         >
           {isNotesSection ? (
             <div className="premium-panel mb-5 p-4">
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
-              <p className="mt-1 text-sm text-slate-600">Create a note, search, filter, and export your library.</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {statCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <div
-                      key={card.label}
-                      className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {card.label}
-                        </p>
-                        <Icon className="h-4 w-4 text-slate-500" />
-                      </div>
-                      <p className="mt-2 text-lg font-bold capitalize text-slate-950">{card.value}</p>
-                      <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
-                      {typeof card.progress === "number" ? (
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
-                          <div
-                            className="h-full rounded-full bg-emerald-600"
-                            style={{ width: `${card.progress}%` }}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mt-4 rounded-md border border-slate-200 bg-white p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-950">{t("productInsights")}</h3>
-                    <p className="text-xs text-slate-500">{t("currentLoadedNotes")}</p>
-                  </div>
-                  <BarChart3 className="h-5 w-5 text-emerald-700" />
-                </div>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {t("mostUsedCategory")}
-                      </p>
-                      <Folder className="h-4 w-4 text-slate-500" />
-                    </div>
-                    <p className="mt-2 truncate text-sm font-semibold text-slate-950">
-                      {mostUsedCategory || t("noInsightYet")}
-                    </p>
-                    {mostUsedCategory ? (
-                      <span className="mt-2 inline-flex rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                        {t("notesCount", { count: mostUsedCategoryCount })}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      {t("latestNoteCreated")}
-                    </p>
-                    <p className="mt-2 truncate text-sm font-semibold text-slate-950">
-                      {latestCreatedNote?.title || t("noInsightYet")}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {t("notesCreatedThisWeek")}
-                      </p>
-                      <TrendingUp className="h-4 w-4 text-slate-500" />
-                    </div>
-                    <p className="mt-2 text-sm font-semibold text-slate-950">
-                      {t("notesCount", { count: notesCreatedThisWeek })}
-                    </p>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                      <div
-                        className="h-full rounded-full bg-emerald-600"
-                        style={{ width: `${weekProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <p className="mt-1 text-sm text-slate-600">Capture ideas, search, filter by category, and export when you need to share.</p>
             </div>
           ) : null}
 
-          {(isAiToolsSection || isMeetingsSection) && !loading && !aiNotePickerNotes.length ? (
+          {(isAiWorkspaceSection || isMeetingsSection) && !loading && !aiNotePickerNotes.length ? (
             <SectionEmptyState
               title={isMeetingsSection ? "No meeting notes yet" : "No notes yet"}
               description={
                 isMeetingsSection
                   ? "Create a meeting note in Notes, then return here to extract action items and follow-ups."
-                  : "Create a note first, then come back to run summarize, improve writing, and other AI tools."
+                  : "Create a note first, then use AI Workspace to summarize and organize your business notes."
               }
               actionLabel={isMeetingsSection ? "Create a meeting note" : "Create a note"}
               onAction={() => {
@@ -2201,15 +1962,19 @@ export default function DashboardPage() {
             />
           ) : null}
 
-          {(isAiToolsSection || isMeetingsSection) && aiNotePickerNotes.length ? (
+          {(isAiWorkspaceSection || isMeetingsSection) && aiNotePickerNotes.length ? (
           <div className="premium-panel mb-5 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-emerald-700" />
-                  <h2 className="text-lg font-semibold text-slate-950">{isMeetingsSection ? "Meetings" : t("aiTools")}</h2>
+                  <h2 className="text-lg font-semibold text-slate-950">{isMeetingsSection ? "Meetings" : "AI Workspace"}</h2>
                 </div>
-                <p className="mt-1 text-sm text-slate-500">{isMeetingsSection ? "Select a meeting note, then run meeting-focused AI tools below." : t("aiToolsDescription")}</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {isMeetingsSection
+                    ? "Turn meetings into action items, follow-ups, and summaries."
+                    : "Use AI to organize business notes — summarize, refine, and extract insights."}
+                </p>
               </div>
               <label className="w-full lg:max-w-sm">
                 <span className="text-sm font-medium text-slate-700">{t("selectNoteForAi")}</span>
@@ -2251,7 +2016,7 @@ export default function DashboardPage() {
               ) : null}
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {isAiToolsSection ? (
+              {isAiWorkspaceSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("summary")}
@@ -2262,7 +2027,7 @@ export default function DashboardPage() {
                 {t("summarizeSelectedNote")}
               </button>
               ) : null}
-              {isAiToolsSection ? (
+              {isAiWorkspaceSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("tags")}
@@ -2273,7 +2038,7 @@ export default function DashboardPage() {
                 {t("suggestTags")}
               </button>
               ) : null}
-              {isAiToolsSection ? (
+              {isAiWorkspaceSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("improve-writing")}
@@ -2284,18 +2049,7 @@ export default function DashboardPage() {
                 {t("improveWriting")}
               </button>
               ) : null}
-              {isAiToolsSection ? (
-              <button
-                type="button"
-                onClick={() => runAiAction("extract-tasks")}
-                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
-                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {aiLoadingAction === "extract-tasks" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                {t("extractTasks")}
-              </button>
-              ) : null}
-              {isAiToolsSection ? (
+              {isAiWorkspaceSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("executive-summary")}
@@ -2317,18 +2071,7 @@ export default function DashboardPage() {
                 {t("followUpEmail")}
               </button>
               ) : null}
-              {isAiToolsSection ? (
-              <button
-                type="button"
-                onClick={() => runAiAction("study-notes")}
-                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
-                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {aiLoadingAction === "study-notes" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                {t("studyNotes")}
-              </button>
-              ) : null}
-              {isAiToolsSection ? (
+              {isAiWorkspaceSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("insights")}
@@ -2339,7 +2082,7 @@ export default function DashboardPage() {
                 {t("generateSmartInsights")}
               </button>
               ) : null}
-              {isAiToolsSection ? (
+              {isAiWorkspaceSection ? (
               <button
                 type="button"
                 onClick={generateAiInsights}

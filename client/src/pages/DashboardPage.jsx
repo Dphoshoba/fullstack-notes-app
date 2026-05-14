@@ -65,6 +65,11 @@ import {
   DASHBOARD_SECTIONS,
   normalizeDashboardSection
 } from "../components/dashboard/dashboardSections.js";
+import { OnboardingWelcomePanel } from "../components/dashboard/OnboardingWelcomePanel.jsx";
+import {
+  ONBOARDING_AI_STARTED_KEY,
+  ONBOARDING_MEETINGS_STARTED_KEY
+} from "../components/dashboard/onboardingSteps.js";
 import { SectionEmptyState } from "../components/dashboard/SectionEmptyState.jsx";
 import { WorkspaceDashboardSection } from "../components/dashboard/WorkspaceDashboardSection.jsx";
 import { NoteForm } from "../components/NoteForm.jsx";
@@ -401,6 +406,10 @@ export default function DashboardPage() {
   const [onboardingHidden, setOnboardingHidden] = useState(
     () => localStorage.getItem(FIRST_TIME_ONBOARDING_KEY) === "true"
   );
+  const [onboardingStepFlags, setOnboardingStepFlags] = useState(() => ({
+    ai: localStorage.getItem(ONBOARDING_AI_STARTED_KEY) === "true",
+    meetings: localStorage.getItem(ONBOARDING_MEETINGS_STARTED_KEY) === "true"
+  }));
   const [notePrefillValues, setNotePrefillValues] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [workspaceInfo, setWorkspaceInfo] = useState({ workspace: null, role: "staff" });
@@ -482,6 +491,7 @@ export default function DashboardPage() {
   const productivitySnapshot =
     aiInsightsData?.productivitySummary ||
     "Generate insights to get a live productivity snapshot based on your workspace notes.";
+  const hasAiInsightsSummary = Boolean(aiInsightsData?.productivitySummary);
   const remainingAiUses = Math.max(usage.remainingAiUses ?? usage.aiUsageLimit - usage.aiUsageCount, 0);
   const notesEmptyState = (() => {
     if (isSearching) {
@@ -542,12 +552,19 @@ export default function DashboardPage() {
       .some((value) => value.toLowerCase().includes(query));
   });
   const hasCreatedFirstNote = pagination.total > 0 || loadedNotesCount > 0;
+  const hasMeetingNotes = notes.some(
+    (note) =>
+      note.noteType === "meeting" ||
+      Boolean(note.meetingMeta?.summary || note.meetingMeta?.actionItems?.length)
+  );
   const inviteTeamStarted = localStorage.getItem("notes_api_onboarding_invite_started") === "true";
-  const onboardingStepsCompleted = [
-    hasCreatedFirstNote,
-    inviteTeamStarted,
-    true
-  ].filter(Boolean).length;
+  const onboardingStepCompletion = {
+    note: hasCreatedFirstNote,
+    ai: onboardingStepFlags.ai || Boolean(aiResult || aiInsightsData),
+    meetings: onboardingStepFlags.meetings || hasMeetingNotes,
+    team: inviteTeamStarted || hasWorkspace
+  };
+  const onboardingStepsCompleted = Object.values(onboardingStepCompletion).filter(Boolean).length;
   const showFirstTimeOnboarding =
     !onboardingHidden &&
     user?.onboardingCompleted !== true &&
@@ -583,14 +600,53 @@ export default function DashboardPage() {
   const startFirstNoteOnboarding = () => {
     setActiveSection("notes");
     setNotePrefillValues({
-      title: "My First Note",
-      body: "Start typing here...",
-      category: "General",
+      title: "Q1 Project Plan",
+      body: "Goals:\nKey decisions:\nNext steps:\n",
+      category: "Work",
       noteType: "standard"
     });
     window.setTimeout(() => {
       createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 100);
+  };
+
+  const startAiOnboarding = () => {
+    localStorage.setItem(ONBOARDING_AI_STARTED_KEY, "true");
+    setOnboardingStepFlags((current) => ({ ...current, ai: true }));
+    setActiveSection("ai-workspace");
+  };
+
+  const startMeetingsOnboarding = () => {
+    localStorage.setItem(ONBOARDING_MEETINGS_STARTED_KEY, "true");
+    setOnboardingStepFlags((current) => ({ ...current, meetings: true }));
+    setActiveSection("meetings");
+    setNotePrefillValues({
+      title: "Team Meeting",
+      body: "Attendees:\nAgenda:\nNotes:\n",
+      category: "Work",
+      noteType: "meeting"
+    });
+  };
+
+  const handleOnboardingStepAction = (stepId) => {
+    if (stepId === "note") {
+      startFirstNoteOnboarding();
+      return;
+    }
+
+    if (stepId === "ai") {
+      startAiOnboarding();
+      return;
+    }
+
+    if (stepId === "meetings") {
+      startMeetingsOnboarding();
+      return;
+    }
+
+    if (stepId === "team") {
+      startInviteOnboarding();
+    }
   };
 
   const startInviteOnboarding = () => {
@@ -1229,6 +1285,10 @@ export default function DashboardPage() {
         (Array.isArray(insights?.topCategories) && insights.topCategories.length > 0) ||
         (Array.isArray(insights?.recentTopics) && insights.recentTopics.length > 0);
       setAiInsightsData(hasContent ? insights : null);
+      if (hasContent) {
+        localStorage.setItem(ONBOARDING_AI_STARTED_KEY, "true");
+        setOnboardingStepFlags((current) => ({ ...current, ai: true }));
+      }
     } catch (err) {
       setAiInsightsError(err.message || "Could not load AI insights right now. Please try again.");
       setAiInsightsData(null);
@@ -1530,73 +1590,16 @@ export default function DashboardPage() {
       <DashboardSectionNav activeSection={activeSection} onChange={setActiveSection} />
 
       {showFirstTimeOnboarding && isHomeSection ? (
-        <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-          <div className="onboarding-enter premium-panel border-emerald-200 bg-white p-4 shadow-emerald-950/5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                  <CheckCircle2 className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-base font-bold text-slate-950">{t("onboardingTitle")}</p>
-                  <p className="mt-1 text-sm text-slate-600">{t("onboardingSubtitle")}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Start with a business note, turn meetings into action items with AI, then invite
-                    teammates to share decisions and follow-ups in one workspace.
-                  </p>
-                  <p className="mt-3 text-sm font-semibold text-emerald-700">
-                    {t("onboardingProgress", { completed: onboardingStepsCompleted, total: 3 })}
-                  </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {[
-                      [t("onboardingCreateFirstNote"), hasCreatedFirstNote],
-                      [t("onboardingInviteTeam"), inviteTeamStarted],
-                      [t("onboardingViewDashboard"), true]
-                    ].map(([label, completed]) => (
-                      <div
-                        key={label}
-                        className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${
-                          completed
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : "border-slate-200 bg-slate-50 text-slate-600"
-                        }`}
-                      >
-                        <CheckCircle2 className={`h-4 w-4 ${completed ? "text-emerald-700" : "text-slate-300"}`} />
-                        <span className="font-medium">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
-                <button
-                  type="button"
-                  onClick={startFirstNoteOnboarding}
-                  className="premium-button inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
-                >
-                  {t("createFirstNote")}
-                </button>
-                <button
-                  type="button"
-                  onClick={startInviteOnboarding}
-                  className="premium-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
-                >
-                  {t("inviteTeam")}
-                </button>
-                <button
-                  type="button"
-                  onClick={completeFirstTimeOnboarding}
-                  className="premium-button inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
-                >
-                  {t("skipForNow")}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <OnboardingWelcomePanel
+          completedCount={onboardingStepsCompleted}
+          stepCompletion={onboardingStepCompletion}
+          onStepAction={handleOnboardingStepAction}
+          onDismiss={completeFirstTimeOnboarding}
+          dismissLabel={t("skipForNow")}
+        />
       ) : null}
 
-      {showGuideOnboarding && isHomeSection ? (
+            {showGuideOnboarding && isHomeSection ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
           <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1653,8 +1656,10 @@ export default function DashboardPage() {
           </section>
 
           <section className="premium-panel p-6">
-            <h2 className="text-sm font-semibold text-slate-950">Quick actions</h2>
-            <p className="mt-1 text-sm text-slate-500">Jump straight to the work that matters.</p>
+            <h2 className="text-sm font-semibold text-slate-950">Get started</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Create notes for projects, meetings, and ideas — then use AI to move work forward.
+            </p>
             <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="button"
@@ -1722,16 +1727,29 @@ export default function DashboardPage() {
                 {aiInsightsError}
               </p>
             ) : null}
-            <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700">
-              {productivitySnapshot}
-            </p>
-            {commandCenterActionItems.length ? (
-              <ul className="mt-3 space-y-1 text-sm text-slate-600">
-                {commandCenterActionItems.slice(0, 3).map((item) => (
-                  <li key={item}>• {item}</li>
-                ))}
-              </ul>
-            ) : null}
+            {hasAiInsightsSummary ? (
+              <>
+                <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-700">
+                  {productivitySnapshot}
+                </p>
+                {commandCenterActionItems.length ? (
+                  <ul className="mt-3 space-y-1 text-sm text-slate-600">
+                    {commandCenterActionItems.slice(0, 3).map((item) => (
+                      <li key={item}>• {item}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </>
+            ) : (
+              <div className="mt-4">
+                <SectionEmptyState
+                  title="No AI insights yet"
+                  description="Use AI to summarize and organize your work, then refresh insights here."
+                  actionLabel="Generate insights"
+                  onAction={generateAiInsights}
+                />
+              </div>
+            )}
           </section>
 
           <section className="premium-panel p-6">
@@ -1759,10 +1777,10 @@ export default function DashboardPage() {
               </ul>
             ) : (
               <SectionEmptyState
-                title={t("emptyNotesTitle")}
-                description="Create your first note to see it here."
+                title="No notes yet"
+                description="Create notes for projects, meetings, and ideas to see them here."
                 actionLabel="Create a note"
-                onAction={() => setActiveSection("notes")}
+                onAction={startFirstNoteOnboarding}
               />
             )}
           </section>
@@ -1790,9 +1808,9 @@ export default function DashboardPage() {
               </div>
             ) : (
               <SectionEmptyState
-                title="No team workspace yet"
-                description="Invite teammates in Settings to share notes and meeting follow-ups."
-                actionLabel="Collaborate with your team"
+                title="No team members yet"
+                description="Collaborate with your team — invite members to share notes and meeting follow-ups."
+                actionLabel="Invite your team"
                 onAction={() => setActiveSection("team")}
               />
             )}
@@ -1935,7 +1953,7 @@ export default function DashboardPage() {
           {isNotesSection ? (
             <div className="premium-panel mb-5 p-4">
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
-              <p className="mt-1 text-sm text-slate-600">Capture ideas, search, filter by category, and export when you need to share.</p>
+              <p className="mt-1 text-sm text-slate-600">Create notes for projects, meetings, and ideas.</p>
             </div>
           ) : null}
 
@@ -1944,8 +1962,8 @@ export default function DashboardPage() {
               title={isMeetingsSection ? "No meeting notes yet" : "No notes yet"}
               description={
                 isMeetingsSection
-                  ? "Create a meeting note in Notes, then return here to extract action items and follow-ups."
-                  : "Create a note first, then use AI Workspace to summarize and organize your business notes."
+                  ? "Turn meetings into actionable follow-ups — create a meeting note first."
+                  : "Use AI to summarize and organize your work — create a business note to begin."
               }
               actionLabel={isMeetingsSection ? "Create a meeting note" : "Create a note"}
               onAction={() => {

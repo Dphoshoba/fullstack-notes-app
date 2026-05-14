@@ -59,6 +59,7 @@ import {
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
 import { Button } from "../components/Button.jsx";
+import { DailyBriefingSection } from "../components/dashboard/DailyBriefingSection.jsx";
 import { DashboardSectionNav } from "../components/dashboard/DashboardSectionNav.jsx";
 import {
   DEFAULT_DASHBOARD_SECTION,
@@ -1696,6 +1697,8 @@ export default function DashboardPage() {
               </button>
             </div>
           </section>
+
+          <DailyBriefingSection />
 
           <section className="premium-panel p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

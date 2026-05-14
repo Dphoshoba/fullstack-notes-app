@@ -59,6 +59,11 @@ const EMPTY_MEETING_FOLLOW_UP_EMAIL = {
 const EMPTY_SEMANTIC_SEARCH_RANKING = {
   results: []
 };
+const EMPTY_DAILY_BRIEFING_NARRATIVE = {
+  dailySummary: "",
+  suggestedFocus: "",
+  productivityReminder: ""
+};
 
 let client;
 
@@ -963,6 +968,73 @@ export const generateMeetingFollowUpEmailDraft = async (meetingContextText, reci
       body: bodyLines.join("\n").trim(),
       recipients: cleanStringArray(recipientsSeed, 20)
     };
+  }
+};
+
+export const generateDailyBriefingNarrative = async (briefingFactsText) => {
+  const facts = String(briefingFactsText || "").trim();
+  if (!facts) {
+    return { ...EMPTY_DAILY_BRIEFING_NARRATIVE };
+  }
+
+  try {
+    const result = await runJsonPrompt({
+      system: [
+        "You write concise daily briefing copy for a business notes workspace.",
+        "Return JSON only.",
+        "Use only the provided briefing facts.",
+        "Do not invent tasks, deadlines, people, or commitments.",
+        "Keep wording professional, warm, and actionable."
+      ].join(" "),
+      user: [
+        "Polish this daily briefing using only these facts:",
+        "- dailySummary: 1-2 short sentences summarizing the day ahead",
+        "- suggestedFocus: 1 concise sentence on what to focus on first",
+        "- productivityReminder: 1 motivational nudge tied to the briefing",
+        "",
+        facts
+      ].join("\n"),
+      name: "daily_briefing_narrative",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          dailySummary: { type: "string", maxLength: 280 },
+          suggestedFocus: { type: "string", maxLength: 200 },
+          productivityReminder: { type: "string", maxLength: 220 }
+        },
+        required: ["dailySummary", "suggestedFocus", "productivityReminder"]
+      },
+      fallback: {
+        ...EMPTY_DAILY_BRIEFING_NARRATIVE,
+        __fallbackReason: "json_parse_or_empty"
+      },
+      maxCompletionTokens: 320
+    });
+
+    const payload = {
+      dailySummary: String(result.dailySummary || "").trim(),
+      suggestedFocus: String(result.suggestedFocus || "").trim(),
+      productivityReminder: String(result.productivityReminder || "").trim()
+    };
+
+    if (
+      result.__fallbackReason === "json_parse_or_empty" ||
+      (!payload.dailySummary && !payload.suggestedFocus && !payload.productivityReminder)
+    ) {
+      throw new Error("DAILY_BRIEFING_NARRATIVE_UNUSABLE");
+    }
+
+    return payload;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    safeLog("warn", "Daily briefing narrative generation failed", {
+      message: String(error?.message || "unknown").slice(0, 200)
+    });
+    throw error;
   }
 };
 

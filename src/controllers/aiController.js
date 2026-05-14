@@ -9,6 +9,7 @@ import {
   extractAttendeesAndDecisions as extractNoteAttendeesAndDecisions,
   extractTasks as extractNoteTasks,
   generateInsightsDashboardNarrative,
+  generateDailyBriefingNarrative,
   generateMeetingFollowUpEmailDraft,
   generateMeetingIntelligence,
   rankNotesForSemanticSearch,
@@ -165,9 +166,196 @@ const buildEmptyBriefing = (date) => ({
   upcomingDeadlines: [],
   suggestedFollowUps: [],
   recentMeetingActions: [],
+  dailySummary: "",
+  suggestedFocus: "",
   productivityReminder:
     "Add notes and meeting records to receive a personalized daily briefing."
 });
+
+const buildLocalProductivityReminder = ({
+  topPriorities,
+  recentMeetingActions,
+  suggestedFollowUps
+}) => {
+  if (topPriorities.length) {
+    return `Start with your top priority: "${topPriorities[0]}".`;
+  }
+  if (recentMeetingActions.length) {
+    return `Review ${recentMeetingActions.length} open meeting action item${recentMeetingActions.length === 1 ? "" : "s"} today.`;
+  }
+  if (suggestedFollowUps.length) {
+    return `Knock out a follow-up: "${suggestedFollowUps[0]}".`;
+  }
+  return "Capture today's priorities in a note to keep your briefing fresh.";
+};
+
+const buildFallbackDailySummary = (briefing) => {
+  const parts = [];
+  if (briefing.topPriorities.length) {
+    parts.push(
+      `${briefing.topPriorities.length} top priorit${briefing.topPriorities.length === 1 ? "y" : "ies"}`
+    );
+  }
+  if (briefing.upcomingDeadlines.length) {
+    parts.push(
+      `${briefing.upcomingDeadlines.length} upcoming deadline${briefing.upcomingDeadlines.length === 1 ? "" : "s"}`
+    );
+  }
+  if (briefing.recentMeetingActions.length) {
+    parts.push("recent meeting action items");
+  }
+  if (!parts.length) {
+    return "";
+  }
+  return `Today's briefing highlights ${parts.join(", ")}.`;
+};
+
+const buildFallbackSuggestedFocus = (briefing) => {
+  if (briefing.topPriorities[0]) {
+    return `Focus first on: ${briefing.topPriorities[0]}`;
+  }
+  if (briefing.recentMeetingActions[0]?.action) {
+    return `Tackle meeting action: ${briefing.recentMeetingActions[0].action}`;
+  }
+  if (briefing.suggestedFollowUps[0]) {
+    return `Follow up on: ${briefing.suggestedFollowUps[0]}`;
+  }
+  return "Review your notes and pick one clear next step for today.";
+};
+
+const briefingHasContent = (briefing) =>
+  Boolean(
+    briefing.topPriorities.length ||
+      briefing.upcomingDeadlines.length ||
+      briefing.suggestedFollowUps.length ||
+      briefing.recentMeetingActions.length
+  );
+
+const buildBriefingFactsPayload = (briefing) =>
+  JSON.stringify({
+    date: briefing.date,
+    topPriorities: briefing.topPriorities.slice(0, 5),
+    upcomingDeadlines: briefing.upcomingDeadlines.slice(0, 6).map((item) => ({
+      label: String(item.label || "").slice(0, 120),
+      due: String(item.due || "").slice(0, 80)
+    })),
+    suggestedFollowUps: briefing.suggestedFollowUps.slice(0, 6).map((item) => String(item).slice(0, 140)),
+    recentMeetingActions: briefing.recentMeetingActions.slice(0, 6).map((item) => ({
+      title: String(item.title || "").slice(0, 100),
+      action: String(item.action || "").slice(0, 140)
+    }))
+  });
+
+const assembleLocalDailyBriefing = (notes, date) => {
+  const meetingNotes = notes.filter(isMeetingNote);
+  const seenFollowUps = new Set();
+  const suggestedFollowUps = [];
+  const upcomingDeadlines = [];
+  const priorityCandidates = [];
+
+  for (const note of notes) {
+    const meta = note.meetingMeta || {};
+
+    if (note.pinned) {
+      priorityCandidates.push({ text: note.title || "Untitled note", rank: 0 });
+    }
+
+    (Array.isArray(meta.followUps) ? meta.followUps : []).forEach((item) => {
+      const text = String(item || "").trim();
+      if (!text || seenFollowUps.has(text.toLowerCase())) {
+        return;
+      }
+      seenFollowUps.add(text.toLowerCase());
+      suggestedFollowUps.push(text);
+    });
+
+    (Array.isArray(meta.deadlines) ? meta.deadlines : []).forEach((item) => {
+      const label = String(item || "").trim();
+      if (label) {
+        upcomingDeadlines.push({ label, due: formatDueLabel(label) || label });
+      }
+    });
+
+    if (meta.followUpDate) {
+      upcomingDeadlines.push({
+        label: `Follow up: ${note.title || "Meeting note"}`,
+        due: formatDueLabel(meta.followUpDate)
+      });
+    }
+
+    normalizeActionItemEntries(meta.actionItems).forEach((item) => {
+      if (item.dueDate) {
+        upcomingDeadlines.push({
+          label: item.text,
+          due: formatDueLabel(item.dueDate)
+        });
+      }
+      if (isOpenActionItem(item)) {
+        priorityCandidates.push({ text: item.text, rank: 2 });
+      }
+    });
+  }
+
+  notes
+    .filter((note) => note.starred && !note.pinned)
+    .slice(0, 3)
+    .forEach((note) => {
+      priorityCandidates.push({ text: note.title || "Untitled note", rank: 1 });
+    });
+
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  notes
+    .filter((note) => new Date(note.updatedAt || note.createdAt).getTime() >= weekAgo)
+    .slice(0, 5)
+    .forEach((note) => {
+      priorityCandidates.push({ text: note.title || "Untitled note", rank: 3 });
+    });
+
+  const topPriorities = [];
+  const seenPriorities = new Set();
+  priorityCandidates
+    .sort((a, b) => a.rank - b.rank)
+    .forEach(({ text }) => {
+      const key = text.toLowerCase();
+      if (seenPriorities.has(key) || topPriorities.length >= 5) {
+        return;
+      }
+      seenPriorities.add(key);
+      topPriorities.push(text);
+    });
+
+  const recentMeetingActions = [];
+  meetingNotes.slice(0, 10).forEach((note) => {
+    if (recentMeetingActions.length >= 6) {
+      return;
+    }
+    const items = normalizeActionItemEntries(note.meetingMeta?.actionItems).filter(isOpenActionItem);
+    if (!items.length) {
+      return;
+    }
+    recentMeetingActions.push({
+      title: note.title || "Meeting note",
+      action: items[0].text
+    });
+  });
+
+  const sortedDeadlines = upcomingDeadlines
+    .sort((a, b) => parseDueSortKey(a.due) - parseDueSortKey(b.due))
+    .slice(0, 6);
+
+  const localCore = {
+    date,
+    topPriorities,
+    upcomingDeadlines: sortedDeadlines,
+    suggestedFollowUps: suggestedFollowUps.slice(0, 6),
+    recentMeetingActions
+  };
+
+  return {
+    ...localCore,
+    productivityReminder: buildLocalProductivityReminder(localCore)
+  };
+};
 
 const excerptForQuery = (text, query) => {
   const source = String(text || "").trim();
@@ -784,122 +972,40 @@ export const dailyBriefing = async (req, res) => {
     });
   }
 
-  const meetingNotes = notes.filter(isMeetingNote);
-  const seenFollowUps = new Set();
-  const suggestedFollowUps = [];
-  const upcomingDeadlines = [];
-  const priorityCandidates = [];
+  const localBriefing = assembleLocalDailyBriefing(notes, date);
+  const fallbackNarrative = {
+    dailySummary: buildFallbackDailySummary(localBriefing),
+    suggestedFocus: buildFallbackSuggestedFocus(localBriefing),
+    productivityReminder: localBriefing.productivityReminder
+  };
 
-  for (const note of notes) {
-    const meta = note.meetingMeta || {};
-
-    if (note.pinned) {
-      priorityCandidates.push({ text: note.title || "Untitled note", rank: 0 });
-    }
-
-    (Array.isArray(meta.followUps) ? meta.followUps : []).forEach((item) => {
-      const text = String(item || "").trim();
-      if (!text || seenFollowUps.has(text.toLowerCase())) {
-        return;
-      }
-      seenFollowUps.add(text.toLowerCase());
-      suggestedFollowUps.push(text);
-    });
-
-    (Array.isArray(meta.deadlines) ? meta.deadlines : []).forEach((item) => {
-      const label = String(item || "").trim();
-      if (label) {
-        upcomingDeadlines.push({ label, due: formatDueLabel(label) || label });
-      }
-    });
-
-    if (meta.followUpDate) {
-      upcomingDeadlines.push({
-        label: `Follow up: ${note.title || "Meeting note"}`,
-        due: formatDueLabel(meta.followUpDate)
+  let narrative = fallbackNarrative;
+  if (briefingHasContent(localBriefing)) {
+    try {
+      const generated = await generateDailyBriefingNarrative(buildBriefingFactsPayload(localBriefing));
+      narrative = {
+        dailySummary: generated.dailySummary || fallbackNarrative.dailySummary,
+        suggestedFocus: generated.suggestedFocus || fallbackNarrative.suggestedFocus,
+        productivityReminder: generated.productivityReminder || fallbackNarrative.productivityReminder
+      };
+    } catch {
+      console.error("[dailyBriefing] OpenAI narrative failed, using local fallback", {
+        userId: req.user?.id
       });
     }
-
-    normalizeActionItemEntries(meta.actionItems).forEach((item) => {
-      if (item.dueDate) {
-        upcomingDeadlines.push({
-          label: item.text,
-          due: formatDueLabel(item.dueDate)
-        });
-      }
-      if (isOpenActionItem(item)) {
-        priorityCandidates.push({ text: item.text, rank: 2 });
-      }
-    });
-  }
-
-  notes
-    .filter((note) => note.starred && !note.pinned)
-    .slice(0, 3)
-    .forEach((note) => {
-      priorityCandidates.push({ text: note.title || "Untitled note", rank: 1 });
-    });
-
-  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  notes
-    .filter((note) => new Date(note.updatedAt || note.createdAt).getTime() >= weekAgo)
-    .slice(0, 5)
-    .forEach((note) => {
-      priorityCandidates.push({ text: note.title || "Untitled note", rank: 3 });
-    });
-
-  const topPriorities = [];
-  const seenPriorities = new Set();
-  priorityCandidates
-    .sort((a, b) => a.rank - b.rank)
-    .forEach(({ text }) => {
-      const key = text.toLowerCase();
-      if (seenPriorities.has(key) || topPriorities.length >= 5) {
-        return;
-      }
-      seenPriorities.add(key);
-      topPriorities.push(text);
-    });
-
-  const recentMeetingActions = [];
-  meetingNotes.slice(0, 10).forEach((note) => {
-    if (recentMeetingActions.length >= 6) {
-      return;
-    }
-    const items = normalizeActionItemEntries(note.meetingMeta?.actionItems).filter(isOpenActionItem);
-    if (!items.length) {
-      return;
-    }
-    recentMeetingActions.push({
-      title: note.title || "Meeting note",
-      action: items[0].text
-    });
-  });
-
-  const sortedDeadlines = upcomingDeadlines
-    .sort((a, b) => parseDueSortKey(a.due) - parseDueSortKey(b.due))
-    .slice(0, 6);
-
-  let productivityReminder;
-  if (topPriorities.length) {
-    productivityReminder = `Start with your top priority: "${topPriorities[0]}".`;
-  } else if (recentMeetingActions.length) {
-    productivityReminder = `Review ${recentMeetingActions.length} open meeting action item${recentMeetingActions.length === 1 ? "" : "s"} today.`;
-  } else if (suggestedFollowUps.length) {
-    productivityReminder = `Knock out a follow-up: "${suggestedFollowUps[0]}".`;
-  } else {
-    productivityReminder = "Capture today's priorities in a note to keep your briefing fresh.";
   }
 
   return res.status(StatusCodes.OK).json({
     success: true,
     data: {
-      date,
-      topPriorities,
-      upcomingDeadlines: sortedDeadlines,
-      suggestedFollowUps: suggestedFollowUps.slice(0, 6),
-      recentMeetingActions,
-      productivityReminder
+      date: localBriefing.date,
+      topPriorities: localBriefing.topPriorities,
+      upcomingDeadlines: localBriefing.upcomingDeadlines,
+      suggestedFollowUps: localBriefing.suggestedFollowUps,
+      recentMeetingActions: localBriefing.recentMeetingActions,
+      dailySummary: narrative.dailySummary,
+      suggestedFocus: narrative.suggestedFocus,
+      productivityReminder: narrative.productivityReminder
     }
   });
 };

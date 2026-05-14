@@ -101,6 +101,12 @@ export async function fetchInsightsDashboard() {
   return data.data;
 }
 
+export async function fetchSemanticSearch(query) {
+  const params = new URLSearchParams({ q: query.trim() });
+  const data = await apiRequest(`/api/ai/semantic-search?${params.toString()}`);
+  return data.data;
+}
+
 export async function generateMeetingIntelligence({ noteId, content }) {
   const data = await apiRequest("/api/ai/meeting-intelligence", {
     method: "POST",

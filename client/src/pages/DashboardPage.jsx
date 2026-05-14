@@ -66,6 +66,7 @@ import {
   normalizeDashboardSection
 } from "../components/dashboard/dashboardSections.js";
 import { OnboardingWelcomePanel } from "../components/dashboard/OnboardingWelcomePanel.jsx";
+import { SemanticSearchPanel } from "../components/dashboard/SemanticSearchPanel.jsx";
 import {
   ONBOARDING_AI_STARTED_KEY,
   ONBOARDING_MEETINGS_STARTED_KEY
@@ -1955,6 +1956,13 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
               <p className="mt-1 text-sm text-slate-600">Create notes for projects, meetings, and ideas.</p>
             </div>
+          ) : null}
+
+          {isAiWorkspaceSection ? (
+            <SemanticSearchPanel
+              usageLimitReached={usageLimitReached}
+              onSelectNote={(noteId) => setSelectedAiNoteId(noteId)}
+            />
           ) : null}
 
           {(isAiWorkspaceSection || isMeetingsSection) && !loading && !aiNotePickerNotes.length ? (

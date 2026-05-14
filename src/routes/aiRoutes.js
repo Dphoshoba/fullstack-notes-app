@@ -4,6 +4,7 @@ import {
   createExecutiveSummary,
   createFollowUpEmail,
   convertToMeetingMinutes,
+  dailyBriefing,
   extractActionItems,
   extractAttendeesAndDecisions,
   extractTasks,
@@ -34,6 +35,7 @@ import {
 const router = Router();
 
 router.use(authenticate);
+router.get("/daily-briefing", asyncHandler(dailyBriefing));
 router.use(asyncHandler(enforceAiUsage));
 router.get("/insights-dashboard", asyncHandler(insightsDashboard));
 router.get("/semantic-search", validate(semanticSearchSchema), asyncHandler(semanticSearch));

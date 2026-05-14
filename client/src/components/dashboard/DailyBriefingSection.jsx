@@ -80,7 +80,7 @@ function BriefingCard({ title, helper, onDismiss, children }) {
         <button
           type="button"
           onClick={onDismiss}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           aria-label={`Dismiss ${title}`}
         >
           <X className="h-4 w-4" />
@@ -111,9 +111,9 @@ function BriefingCardContent({ cardId, briefing }) {
         {briefing.deadlines.map((item) => (
           <li
             key={`${item.label}-${item.due}`}
-            className="flex items-start justify-between gap-3 rounded-md bg-slate-50 px-3 py-2"
+            className="flex flex-col gap-1 rounded-md bg-slate-50 px-3 py-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
           >
-            <span>{item.label}</span>
+            <span className="break-words">{item.label}</span>
             {item.due ? (
               <span className="shrink-0 text-xs font-semibold text-amber-800">{item.due}</span>
             ) : null}
@@ -222,7 +222,7 @@ export function DailyBriefingSection() {
   const todayLabel = formatBriefingDate(briefing?.date);
 
   return (
-    <section className="premium-panel p-6">
+    <section className="premium-panel p-4 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-700 ring-1 ring-amber-100">
@@ -278,7 +278,7 @@ export function DailyBriefingSection() {
       ) : null}
 
       {!loading && !error && visibleCards.length > 0 ? (
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
           {visibleCards.map((card) => (
             <BriefingCard
               key={card.id}

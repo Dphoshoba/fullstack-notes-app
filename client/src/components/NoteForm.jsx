@@ -439,7 +439,7 @@ export function NoteForm({
         />
       </div>
 
-      <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-1 py-1 text-sm font-medium text-slate-700">
         <input
           type="checkbox"
           name="starred"
@@ -450,7 +450,7 @@ export function NoteForm({
         {t("starred")}
       </label>
 
-      <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-1 py-1 text-sm font-medium text-slate-700">
         <input
           type="checkbox"
           name="pinned"

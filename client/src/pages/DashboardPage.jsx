@@ -1343,16 +1343,16 @@ export default function DashboardPage() {
   }, [adminOpen, isAdmin, loadAdminUsers, loadAnalyticsSummary]);
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
+    <main className="min-h-screen overflow-x-clip bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
-            <h1 className="text-2xl font-bold text-slate-950">
+            <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">
               {DASHBOARD_SECTIONS.find((section) => section.id === activeSection)?.label || "Home"}
             </h1>
           </div>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0">
+          <div className="-mx-4 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0">
             <label className="flex h-10 min-w-28 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
               <span className="sr-only">{t("language")}</span>
               <select
@@ -1404,7 +1404,7 @@ export default function DashboardPage() {
               </Button>
               {notificationsOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-80 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  className="absolute right-0 z-40 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
                   role="menu"
                   aria-label={t("notifications")}
                 >
@@ -1417,7 +1417,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={handleMarkAllNotificationsRead}
                         disabled={!unreadNotificationsCount || markingAllNotifications}
-                        className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                        className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
                       >
                         {markingAllNotifications ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1483,7 +1483,7 @@ export default function DashboardPage() {
                                   type="button"
                                   onClick={() => handleMarkNotificationRead(notification.id)}
                                   disabled={markingNotificationId === notification.id}
-                                  className="mt-2 inline-flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                                  className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                                 >
                                   {markingNotificationId === notification.id ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1516,7 +1516,7 @@ export default function DashboardPage() {
               </Button>
               {exportOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-56 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  className="absolute right-0 z-40 mt-2 w-[min(14rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
                   role="menu"
                   aria-label={t("exportVisibleNotes")}
                 >
@@ -1646,7 +1646,7 @@ export default function DashboardPage() {
           aria-labelledby="dashboard-tab-home"
           className="mx-auto max-w-7xl space-y-6 px-4 pt-6 pb-8 sm:px-6 lg:px-8"
         >
-          <section className="premium-panel p-6">
+          <section className="premium-panel p-4 sm:p-6">
             <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
             <h2 className="mt-1 text-xl font-bold text-slate-950">
               Welcome back{user?.name ? `, ${user.name}` : ""}
@@ -1657,7 +1657,7 @@ export default function DashboardPage() {
             </p>
           </section>
 
-          <section className="premium-panel p-6">
+          <section className="premium-panel p-4 sm:p-6">
             <h2 className="text-sm font-semibold text-slate-950">Get started</h2>
             <p className="mt-1 text-sm text-slate-500">
               Create notes for projects, meetings, and ideas — then use AI to move work forward.
@@ -1700,7 +1700,7 @@ export default function DashboardPage() {
 
           <DailyBriefingSection />
 
-          <section className="premium-panel p-6">
+          <section className="premium-panel p-4 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950">AI Insights</h2>
@@ -1711,7 +1711,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={generateAiInsights}
                   disabled={aiInsightsLoading || usageLimitReached}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                  className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
                 >
                   {aiInsightsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
                   Refresh insights
@@ -1719,7 +1719,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setActiveSection("ai-workspace")}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   <Bot className="h-4 w-4" />
                   Open AI Workspace
@@ -1756,8 +1756,8 @@ export default function DashboardPage() {
             )}
           </section>
 
-          <section className="premium-panel p-6">
-            <div className="flex items-center justify-between gap-3">
+          <section className="premium-panel p-4 sm:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950">Recent notes</h2>
                 <p className="mt-1 text-xs text-slate-500">A quick preview of your latest work.</p>
@@ -1765,7 +1765,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setActiveSection("notes")}
-                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                className="inline-flex min-h-10 items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800"
               >
                 View all notes
               </button>
@@ -1789,8 +1789,8 @@ export default function DashboardPage() {
             )}
           </section>
 
-          <section className="premium-panel p-6">
-            <div className="flex items-center justify-between gap-3">
+          <section className="premium-panel p-4 sm:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950">Team workspace</h2>
                 <p className="mt-1 text-sm text-slate-500">Collaborate with your team on shared notes.</p>
@@ -1798,7 +1798,7 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setActiveSection("team")}
-                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+                className="inline-flex min-h-10 items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800"
               >
                 Manage team
               </button>
@@ -1872,7 +1872,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={manageBilling}
                     disabled={portalLoading}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                    className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
                   >
                     {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                     {t("manageBilling")}
@@ -1955,7 +1955,7 @@ export default function DashboardPage() {
           }
         >
           {isNotesSection ? (
-            <div className="premium-panel mb-5 p-4">
+            <div className="premium-panel mb-5 p-4 sm:p-5">
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
               <p className="mt-1 text-sm text-slate-600">Create notes for projects, meetings, and ideas.</p>
             </div>
@@ -1992,7 +1992,7 @@ export default function DashboardPage() {
           ) : null}
 
           {(isAiWorkspaceSection || isMeetingsSection) && aiNotePickerNotes.length ? (
-          <div className="premium-panel mb-5 p-4">
+          <div className="premium-panel mb-5 p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2">
@@ -2044,7 +2044,7 @@ export default function DashboardPage() {
                 <p className="mt-2 text-sm font-medium text-red-700">{t("upgradeToContinue")}</p>
               ) : null}
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {isAiWorkspaceSection ? (
               <button
                 type="button"
@@ -2213,7 +2213,7 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
                 {aiResult.insights ? (
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
                     <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
                       {t("totalNotes")}: <strong>{aiResult.insights.totalNotes}</strong>
                     </p>
@@ -2268,9 +2268,9 @@ export default function DashboardPage() {
                   </div>
                 ) : null}
                 {aiResult.meetingMeta ? (
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-3 grid gap-2 md:grid-cols-2">
                     {aiResult.meetingMeta.attendees?.length ? (
-                      <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                      <p className="break-words rounded-md bg-white px-3 py-2 text-sm text-slate-700">
                         {t("attendees")}: <strong>{aiResult.meetingMeta.attendees.join(", ")}</strong>
                       </p>
                     ) : null}
@@ -2292,7 +2292,7 @@ export default function DashboardPage() {
                     <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
                       {aiResult.executiveSummary || "No summary available."}
                     </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
                       <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
                         Meeting type: <strong>{aiResult.meetingType || "Unknown"}</strong>
                       </p>
@@ -2300,7 +2300,7 @@ export default function DashboardPage() {
                         Priority level: <strong>{aiResult.priorityLevel || "Unknown"}</strong>
                       </p>
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
                       {[
                         ["Attendees", aiResult.attendees || []],
                         ["Decisions", aiResult.decisions || []],
@@ -2331,7 +2331,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={copyAiResult}
                     disabled={!selectedAiResultText || Boolean(aiSavingAction)}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Copy className="h-4 w-4" />
                     {t("copyResult")}
@@ -2342,7 +2342,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={replaceAiResultInNote}
                         disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {aiSavingAction === "replace" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {t("replaceNoteBody")}
@@ -2351,7 +2351,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={appendAiResultToNote}
                         disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {aiSavingAction === "append" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {t("appendToNoteBody")}
@@ -2360,7 +2360,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={saveAiResultToMeetingDetails}
                         disabled={!canSaveAiToNote || !aiResult.meetingMeta || Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {aiSavingAction === "meetingDetails" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         {t("saveToMeetingDetails")}
@@ -2369,7 +2369,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => setAiResult(null)}
                         disabled={Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <X className="h-4 w-4" />
                         {t("cancel")}
@@ -2378,7 +2378,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={saveAiResultAsComment}
                         disabled={!canSaveAiAsComment || Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {aiSavingAction === "comment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
                         {t("saveAsComment")}
@@ -2390,7 +2390,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={saveAiResultToNote}
                         disabled={!canSaveAiToNote || Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {aiSavingAction === "note" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {t("saveToNote")}
@@ -2399,7 +2399,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={saveAiResultAsComment}
                         disabled={!canSaveAiAsComment || Boolean(aiSavingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-emerald-300 bg-white px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {aiSavingAction === "comment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
                         {t("saveAsComment")}
@@ -2426,7 +2426,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={togglePinnedFilter}
-                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
                     pinnedFilter === "true"
                       ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -2439,7 +2439,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={toggleStarredFilter}
-                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
                     favoritesFilter === "true"
                       ? "border-amber-300 bg-amber-50 text-amber-800"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -2452,7 +2452,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => toggleScopeChip("workspace")}
-                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
                     scopeFilter === "workspace"
                       ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -2465,7 +2465,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => toggleScopeChip("private")}
-                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
                     scopeFilter === "private"
                       ? "border-slate-400 bg-slate-100 text-slate-900"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -2478,7 +2478,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={toggleThisWeekFilter}
-                  className={`inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
                     thisWeekFilter === "true"
                       ? "border-emerald-300 bg-emerald-50 text-emerald-800"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -2653,7 +2653,7 @@ export default function DashboardPage() {
       ) : null}
 
       {toasts.length ? (
-        <div className="fixed right-4 top-4 z-[60] w-[calc(100%-2rem)] max-w-sm space-y-3">
+        <div className="safe-top fixed right-4 top-4 z-[60] w-[calc(100%-2rem)] max-w-sm space-y-3">
           {toasts.map((toast) => {
             const ToastIcon = toast.type === "success" ? CheckCircle2 : AlertCircle;
 
@@ -2766,7 +2766,7 @@ export default function DashboardPage() {
                   <button
                     type="submit"
                     disabled={profileSaving}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                    className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
                   >
                     <Save className="h-4 w-4" />
                     {profileSaving ? t("saving") : t("save")}
@@ -2775,7 +2775,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={cancelProfileEdit}
                     disabled={profileSaving}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                    className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                   >
                     <X className="h-4 w-4" />
                     {t("cancel")}
@@ -2996,7 +2996,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={loadAdminUsers}
                     disabled={adminLoading}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                    className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${adminLoading ? "animate-spin" : ""}`} />
                     {t("refresh")}

@@ -87,20 +87,20 @@ export function SemanticSearchPanel({ onSelectNote, usageLimitReached = false })
   const showNoResults = hasSearched && !loading && !error && results?.length === 0;
 
   return (
-    <div className="premium-panel mb-5 p-5">
+    <div className="premium-panel mb-5 p-4 sm:p-5">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
           <Sparkles className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-semibold text-slate-950">AI Workspace Search</h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm leading-6 text-slate-600">
             Search across your business notes with AI — find projects, meetings, and ideas fast.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-5">
+      <form onSubmit={handleSubmit} className="mt-5 space-y-2">
         <label className="block">
           <span className="sr-only">Search your workspace</span>
           <div className="relative">
@@ -110,19 +110,27 @@ export function SemanticSearchPanel({ onSelectNote, usageLimitReached = false })
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={PLACEHOLDER_EXAMPLES[placeholderIndex]}
-              className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-28 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100 sm:pr-28"
               aria-label="AI workspace search"
             />
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="absolute right-1.5 top-1/2 inline-flex h-8 -translate-y-1/2 items-center justify-center gap-1.5 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="absolute right-1.5 top-1/2 hidden min-h-9 -translate-y-1/2 items-center justify-center gap-1.5 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 sm:inline-flex"
             >
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
               Search
             </button>
           </div>
         </label>
+        <button
+          type="submit"
+          disabled={loading || !query.trim()}
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60 sm:hidden"
+        >
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          Search workspace
+        </button>
       </form>
 
       <div className="mt-4">
@@ -134,7 +142,7 @@ export function SemanticSearchPanel({ onSelectNote, usageLimitReached = false })
               type="button"
               onClick={() => runSearch(suggestion)}
               disabled={loading}
-              className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:opacity-60"
+              className="inline-flex min-h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:opacity-60"
             >
               {suggestion}
             </button>

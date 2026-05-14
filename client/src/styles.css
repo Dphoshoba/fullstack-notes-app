@@ -17,7 +17,18 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: clip;
   background: #f8fafc;
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 @layer components {
@@ -39,6 +50,16 @@ body {
 
   .premium-button {
     @apply transition duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:hover:translate-y-0;
+  }
+
+  @media (hover: none) {
+    .premium-button {
+      @apply hover:translate-y-0;
+    }
+
+    .premium-card-hover {
+      @apply hover:translate-y-0;
+    }
   }
 
   .onboarding-enter {

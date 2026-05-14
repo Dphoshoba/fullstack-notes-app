@@ -18,11 +18,11 @@ export function OnboardingWelcomePanel({
 }) {
   return (
     <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-      <div className="onboarding-enter premium-panel border-emerald-200 bg-white p-5 shadow-emerald-950/5 sm:p-6">
+      <div className="onboarding-enter premium-panel border-emerald-200 bg-white p-4 shadow-emerald-950/5 sm:p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-emerald-700">Getting started</p>
-            <h2 className="mt-1 text-lg font-bold text-slate-950">Welcome to your AI Business Notes Workspace</h2>
+            <h2 className="mt-1 text-lg font-bold text-slate-950 sm:text-xl">Welcome to your AI Business Notes Workspace</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Follow these four steps to capture notes, run AI, handle meetings, and collaborate with
               your team.
@@ -31,7 +31,7 @@ export function OnboardingWelcomePanel({
           <button
             type="button"
             onClick={onDismiss}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             aria-label={dismissLabel}
           >
             <X className="h-4 w-4" />
@@ -42,7 +42,7 @@ export function OnboardingWelcomePanel({
           {completedCount} of {GETTING_STARTED_STEPS.length} steps complete
         </p>
 
-        <ol className="mt-4 grid gap-3 sm:grid-cols-2">
+        <ol className="mt-4 grid gap-3 md:grid-cols-2">
           {GETTING_STARTED_STEPS.map((step) => {
             const Icon = STEP_ICONS[step.id];
             const completed = stepCompletion[step.id];
@@ -78,11 +78,11 @@ export function OnboardingWelcomePanel({
           })}
         </ol>
 
-        <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
+        <div className="mt-5 flex flex-col gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             onClick={() => onStepAction("note")}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 sm:w-auto"
           >
             <FileText className="h-4 w-4" />
             Get started — create a note
@@ -90,7 +90,7 @@ export function OnboardingWelcomePanel({
           <button
             type="button"
             onClick={onDismiss}
-            className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+            className="inline-flex h-11 w-full items-center justify-center rounded-md px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 sm:w-auto"
           >
             {dismissLabel}
           </button>

@@ -13,7 +13,10 @@ import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
+import { registerPwa } from "./pwa/registerPwa.js";
 import "./styles.css";
+
+registerPwa();
 
 const router = createBrowserRouter(
   [

@@ -33,7 +33,7 @@ import {
   X
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   createExecutiveSummary,
@@ -61,6 +61,13 @@ import {
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
 import { Button } from "../components/Button.jsx";
+import { DashboardSectionNav } from "../components/dashboard/DashboardSectionNav.jsx";
+import {
+  DEFAULT_DASHBOARD_SECTION,
+  isDashboardSection
+} from "../components/dashboard/dashboardSections.js";
+import { SectionEmptyState } from "../components/dashboard/SectionEmptyState.jsx";
+import { WorkspaceDashboardSection } from "../components/dashboard/WorkspaceDashboardSection.jsx";
 import { NoteForm } from "../components/NoteForm.jsx";
 import { NoteList, NoteListSkeleton } from "../components/NoteList.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -332,6 +339,15 @@ export default function DashboardPage() {
   const { user, logout, updateProfile, updateSettings } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sectionParam = searchParams.get("section");
+  const activeSection = isDashboardSection(sectionParam) ? sectionParam : DEFAULT_DASHBOARD_SECTION;
+  const isHomeSection = activeSection === "home";
+  const isNotesSection = activeSection === "notes";
+  const isAiToolsSection = activeSection === "ai-tools";
+  const isMeetingsSection = activeSection === "meetings";
+  const isWorkspaceSection = activeSection === "workspace";
+  const isSettingsSection = activeSection === "settings";
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -403,6 +419,27 @@ export default function DashboardPage() {
   const [workspaceInfo, setWorkspaceInfo] = useState({ workspace: null, role: "staff" });
   const notesRequestIdRef = useRef(0);
   const createNoteRef = useRef(null);
+
+  const setActiveSection = useCallback(
+    (section) => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        if (section === DEFAULT_DASHBOARD_SECTION) {
+          next.delete("section");
+        } else {
+          next.set("section", section);
+        }
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+
+  const goToSettingsSection = useCallback(() => {
+    navigate("/settings");
+  }, [navigate]);
+
+  const recentNotesPreview = sortVisibleNotes(notes).slice(0, 5);
 
   const isSearching = Boolean(searchTerm.trim());
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
@@ -483,7 +520,15 @@ export default function DashboardPage() {
       detail: t("account")
     }
   ];
-  const selectedAiNote = notes.find((note) => note.id === selectedAiNoteId) || notes[0];
+  const aiNotePickerNotes = isMeetingsSection
+    ? notes.filter(
+        (note) =>
+          note.noteType === "meeting" ||
+          Boolean(note.meetingMeta?.summary || note.meetingMeta?.actionItems?.length)
+      )
+    : notes;
+  const selectedAiNote =
+    aiNotePickerNotes.find((note) => note.id === selectedAiNoteId) || aiNotePickerNotes[0];
   const selectedAiResultText = aiResultToText(aiResult);
   const meetingAiResult = isMeetingAiResult(aiResult);
   const selectedAiNoteOwnerId = noteOwnerId(selectedAiNote);
@@ -648,13 +693,16 @@ export default function DashboardPage() {
   }, [updateSettings, user?.onboardingCompleted]);
 
   const startFirstNoteOnboarding = () => {
+    setActiveSection("notes");
     setNotePrefillValues({
       title: "My First Note",
       body: "Start typing here...",
       category: "General",
       noteType: "standard"
     });
-    createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => {
+      createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const startInviteOnboarding = () => {
@@ -1323,6 +1371,20 @@ export default function DashboardPage() {
     }
   };
 
+  const previousSectionRef = useRef(activeSection);
+
+  useEffect(() => {
+    if (activeSection === "meetings") {
+      setNoteTypeFilter("meeting");
+      setPage(1);
+    } else if (previousSectionRef.current === "meetings") {
+      setNoteTypeFilter("all");
+      setPage(1);
+    }
+
+    previousSectionRef.current = activeSection;
+  }, [activeSection]);
+
   useEffect(() => {
     if (adminOpen && isAdmin) {
       loadAdminUsers();
@@ -1575,7 +1637,9 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {showFirstTimeOnboarding ? (
+      <DashboardSectionNav activeSection={activeSection} onChange={setActiveSection} />
+
+      {showFirstTimeOnboarding && isHomeSection ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
           <div className="onboarding-enter premium-panel border-emerald-200 bg-white p-4 shadow-emerald-950/5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1638,7 +1702,7 @@ export default function DashboardPage() {
         </section>
       ) : null}
 
-      {usage.plan !== "premium" ? (
+      {usage.plan !== "premium" && isHomeSection ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
           <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1662,7 +1726,7 @@ export default function DashboardPage() {
         </section>
       ) : null}
 
-      {showGuideOnboarding ? (
+      {showGuideOnboarding && isHomeSection ? (
         <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
           <div className="premium-panel border-emerald-200 bg-emerald-50/80 p-4 shadow-emerald-950/5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1700,196 +1764,115 @@ export default function DashboardPage() {
         </section>
       ) : null}
 
-      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          {statCards.map((stat) => {
-            const StatIcon = stat.icon;
-            const iconClass =
-              stat.tone === "amber"
-                ? "bg-amber-50 text-amber-700"
-                : stat.tone === "emerald"
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-slate-100 text-slate-700";
-            const barClass = stat.tone === "amber" ? "bg-amber-500" : "bg-emerald-600";
+      {isHomeSection ? (
+        <div
+          id="dashboard-panel-home"
+          role="tabpanel"
+          aria-labelledby="dashboard-tab-home"
+          className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8"
+        >
+          <section className="premium-panel mb-4 p-5">
+            <p className="text-sm font-semibold text-emerald-700">Dashboard</p>
+            <h2 className="mt-1 text-xl font-bold text-slate-950">
+              Welcome back{user?.name ? `, ${user.name}` : ""}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Your overview and next steps live here. Use the tabs above for notes, AI tools, meetings,
+              workspace, and settings.
+            </p>
+          </section>
 
-            return (
-              <div
-                key={stat.label}
-                className="premium-card premium-card-hover p-4"
+          <section className="premium-panel p-4">
+            <h2 className="text-sm font-semibold text-slate-950">Quick actions</h2>
+            <p className="mt-1 text-xs text-slate-500">Jump to the tools you need without clutter.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveSection("notes")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-slate-600">{stat.label}</p>
-                  <span className={`flex h-9 w-9 items-center justify-center rounded-md ${iconClass}`}>
-                    <StatIcon className="h-4 w-4" />
-                  </span>
-                </div>
-                <p className="mt-3 truncate text-2xl font-bold capitalize text-slate-950">
-                  {stat.value}
-                </p>
-                <p className="mt-1 text-xs font-medium text-slate-500">{stat.detail}</p>
-                {typeof stat.progress === "number" ? (
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className={`h-full rounded-full ${barClass}`}
-                      style={{ width: `${stat.progress}%` }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
+                <FileText className="h-4 w-4" />
+                Create a note
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSection("ai-tools")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <Bot className="h-4 w-4" />
+                Use AI on your notes
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSection("meetings")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Turn meetings into action items
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSection("workspace")}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <UserPlus className="h-4 w-4" />
+                Invite your team
+              </button>
+            </div>
+          </section>
 
-        <section className="premium-panel mt-4 p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-950">{t("productInsights")}</h2>
-              <p className="text-xs font-medium text-slate-500">{t("currentLoadedNotes")}</p>
-            </div>
-            <BarChart3 className="h-5 w-5 text-emerald-700" />
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("mostUsedCategory")}
+          <section className="premium-panel mt-4 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  {t("currentPlan")}:{" "}
+                  <span className="font-semibold capitalize text-slate-950">{usagePlanLabel}</span>
                 </p>
-                <Folder className="h-4 w-4 text-slate-500" />
               </div>
-              <p className="mt-2 truncate text-sm font-semibold text-slate-950">
-                {mostUsedCategory || t("noInsightYet")}
-              </p>
-              {mostUsedCategory ? (
-                <span className="mt-2 inline-flex rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                  {t("notesCount", { count: mostUsedCategoryCount })}
+              {usage.plan === "premium" ? (
+                <button
+                  type="button"
+                  onClick={manageBilling}
+                  disabled={portalLoading}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                >
+                  {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {t("manageBilling")}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startUpgrade}
+                  disabled={upgradeLoading}
+                  className="inline-flex h-9 items-center justify-center rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+                >
+                  {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {t("upgradeToPremium")}
+                </button>
+              )}
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                <span>{t("aiUsage")}</span>
+                <span>
+                  {usageLoading
+                    ? t("loading")
+                    : t("aiUsesRemaining", {
+                        remaining: remainingAiUses,
+                        limit: usage.aiUsageLimit
+                      })}
                 </span>
-              ) : null}
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("latestNoteCreated")}
-                </p>
-                <CalendarDays className="h-4 w-4 text-slate-500" />
               </div>
-              <p className="mt-2 truncate text-sm font-semibold text-slate-950">
-                {latestCreatedNote?.title || t("noInsightYet")}
-              </p>
-              {latestCreatedNote?.createdAt ? (
-                <p className="mt-2 text-xs font-medium text-slate-500">
-                  {formatDisplayDate(latestCreatedNote.createdAt)}
-                </p>
-              ) : null}
-            </div>
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {t("notesCreatedThisWeek")}
-                </p>
-                <TrendingUp className="h-4 w-4 text-slate-500" />
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-950">
-                {t("notesCount", { count: notesCreatedThisWeek })}
-              </p>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-emerald-600"
-                  style={{ width: `${weekProgress}%` }}
+                  className={`h-full rounded-full ${usageLimitReached ? "bg-red-600" : "bg-emerald-600"}`}
+                  style={{ width: `${usageProgress}%` }}
                 />
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="premium-panel mt-4 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-slate-950">AI Insights</h2>
-              <p className="mt-1 text-xs font-medium text-slate-500">
-                Mock insights preview for dashboard experience.
-              </p>
-            </div>
-            <Button
-              type="button"
-              onClick={generateAiInsights}
-              loading={aiInsightsLoading}
-              className="h-9 px-3 text-xs"
-            >
-              Generate AI Insights
-            </Button>
-          </div>
-
-          {aiInsightsError ? (
-            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {aiInsightsError}
-            </p>
-          ) : null}
-
-          {!aiInsightsLoading && !aiInsightsError && !aiInsightsData ? (
-            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
-              No insights yet. Generate AI Insights to load dashboard insights.
-            </div>
-          ) : null}
-
-          {aiInsightsLoading ? (
-            <div className="mt-4 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Generating insights...
-            </div>
-          ) : null}
-
-          {!aiInsightsLoading && !aiInsightsError && aiInsightsData ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 md:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Totals
-                </p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Notes</p>
-                    <p className="mt-1 text-lg font-bold text-slate-950">
-                      {Number(aiInsightsData.totalNotes || 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Meeting Notes</p>
-                    <p className="mt-1 text-lg font-bold text-slate-950">
-                      {Number(aiInsightsData.meetingNotesCount || 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Standard Notes</p>
-                    <p className="mt-1 text-lg font-bold text-slate-950">
-                      {Number(aiInsightsData.standardNotesCount || 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Top Categories</p>
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {(Array.isArray(aiInsightsData.topCategories) ? aiInsightsData.topCategories : []).length ? (
-                    aiInsightsData.topCategories.map((item) => (
-                      <li key={`${item.category}-${item.count}`}>- {item.category}: {item.count}</li>
-                    ))
-                  ) : (
-                    <li>- No categories yet.</li>
-                  )}
-                </ul>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recent Topics</p>
-                <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                  {(Array.isArray(aiInsightsData.recentTopics) ? aiInsightsData.recentTopics : []).length ? (
-                    aiInsightsData.recentTopics.map((item) => <li key={item}>- {item}</li>)
-                  ) : (
-                    <li>- No recent topics yet.</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-          ) : null}
-        </section>
 
         <section className="premium-panel mt-4 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1911,32 +1894,28 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => runAiAction("meeting-intelligence")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-50 disabled:opacity-60"
+                onClick={() => setActiveSection("ai-tools")}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-indigo-300 bg-white px-3 text-xs font-semibold text-indigo-800 transition hover:bg-indigo-50"
               >
-                {aiLoadingAction === "meeting-intelligence" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Bot className="h-3.5 w-3.5" />
-                )}
-                Meeting Intelligence
+                <Bot className="h-3.5 w-3.5" />
+                Use AI tools
               </button>
               <button
                 type="button"
-                onClick={() => runAiAction("follow-up-email")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                onClick={() => setActiveSection("meetings")}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
               >
-                {aiLoadingAction === "follow-up-email" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Mail className="h-3.5 w-3.5" />
-                )}
-                Create Follow-up Email
+                <Mail className="h-3.5 w-3.5" />
+                Open meetings
               </button>
             </div>
           </div>
+
+          {aiInsightsError ? (
+            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {aiInsightsError}
+            </p>
+          ) : null}
 
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 xl:col-span-2">
@@ -1997,9 +1976,83 @@ export default function DashboardPage() {
             </div>
           </div>
         </section>
-      </div>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_1fr] lg:px-8">
+          <section className="premium-panel mt-4 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">Recent notes</h2>
+                <p className="mt-1 text-xs text-slate-500">A quick preview of your latest work.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSection("notes")}
+                className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+              >
+                View all notes
+              </button>
+            </div>
+            {recentNotesPreview.length ? (
+              <ul className="mt-4 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+                {recentNotesPreview.map((note) => (
+                  <li key={note.id} className="px-4 py-3">
+                    <p className="text-sm font-semibold text-slate-900">{note.title}</p>
+                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">{note.body}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <SectionEmptyState
+                title={t("emptyNotesTitle")}
+                description="Create your first note to see it here."
+                actionLabel="Create a note"
+                onAction={() => setActiveSection("notes")}
+              />
+            )}
+          </section>
+        </div>
+      ) : null}
+
+      {isWorkspaceSection ? (
+        <WorkspaceDashboardSection
+          workspaceInfo={workspaceInfo}
+          hasWorkspace={hasWorkspace}
+          t={t}
+          onGoToSettings={goToSettingsSection}
+        />
+      ) : null}
+
+      {isSettingsSection ? (
+        <section
+          id="dashboard-panel-settings"
+          role="tabpanel"
+          aria-labelledby="dashboard-tab-settings"
+          className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8"
+        >
+          <div className="premium-panel p-5">
+            <h2 className="text-lg font-semibold text-slate-950">{t("settings")}</h2>
+            <p className="mt-1 text-sm text-slate-600">Account, billing, invites, and preferences live in Settings.</p>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Link
+                to="/settings"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              >
+                Open full settings
+              </Link>
+              <button
+                type="button"
+                onClick={openProfile}
+                className="inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                {t("profile")}
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {(isNotesSection || isAiToolsSection || isMeetingsSection) ? (
+      <div className={`mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8${isNotesSection ? " lg:grid-cols-[360px_1fr]" : ""}`}>
+        {isNotesSection ? (
         <aside ref={createNoteRef} className="premium-panel h-fit scroll-mt-6 p-5">
           <h2 className="text-lg font-semibold text-slate-950">{t("createNote")}</h2>
           <p className="mt-1 text-sm text-slate-500">{t("notes")}</p>
@@ -2019,16 +2072,144 @@ export default function DashboardPage() {
             />
           </div>
         </aside>
+        ) : null}
 
-        <section>
+        <section
+          id={
+            isNotesSection
+              ? "dashboard-panel-notes"
+              : isAiToolsSection
+                ? "dashboard-panel-ai-tools"
+                : "dashboard-panel-meetings"
+          }
+          role="tabpanel"
+          aria-labelledby={
+            isNotesSection
+              ? "dashboard-tab-notes"
+              : isAiToolsSection
+                ? "dashboard-tab-ai-tools"
+                : "dashboard-tab-meetings"
+          }
+        >
+          {isNotesSection ? (
+            <div className="premium-panel mb-5 p-4">
+              <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
+              <p className="mt-1 text-sm text-slate-600">Create a note, search, filter, and export your library.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {statCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <div
+                      key={card.label}
+                      className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {card.label}
+                        </p>
+                        <Icon className="h-4 w-4 text-slate-500" />
+                      </div>
+                      <p className="mt-2 text-lg font-bold capitalize text-slate-950">{card.value}</p>
+                      <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
+                      {typeof card.progress === "number" ? (
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
+                          <div
+                            className="h-full rounded-full bg-emerald-600"
+                            style={{ width: `${card.progress}%` }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 rounded-md border border-slate-200 bg-white p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">{t("productInsights")}</h3>
+                    <p className="text-xs text-slate-500">{t("currentLoadedNotes")}</p>
+                  </div>
+                  <BarChart3 className="h-5 w-5 text-emerald-700" />
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {t("mostUsedCategory")}
+                      </p>
+                      <Folder className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <p className="mt-2 truncate text-sm font-semibold text-slate-950">
+                      {mostUsedCategory || t("noInsightYet")}
+                    </p>
+                    {mostUsedCategory ? (
+                      <span className="mt-2 inline-flex rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                        {t("notesCount", { count: mostUsedCategoryCount })}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {t("latestNoteCreated")}
+                    </p>
+                    <p className="mt-2 truncate text-sm font-semibold text-slate-950">
+                      {latestCreatedNote?.title || t("noInsightYet")}
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {t("notesCreatedThisWeek")}
+                      </p>
+                      <TrendingUp className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-slate-950">
+                      {t("notesCount", { count: notesCreatedThisWeek })}
+                    </p>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                      <div
+                        className="h-full rounded-full bg-emerald-600"
+                        style={{ width: `${weekProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {(isAiToolsSection || isMeetingsSection) && !loading && !aiNotePickerNotes.length ? (
+            <SectionEmptyState
+              title={isMeetingsSection ? "No meeting notes yet" : "No notes yet"}
+              description={
+                isMeetingsSection
+                  ? "Create a meeting note in Notes, then return here to extract action items and follow-ups."
+                  : "Create a note first, then come back to run summarize, improve writing, and other AI tools."
+              }
+              actionLabel={isMeetingsSection ? "Create a meeting note" : "Create a note"}
+              onAction={() => {
+                setActiveSection("notes");
+                if (isMeetingsSection) {
+                  setNotePrefillValues({
+                    title: "Team Meeting",
+                    body: "Attendees:\nAgenda:\nNotes:\n",
+                    category: "Work",
+                    noteType: "meeting"
+                  });
+                }
+              }}
+            />
+          ) : null}
+
+          {(isAiToolsSection || isMeetingsSection) && aiNotePickerNotes.length ? (
           <div className="premium-panel mb-5 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <div className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-emerald-700" />
-                  <h2 className="text-lg font-semibold text-slate-950">{t("aiTools")}</h2>
+                  <h2 className="text-lg font-semibold text-slate-950">{isMeetingsSection ? "Meetings" : t("aiTools")}</h2>
                 </div>
-                <p className="mt-1 text-sm text-slate-500">{t("aiToolsDescription")}</p>
+                <p className="mt-1 text-sm text-slate-500">{isMeetingsSection ? "Select a meeting note, then run meeting-focused AI tools below." : t("aiToolsDescription")}</p>
               </div>
               <label className="w-full lg:max-w-sm">
                 <span className="text-sm font-medium text-slate-700">{t("selectNoteForAi")}</span>
@@ -2036,10 +2217,10 @@ export default function DashboardPage() {
                   value={selectedAiNote?.id || ""}
                   onChange={(event) => setSelectedAiNoteId(event.target.value)}
                   className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                  disabled={!notes.length}
+                  disabled={!aiNotePickerNotes.length}
                 >
-                  {notes.length ? null : <option value="">{t("noInsightYet")}</option>}
-                  {notes.map((note) => (
+                  {aiNotePickerNotes.length ? null : <option value="">{t("noInsightYet")}</option>}
+                  {aiNotePickerNotes.map((note) => (
                     <option key={note.id} value={note.id}>
                       {note.title}
                     </option>
@@ -2047,208 +2228,107 @@ export default function DashboardPage() {
                 </select>
               </label>
             </div>
-            <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-3 shadow-sm shadow-emerald-950/[0.04]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-950">{t("planAndUsage")}</p>
-                    <span className="inline-flex rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white shadow-sm shadow-emerald-950/10">
-                      {usage.plan === "premium" ? t("premiumActive") : t("mostPopular")}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {t("currentPlan")}:{" "}
-                    <span className="font-semibold capitalize text-slate-950">
-                      {usagePlanLabel}
-                    </span>
-                    {usage.plan === "premium" ? (
-                      <span className="ml-2 inline-flex rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white">
-                        {t("premiumBadge")}
-                      </span>
-                    ) : null}
-                  </p>
-                  {usage.plan !== "premium" ? (
-                    <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-emerald-800">
-                      {t("premiumUpgradeReason")}
-                    </p>
-                  ) : null}
-                </div>
-                {usage.plan === "premium" ? (
-                  <button
-                    type="button"
-                    onClick={manageBilling}
-                    disabled={portalLoading}
-                    className="premium-button inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm shadow-slate-950/10 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {portalLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CreditCard className="h-4 w-4" />
-                    )}
-                    {t("manageBilling")}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={startUpgrade}
-                    disabled={upgradeLoading}
-                    className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {t("upgradeToPremium")}
-                  </button>
-                )}
+            <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-slate-500">
+                <span>{t("aiUsage")}</span>
+                <span>
+                  {usageLoading
+                    ? t("loading")
+                    : t("aiUsesRemaining", {
+                        remaining: remainingAiUses,
+                        limit: usage.aiUsageLimit
+                      })}
+                </span>
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="rounded-md border border-slate-200 bg-white p-3">
-                  <p className="text-sm font-semibold text-slate-950">{t("freePlan")}</p>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                    <li className="flex items-center justify-between gap-3">
-                      <span>{t("aiUsage")}</span>
-                      <span className="font-semibold text-slate-900">{t("freeAiLimit")}</span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3">
-                      <span>{t("notes")}</span>
-                      <span className="font-semibold text-slate-900">{t("basicNotesLimit")}</span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3">
-                      <span>{t("workspace")}</span>
-                      <span className="font-semibold text-slate-900">{t("personalWorkspaceLimit")}</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="rounded-md border border-emerald-300 bg-white p-3 shadow-sm shadow-emerald-950/[0.04]">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-950">{t("premiumPlan")}</p>
-                    <span className="rounded-md bg-emerald-700 px-2 py-0.5 text-xs font-semibold text-white">
-                      {t("mostPopular")}
-                    </span>
-                  </div>
-                  <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                    <li className="flex items-center justify-between gap-3">
-                      <span>{t("aiUsage")}</span>
-                      <span className="font-semibold text-emerald-800">{t("premiumAiLimit")}</span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3">
-                      <span>{t("notes")}</span>
-                      <span className="font-semibold text-emerald-800">{t("unlimitedNotesLimit")}</span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3">
-                      <span>{t("workspace")}</span>
-                      <span className="font-semibold text-emerald-800">{t("teamWorkspaceLimit")}</span>
-                    </li>
-                  </ul>
-                </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200/70">
+                <div
+                  className={`h-full rounded-full ${usageLimitReached ? "bg-red-600" : "bg-emerald-600"}`}
+                  style={{ width: `${usageProgress}%` }}
+                />
               </div>
-              <div className="mt-3">
-                <div className="flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
-                  <span className="inline-flex items-center gap-1.5">
-                    {t("aiUsage")}
-                    <span className="group relative inline-flex">
-                      <button
-                        type="button"
-                        className="inline-flex h-4 w-4 items-center justify-center rounded-full text-slate-400 transition hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
-                        aria-label={t("aiUsageHelp")}
-                        title={t("aiUsageTooltip")}
-                      >
-                        <HelpCircle className="h-3.5 w-3.5" />
-                      </button>
-                      <span
-                        role="tooltip"
-                        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-64 -translate-x-1/2 rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs font-medium leading-5 text-slate-600 shadow-soft group-hover:block group-focus-within:block"
-                      >
-                        {t("aiUsageTooltip")}
-                      </span>
-                    </span>
-                  </span>
-                  <span>
-                    {usageLoading
-                      ? t("loading")
-                      : t("aiUsesRemaining", {
-                          remaining: remainingAiUses,
-                          limit: usage.aiUsageLimit
-                        })}
-                  </span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200/70">
-                  <div
-                    className={`h-full rounded-full ${
-                      usageLimitReached ? "bg-red-600" : "bg-emerald-600"
-                    }`}
-                    style={{ width: `${usageProgress}%` }}
-                  />
-                </div>
-                {usageLimitReached ? (
-                  <p className="mt-2 text-sm font-medium text-red-700">
-                    {t("upgradeToContinue")}
-                  </p>
-                ) : null}
-              </div>
+              {usageLimitReached ? (
+                <p className="mt-2 text-sm font-medium text-red-700">{t("upgradeToContinue")}</p>
+              ) : null}
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("summary")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "summary" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 {t("summarizeSelectedNote")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("tags")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "tags" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
                 {t("suggestTags")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("improve-writing")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "improve-writing" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
                 {t("improveWriting")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("extract-tasks")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "extract-tasks" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {t("extractTasks")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("executive-summary")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "executive-summary" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 {t("executiveSummary")}
               </button>
+              ) : null}
+              {isMeetingsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("follow-up-email")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "follow-up-email" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                 {t("followUpEmail")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("study-notes")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "study-notes" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 {t("studyNotes")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("insights")}
@@ -2258,42 +2338,62 @@ export default function DashboardPage() {
                 {aiLoadingAction === "insights" ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
                 {t("generateSmartInsights")}
               </button>
+              ) : null}
+              {isAiToolsSection ? (
+              <button
+                type="button"
+                onClick={generateAiInsights}
+                disabled={aiInsightsLoading || usageLimitReached}
+                className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {aiInsightsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+                AI Insights
+              </button>
+              ) : null}
+              {isMeetingsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("meeting-minutes")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-minutes" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                 {t("convertToMeetingMinutes")}
               </button>
+              ) : null}
+              {isMeetingsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("meeting-actions")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-actions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {t("extractActionItems")}
               </button>
+              ) : null}
+              {isMeetingsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("meeting-attendees-decisions")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-attendees-decisions" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
                 {t("extractAttendeesDecisions")}
               </button>
+              ) : null}
+              {isMeetingsSection ? (
               <button
                 type="button"
                 onClick={() => runAiAction("meeting-intelligence")}
-                disabled={Boolean(aiLoadingAction) || !notes.length || usageLimitReached}
+                disabled={Boolean(aiLoadingAction) || !aiNotePickerNotes.length || usageLimitReached}
                 className="premium-button inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-800 shadow-sm shadow-indigo-950/[0.03] transition hover:border-indigo-300 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {aiLoadingAction === "meeting-intelligence" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
                 Meeting intelligence
               </button>
+              ) : null}
             </div>
             {aiError ? (
               <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
@@ -2543,6 +2643,10 @@ export default function DashboardPage() {
             )}
           </div>
 
+          ) : null}
+
+          {isNotesSection ? (
+          <>
           <div className="premium-panel mb-4 p-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <p className="text-sm font-semibold text-slate-700">{t("quickFilters")}</p>
@@ -2770,8 +2874,11 @@ export default function DashboardPage() {
               </div>
             </div>
           ) : null}
+          </>
+        ) : null}
         </section>
       </div>
+      ) : null}
 
       {toasts.length ? (
         <div className="fixed right-4 top-4 z-[60] w-[calc(100%-2rem)] max-w-sm space-y-3">

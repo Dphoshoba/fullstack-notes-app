@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Loader2, Sun, X } from "lucide-react";
 
+import { fetchDailyBriefing } from "../../api/ai.js";
 import {
   BRIEFING_CARD_DEFINITIONS,
-  DAILY_BRIEFING_DISMISSED_KEY,
-  MOCK_DAILY_BRIEFING
+  DAILY_BRIEFING_DISMISSED_KEY
 } from "./dailyBriefingMock.js";
 import { SectionEmptyState } from "./SectionEmptyState.jsx";
 
@@ -16,6 +16,57 @@ function readDismissedIds() {
   } catch {
     return [];
   }
+}
+
+function normalizeBriefing(payload) {
+  return {
+    priorities: Array.isArray(payload?.topPriorities) ? payload.topPriorities : [],
+    deadlines: Array.isArray(payload?.upcomingDeadlines) ? payload.upcomingDeadlines : [],
+    followUps: Array.isArray(payload?.suggestedFollowUps) ? payload.suggestedFollowUps : [],
+    meetingActions: Array.isArray(payload?.recentMeetingActions) ? payload.recentMeetingActions : [],
+    productivityReminder: String(payload?.productivityReminder || "").trim(),
+    date: String(payload?.date || "").trim()
+  };
+}
+
+function cardHasContent(cardId, briefing) {
+  if (cardId === "priorities") {
+    return briefing.priorities.length > 0;
+  }
+  if (cardId === "deadlines") {
+    return briefing.deadlines.length > 0;
+  }
+  if (cardId === "follow-ups") {
+    return briefing.followUps.length > 0;
+  }
+  if (cardId === "meeting-actions") {
+    return briefing.meetingActions.length > 0;
+  }
+  if (cardId === "productivity") {
+    return Boolean(briefing.productivityReminder);
+  }
+  return false;
+}
+
+function formatBriefingDate(value) {
+  if (!value) {
+    return new Date().toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric"
+    });
+  }
+
+  const parsed = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric"
+  });
 }
 
 function BriefingCard({ title, helper, onDismiss, children }) {
@@ -58,9 +109,14 @@ function BriefingCardContent({ cardId, briefing }) {
     return (
       <ul className="space-y-2 text-sm text-slate-700">
         {briefing.deadlines.map((item) => (
-          <li key={item.label} className="flex items-start justify-between gap-3 rounded-md bg-slate-50 px-3 py-2">
+          <li
+            key={`${item.label}-${item.due}`}
+            className="flex items-start justify-between gap-3 rounded-md bg-slate-50 px-3 py-2"
+          >
             <span>{item.label}</span>
-            <span className="shrink-0 text-xs font-semibold text-amber-800">{item.due}</span>
+            {item.due ? (
+              <span className="shrink-0 text-xs font-semibold text-amber-800">{item.due}</span>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -102,17 +158,52 @@ function BriefingCardContent({ cardId, briefing }) {
 
 export function DailyBriefingSection() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [briefing, setBriefing] = useState(null);
   const [dismissedIds, setDismissedIds] = useState(() => readDismissedIds());
-  const briefing = MOCK_DAILY_BRIEFING;
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 700);
-    return () => window.clearTimeout(timer);
+    let cancelled = false;
+
+    async function loadBriefing() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const payload = await fetchDailyBriefing();
+        if (!cancelled) {
+          setBriefing(normalizeBriefing(payload));
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setBriefing(null);
+          setError(loadError.message || "Unable to load your daily briefing.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadBriefing();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
+  const cardsWithContent = useMemo(() => {
+    if (!briefing) {
+      return [];
+    }
+
+    return BRIEFING_CARD_DEFINITIONS.filter((card) => cardHasContent(card.id, briefing));
+  }, [briefing]);
+
   const visibleCards = useMemo(
-    () => BRIEFING_CARD_DEFINITIONS.filter((card) => !dismissedIds.includes(card.id)),
-    [dismissedIds]
+    () => cardsWithContent.filter((card) => !dismissedIds.includes(card.id)),
+    [cardsWithContent, dismissedIds]
   );
 
   const dismissCard = (cardId) => {
@@ -128,11 +219,7 @@ export function DailyBriefingSection() {
     setDismissedIds([]);
   };
 
-  const todayLabel = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric"
-  });
+  const todayLabel = formatBriefingDate(briefing?.date);
 
   return (
     <section className="premium-panel p-6">
@@ -161,18 +248,36 @@ export function DailyBriefingSection() {
         </div>
       ) : null}
 
-      {!loading && visibleCards.length === 0 ? (
+      {!loading && error ? (
+        <div className="mt-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      {!loading && !error && cardsWithContent.length === 0 ? (
+        <div className="mt-5">
+          <SectionEmptyState
+            title="No briefing items yet"
+            description={
+              briefing?.productivityReminder ||
+              "Add notes and meeting records to unlock your daily briefing."
+            }
+          />
+        </div>
+      ) : null}
+
+      {!loading && !error && cardsWithContent.length > 0 && visibleCards.length === 0 ? (
         <div className="mt-5">
           <SectionEmptyState
             title="Briefing cleared for today"
-            description="You dismissed all briefing cards. Restore them anytime to see today's mock priorities and follow-ups."
+            description="You dismissed all briefing cards. Restore them anytime to see today's priorities and follow-ups."
             actionLabel="Show briefing again"
             onAction={resetDismissed}
           />
         </div>
       ) : null}
 
-      {!loading && visibleCards.length > 0 ? (
+      {!loading && !error && visibleCards.length > 0 ? (
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           {visibleCards.map((card) => (
             <BriefingCard

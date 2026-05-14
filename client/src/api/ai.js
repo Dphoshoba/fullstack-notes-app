@@ -107,6 +107,11 @@ export async function fetchSemanticSearch(query) {
   return data.data;
 }
 
+export async function fetchDailyBriefing() {
+  const data = await apiRequest("/api/ai/daily-briefing");
+  return data.data;
+}
+
 export async function generateMeetingIntelligence({ noteId, content }) {
   const data = await apiRequest("/api/ai/meeting-intelligence", {
     method: "POST",

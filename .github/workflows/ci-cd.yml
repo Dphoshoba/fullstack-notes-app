@@ -1,0 +1,91 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies (backend)
+        run: npm ci
+      - name: Install dependencies (client)
+        run: npm ci --prefix client
+      - name: Lint backend
+        run: npm run lint
+        continue-on-error: true
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
+          MONGODB_URI: mongodb://localhost:27017/express_auth_api_test
+          JWT_ACCESS_SECRET: test-access-secret-very-long-for-testing-purposes-32chars
+          JWT_REFRESH_SECRET: test-refresh-secret-very-long-for-testing-purposes-32chars
+          ACCESS_TOKEN_EXPIRES_IN: 15m
+          REFRESH_TOKEN_EXPIRES_IN: 7d
+          CLIENT_ORIGIN: http://localhost:3000
+          COOKIE_SECURE: false
+          OPENAI_API_KEY: sk-test-key-for-testing-only
+          OPENAI_MODEL: gpt-4o-mini
+          STRIPE_SECRET_KEY: sk_test_dummy
+          STRIPE_PRICE_ID: price_test
+          STRIPE_WEBHOOK_SECRET: whsec_test
+          RESEND_API_KEY: re_test
+          EMAIL_FROM: Test <no-reply@test.com>
+
+  build-client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies (client)
+        run: npm ci --prefix client
+      - name: Build client
+        run: npm run build --prefix client
+        env:
+          VITE_API_BASE_URL: https://api.example.com
+
+  security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true

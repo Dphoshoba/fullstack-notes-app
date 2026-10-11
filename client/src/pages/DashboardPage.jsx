@@ -6,7 +6,6 @@ import {
   Bot,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   Copy,
   CreditCard,
   Download,
@@ -58,7 +57,6 @@ import {
 } from "../api/notifications.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
-import { Button } from "../components/Button.jsx";
 import { DailyBriefingSection } from "../components/dashboard/DailyBriefingSection.jsx";
 import { DashboardSectionNav } from "../components/dashboard/DashboardSectionNav.jsx";
 import {
@@ -397,6 +395,7 @@ export default function DashboardPage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState("");
@@ -1353,55 +1352,38 @@ export default function DashboardPage() {
             </h1>
           </div>
           <div className="-mx-4 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0">
-            <label className="flex h-10 min-w-28 items-center rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
-              <span className="sr-only">{t("language")}</span>
-              <select
-                value={language}
-                onChange={(event) => setLanguage(event.target.value)}
-                className="bg-white text-sm font-medium text-slate-700 outline-none"
-                aria-label={t("language")}
-              >
-                {languages.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span className="max-w-64 truncate rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-              {user?.email}
-            </span>
-            <Button
+            <button
+              type="button"
               onClick={loadNotes}
-              className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
+              disabled={loading}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white text-slate-600 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950 disabled:opacity-60"
+              aria-label={t("refresh")}
+              title={t("refresh")}
             >
-              <RefreshCw className="h-4 w-4" />
-              {t("refresh")}
-            </Button>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            </button>
             <div className="relative">
-              <Button
+              <button
+                type="button"
                 onClick={() => {
                   setNotificationsOpen((current) => !current);
                   if (!notificationsOpen) {
                     loadNotifications();
                   }
                 }}
-                className="h-10 w-full bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-md bg-white text-slate-600 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950"
                 aria-expanded={notificationsOpen}
                 aria-haspopup="menu"
                 aria-label={t("notifications")}
                 title={t("notifications")}
               >
-                <span className="relative inline-flex">
-                  <Bell className="h-4 w-4" />
-                  {unreadNotificationsCount ? (
-                    <span className="absolute -right-2 -top-2 inline-flex min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-4 text-white">
-                      {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
-                    </span>
-                  ) : null}
-                </span>
-                {t("notifications")}
-              </Button>
+                <Bell className="h-4 w-4" />
+                {unreadNotificationsCount ? (
+                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-4 text-white">
+                    {unreadNotificationsCount > 9 ? "9+" : unreadNotificationsCount}
+                  </span>
+                ) : null}
+              </button>
               {notificationsOpen ? (
                 <div
                   className="absolute right-0 z-40 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
@@ -1503,17 +1485,18 @@ export default function DashboardPage() {
               ) : null}
             </div>
             <div className="relative">
-              <Button
+              <button
+                type="button"
                 onClick={() => setExportOpen((current) => !current)}
                 disabled={loading}
-                className="h-10 w-full bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white text-slate-600 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950 disabled:opacity-60"
                 aria-expanded={exportOpen}
                 aria-haspopup="menu"
+                aria-label={t("exportNotes")}
+                title={t("exportNotes")}
               >
                 <Download className="h-4 w-4" />
-                {t("exportNotes")}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
+              </button>
               {exportOpen ? (
                 <div
                   className="absolute right-0 z-40 mt-2 w-[min(14rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
@@ -1544,47 +1527,116 @@ export default function DashboardPage() {
                 </div>
               ) : null}
             </div>
-            <Button
-              onClick={openProfile}
-              className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
-            >
-              <User className="h-4 w-4" />
-              {t("profile")}
-            </Button>
-            <Link
-              to="/guide"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950"
-            >
-              <HelpCircle className="h-4 w-4 text-slate-700" />
-              {t("guide")}
-            </Link>
-            <Link
-              to="/settings"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50 hover:text-slate-950"
-            >
-              <Settings className="h-4 w-4 text-slate-700" />
-              {t("settings")}
-            </Link>
-            <Link
-              to="/settings"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-100"
-            >
-              <UserPlus className="h-4 w-4 text-emerald-700" />
-              {t("invite")}
-            </Link>
-            {isAdmin ? (
-              <Button
-                onClick={() => setAdminOpen(true)}
-                className="h-10 bg-white !text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50 hover:!text-slate-950 [&_svg]:!text-slate-700"
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen((current) => !current)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white ring-2 ring-white transition hover:bg-emerald-700"
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+                aria-label={t("profile")}
+                title={user?.name || user?.email}
               >
-                <Shield className="h-4 w-4" />
-                {t("admin")}
-              </Button>
-            ) : null}
-            <Button onClick={logout} className="h-10 bg-slate-950">
-              <LogOut className="h-4 w-4" />
-              {t("logout")}
-            </Button>
+                {(user?.name || user?.email || "?")
+                  .split(" ")
+                  .map((part) => part[0])
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()}
+              </button>
+              {userMenuOpen ? (
+                <div
+                  className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  role="menu"
+                  aria-label={t("profile")}
+                >
+                  <div className="border-b border-slate-200 px-4 py-3">
+                    <p className="truncate text-sm font-semibold text-slate-950">{user?.name}</p>
+                    <p className="truncate text-xs text-slate-500">{user?.email}</p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("language")}</span>
+                    <select
+                      value={language}
+                      onChange={(event) => setLanguage(event.target.value)}
+                      className="rounded border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 outline-none"
+                      aria-label={t("language")}
+                    >
+                      {languages.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      openProfile();
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <User className="h-4 w-4 text-slate-500" />
+                    {t("profile")}
+                  </button>
+                  <Link
+                    to="/settings"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <UserPlus className="h-4 w-4 text-slate-500" />
+                    {t("invite")}
+                  </Link>
+                  <Link
+                    to="/guide"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <HelpCircle className="h-4 w-4 text-slate-500" />
+                    {t("guide")}
+                  </Link>
+                  <Link
+                    to="/settings"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <Settings className="h-4 w-4 text-slate-500" />
+                    {t("settings")}
+                  </Link>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        setAdminOpen(true);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                      role="menuitem"
+                    >
+                      <Shield className="h-4 w-4 text-slate-500" />
+                      {t("admin")}
+                    </button>
+                  ) : null}
+                  <div className="border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={logout}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
+                      role="menuitem"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {t("logout")}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>

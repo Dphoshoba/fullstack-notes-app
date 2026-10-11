@@ -428,7 +428,7 @@ export const summarizeNote = async (req, res) => {
 
 export const suggestTags = async (req, res) => {
   const note = await noteLookup(req);
-  const existingTags = new Set((note.tags || []).map((tag) => tag.toLowerCase()));
+  const existingTags = new Set((note.tags || []).map((tag) => String(tag).toLowerCase()));
   const suggestedTags = (await suggestNoteTags(noteToAiText(note))).filter(
     (tag) => !existingTags.has(tag.toLowerCase())
   );
@@ -629,11 +629,14 @@ export const extractAttendeesAndDecisions = async (req, res) => {
 
 export const smartInsights = async (req, res) => {
   const notes = await Note.find({ owner: req.user.id }).sort({ updatedAt: -1 }).limit(100);
-  const categoryCounts = notes.reduce((acc, note) => {
-    const category = note.category || "General";
-    acc[category] = (acc[category] || 0) + 1;
-    return acc;
-  }, {});
+  const categoryCounts = notes.reduce(
+    (acc, note) => {
+      const category = String(note.category || "General");
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    },
+    /** @type {Record<string, number>} */ ({})
+  );
   const [localTopCategory = "General", topCategoryCount = 0] =
     Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0] || [];
   const pinnedCount = notes.filter((note) => note.pinned).length;

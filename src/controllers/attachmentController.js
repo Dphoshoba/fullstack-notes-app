@@ -127,7 +127,7 @@ export const downloadAttachment = async (req, res) => {
 
   await getAccessibleNote(req.user, attachment.noteId);
 
-  return res.download(path.join(uploadsDir, attachment.fileName), attachment.originalName);
+  return res.download(path.join(uploadsDir, String(attachment.fileName)), String(attachment.originalName));
 };
 
 export const deleteAttachment = async (req, res) => {

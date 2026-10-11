@@ -46,6 +46,10 @@ const normalizeMeetingMeta = (meetingMeta = {}) => ({
   priorityLevel: String(meetingMeta.priorityLevel || "").trim()
 });
 
+/**
+ * @param {any} input
+ * @param {{ defaultNoteType?: string }} [options]
+ */
 const normalizeNoteInput = (input, { defaultNoteType } = {}) => {
   const noteType = input.noteType || defaultNoteType;
 

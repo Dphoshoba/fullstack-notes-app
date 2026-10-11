@@ -194,7 +194,7 @@ export const getWorkspaceInvite = async (req, res) => {
   return res.status(StatusCodes.OK).json({
     success: true,
     data: {
-      workspaceName: invite.workspaceId.name,
+      workspaceName: /** @type {any} */ (invite.workspaceId).name,
       invitedEmail: invite.invitedEmail,
       workspaceRole: invite.workspaceRole,
       expiresAt: invite.expiresAt
@@ -230,7 +230,7 @@ export const acceptWorkspaceInvite = async (req, res) => {
       userId: invite.invitedBy,
       type: "workspace_invite_accepted",
       title: "Workspace invite accepted",
-      message: `${req.user.name} accepted your workspace invite for ${invite.workspaceId.name}.`,
+      message: `${req.user.name} accepted your workspace invite for ${/** @type {any} */ (invite.workspaceId).name}.`,
       metadata: {
         workspaceId: invite.workspaceId.id,
         acceptedBy: req.user.id

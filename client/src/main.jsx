@@ -14,6 +14,7 @@ import RegisterPage from "./pages/RegisterPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
 import { registerPwa } from "./pwa/registerPwa.js";
+import { QueryProvider } from "./api/queryClient.jsx";
 import "./styles.css";
 
 registerPwa();
@@ -69,7 +70,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <I18nProvider>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <QueryProvider>
+          <RouterProvider router={router} />
+        </QueryProvider>
       </AuthProvider>
     </I18nProvider>
   </React.StrictMode>

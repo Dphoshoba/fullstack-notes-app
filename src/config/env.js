@@ -50,5 +50,8 @@ export const env = {
   EMAIL_FROM: process.env.EMAIL_FROM || "Notes Workspace <no-reply@notesworkspace.local>",
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-5.2",
-  COOKIE_SECURE: process.env.COOKIE_SECURE === "true"
+  COOKIE_SECURE: process.env.COOKIE_SECURE === "true",
+  REDIS_URL: process.env.REDIS_URL || "",
+  SENTRY_DSN: process.env.SENTRY_DSN || "",
+  LOG_LEVEL: process.env.LOG_LEVEL || "info"
 };

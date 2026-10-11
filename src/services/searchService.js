@@ -23,7 +23,7 @@ export const searchNotes = async ({ user, query, scope = "all", limit = 12 }) =>
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   filter.$and = [{ $or: [{ title: new RegExp(escaped, "i") }, { body: new RegExp(escaped, "i") }, { tags: new RegExp(escaped, "i") }] }];
 
-  const notes = await Note.find(filter).sort({ createdAt: -1 }).limit(50).select("title body tags category noteType meetingMeta").lean();
+  const notes = await Note.find(filter).sort({ createdAt: -1 }).limit(limit).select("title body tags category noteType meetingMeta").lean();
 
   return notes.map((n) => ({
     id: n._id.toString(),

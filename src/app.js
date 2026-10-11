@@ -17,6 +17,7 @@ import commentRoutes from "./routes/commentRoutes.js";
 import debugRoutes from "./routes/debugRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
+import noteTemplateRoutes from "./routes/noteTemplateRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import openapiRoutes from "./routes/openapiRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -28,7 +29,23 @@ const allowedOrigins = env.CLIENT_ORIGIN.split(",");
 
 app.set("trust proxy", 1);
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  hsts: {
+    maxAge: env.COOKIE_SECURE ? 31536000 : 0,
+    includeSubDomains: env.COOKIE_SECURE,
+    preload: env.COOKIE_SECURE
+  },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
+}));
 app.use(
   cors({
     origin(origin, callback) {
@@ -61,6 +78,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/billing", billingLimiter, billingRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/debug", debugRoutes);
+app.use("/api/notes/templates", noteTemplateRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);

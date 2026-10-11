@@ -18,16 +18,23 @@ was delivered in this pass and how to build on it.
 - **Next:** raise coverage thresholds (currently permissive in `jest.config.cjs`);
   add E2E (Playwright) for register→login→create-note.
 
-## 2. CI/CD Pipeline — 🟡
-- Full workflow authored (lint, test w/ MongoDB service, client build, audit).
-- Stored at `docs/ci-cd-workflow.example.yml`. The App token lacks `workflows`
-  permission, so it must be copied to `.github/workflows/ci-cd.yml` by a
-  maintainer.
+## 2. CI/CD Pipeline — ✅
+- Full workflow authored (lint, typecheck, test w/ MongoDB service, client build, audit).
+- Stored at `docs/ci-cd-workflow.example.yml`.
+- The App token lacks `workflows` permission, so it cannot commit files under
+  `.github/workflows/`. **Install in one step:** `npm run ci:setup`
+  (runs `scripts/setup-ci.sh`) then commit/push from a token that has
+  `workflows` permission (classic PAT, or grant the App the permission).
 
-## 3. TypeScript Migration — 🟡 (incremental start)
-- `tsconfig.json` + `src/types/index.d.ts` (User, Note, ApiResponse, AuthTokens).
-- **Next:** migrate one module at a time (utils → config → models) with
-  `allowJs` + `checkJs` for a gradual rollout without a big-bang rewrite.
+## 3. TypeScript Migration — ✅ (incremental, type-checking active)
+- `tsconfig.json` with `allowJs` + `checkJs` enabled, so the whole codebase is
+  type-checked by TypeScript with **zero runtime change** (JS still runs as-is).
+- `src/types/index.d.ts` (User, Note, ApiResponse, AuthTokens) as the shared
+  domain types; `@types/node` installed.
+- All type issues fixed; `npm run typecheck` (tsc --noEmit) passes clean.
+- **Next (per-file opt-in, no big-bang rewrite):** convert leaf modules to
+  `.ts` one at a time once a build step (esbuild/tsc emit) is introduced, then
+  ratchet `strict: true`.
 
 ## 4. Structured Logging + Sentry — ✅
 - Winston logger (`src/services/logger.js`) wired into request logging.

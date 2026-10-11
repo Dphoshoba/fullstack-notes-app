@@ -26,6 +26,8 @@ jobs:
       - name: Lint backend
         run: npm run lint
         continue-on-error: true
+      - name: Typecheck backend
+        run: npm run typecheck
 
   test:
     runs-on: ubuntu-latest

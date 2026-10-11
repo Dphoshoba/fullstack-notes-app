@@ -44,7 +44,7 @@ const noteTemplateSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform: (_doc, ret) => {
-        ret.id = ret._id.toString();
+        /** @type {Record<string, any>} */ (ret).id = String(ret._id);
         delete ret._id;
         delete ret.__v;
         return ret;

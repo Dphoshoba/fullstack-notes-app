@@ -12,8 +12,10 @@
     "start": "node src/server.js",
     "lint": "eslint src client",
     "lint:fix": "eslint src client --fix",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.js\" \"tests/**/*.js\" \"client/src/**/*.jsx\"",
     "format:check": "prettier --check \"src/**/*.js\" \"tests/**/*.js\" \"client/src/**/*.jsx\"",
+    "ci:setup": "bash scripts/setup-ci.sh",
     "prepare": "husky || true",
     "migrate": "migrate-mongo up",
     "migrate:status": "migrate-mongo status",
@@ -63,6 +65,7 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^9.9.1",
+    "@types/node": "^26.6.5",
     "babel-jest": "^29.7.0",
     "concurrently": "^9.0.1",
     "eslint": "^9.9.1",
@@ -72,6 +75,7 @@
     "mongodb-memory-server": "^10.1.3",
     "nodemon": "^3.1.4",
     "prettier": "^3.9.10",
-    "supertest": "^7.1.1"
+    "supertest": "^7.1.1",
+    "typescript": "^7.0.2"
   }
 }

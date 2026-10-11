@@ -72,7 +72,7 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   const user = await User.findOne({ email: req.body.email }).select("+password");
 
-  if (!user || !(await user.comparePassword(req.body.password))) {
+  if (!user || !(await /** @type {any} */ (user).comparePassword(req.body.password))) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }
 

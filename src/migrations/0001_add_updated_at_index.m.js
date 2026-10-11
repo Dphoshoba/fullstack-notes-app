@@ -3,7 +3,7 @@ import { Note } from "../models/Note.js";
 
 export async function up() {
   await Note.collection.createIndexes([
-    { keys: { organizationId: 1, updatedAt: -1 }, name: "idx_org_updated" }
+    { key: { organizationId: 1, updatedAt: -1 }, name: "idx_org_updated" }
   ]);
   console.log("Created org updatedAt index");
 }

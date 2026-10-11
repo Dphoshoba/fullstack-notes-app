@@ -1,3 +1,6 @@
+# Copy this file to: .github/workflows/ci-cd.yml
+
+# (Requires a token with "workflows" permission to commit.)
 name: CI/CD Pipeline
 
 on:
@@ -89,3 +92,5 @@ jobs:
       - name: Run security audit
         run: npm audit --audit-level=moderate
         continue-on-error: true
+
+

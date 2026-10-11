@@ -1344,14 +1344,14 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen overflow-x-clip bg-slate-50 text-slate-950">
       <header className="relative z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8">
-          <div className="min-w-0 shrink-0">
-            <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-4 sm:px-6 lg:flex-nowrap lg:gap-4 lg:px-8">
+          <div className="order-1 min-w-0 flex-1 lg:flex-none">
+            <p className="hidden text-sm font-semibold text-emerald-700 sm:block">AI Business Notes Workspace</p>
             <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">
               {DASHBOARD_SECTIONS.find((section) => section.id === activeSection)?.label || "Home"}
             </h1>
           </div>
-          <label className="relative w-full lg:mx-auto lg:max-w-md lg:flex-1">
+          <label className="order-3 relative w-full lg:order-2 lg:mx-auto lg:max-w-md lg:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"
@@ -1373,7 +1373,7 @@ export default function DashboardPage() {
               aria-label={t("searchNotes")}
             />
           </label>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3">
             <button
               type="button"
               onClick={loadNotes}
@@ -1408,7 +1408,7 @@ export default function DashboardPage() {
               </button>
               {notificationsOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  className="absolute right-0 z-50 mt-2 w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
                   role="menu"
                   aria-label={t("notifications")}
                 >
@@ -1521,7 +1521,7 @@ export default function DashboardPage() {
               </button>
               {exportOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-[min(14rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  className="absolute right-0 z-50 mt-2 w-[min(14rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
                   role="menu"
                   aria-label={t("exportVisibleNotes")}
                 >
@@ -1569,7 +1569,7 @@ export default function DashboardPage() {
               </button>
               {userMenuOpen ? (
                 <div
-                  className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
+                  className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-md border border-slate-200 bg-white shadow-soft"
                   role="menu"
                   aria-label={t("profile")}
                 >

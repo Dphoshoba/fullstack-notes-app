@@ -1,98 +1,117 @@
 # Copy this file to: .github/workflows/ci-cd.yml
-
 # (Requires a token with "workflows" permission to commit.)
-name: CI/CD Pipeline
+name: CI/CD
 
 on:
   push:
-    branches: [main, master]
+    branches:
+      - main
   pull_request:
-    branches: [main, master]
+    branches:
+      - main
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies (backend)
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+
+      - name: Install backend dependencies
         run: npm ci
-      - name: Install dependencies (client)
-        run: npm ci --prefix client
+
       - name: Lint backend
         run: npm run lint
-        continue-on-error: true
+
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Lint client
+        working-directory: client
+        run: npm run lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
       - name: Typecheck backend
         run: npm run typecheck
 
   test:
+    name: Test
     runs-on: ubuntu-latest
     services:
       mongodb:
         image: mongo:7
         ports:
           - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install backend dependencies
         run: npm ci
-      - name: Run tests
+
+      - name: Run backend tests
         run: npm test
         env:
           NODE_OPTIONS: --experimental-vm-modules
-          MONGODB_URI: mongodb://localhost:27017/express_auth_api_test
-          JWT_ACCESS_SECRET: test-access-secret-very-long-for-testing-purposes-32chars
-          JWT_REFRESH_SECRET: test-refresh-secret-very-long-for-testing-purposes-32chars
-          ACCESS_TOKEN_EXPIRES_IN: 15m
-          REFRESH_TOKEN_EXPIRES_IN: 7d
-          CLIENT_ORIGIN: http://localhost:3000
-          COOKIE_SECURE: false
-          OPENAI_API_KEY: sk-test-key-for-testing-only
-          OPENAI_MODEL: gpt-4o-mini
-          STRIPE_SECRET_KEY: sk_test_dummy
-          STRIPE_PRICE_ID: price_test
-          STRIPE_WEBHOOK_SECRET: whsec_test
-          RESEND_API_KEY: re_test
-          EMAIL_FROM: Test <no-reply@test.com>
+          CI_MONGODB_URI: mongodb://127.0.0.1:27017/express_auth_api_test
 
-  build-client:
+  build:
+    name: Build client
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies (client)
-        run: npm ci --prefix client
-      - name: Build client
-        run: npm run build --prefix client
-        env:
-          VITE_API_BASE_URL: https://api.example.com
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  security-audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
+          node-version: 20
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
         run: npm ci
-      - name: Run security audit
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
 
-
+      - name: Build client
+        working-directory: client
+        run: npm run build

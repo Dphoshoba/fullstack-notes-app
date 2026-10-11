@@ -16,6 +16,7 @@ process.env.EMAIL_FROM = "Test <no-reply@test.com>";
 
 module.exports = {
   testEnvironment: "node",
+  maxWorkers: 1,
   roots: ["<rootDir>/src", "<rootDir>/tests"],
   testMatch: ["**/*.test.js", "**/*.spec.js"],
   collectCoverageFrom: ["src/**/*.js", "!src/server.js", "!src/scripts/**"],

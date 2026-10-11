@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+. "$(dirname -- "${BASH_SOURCE[0]:-$0}")/_/husky.sh"
+
+npx --no -- commitlint --edit "$1"

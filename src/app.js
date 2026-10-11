@@ -18,8 +18,10 @@ import debugRoutes from "./routes/debugRoutes.js";
 import healthRoutes from "./routes/healthRoutes.js";
 import noteRoutes from "./routes/noteRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import openapiRoutes from "./routes/openapiRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import workspaceRoutes from "./routes/workspaceRoutes.js";
+import { getMetricsText } from "./services/metrics.js";
 
 const app = express();
 const allowedOrigins = env.CLIENT_ORIGIN.split(",");
@@ -47,7 +49,11 @@ app.use(requestLogger);
 
 app.use(globalLimiter);
 
+app.get("/metrics", (_req, res) => {
+  res.type("text/plain").send(getMetricsText());
+});
 app.use("/api/health", healthRoutes);
+app.use("/api", openapiRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/attachments", uploadLimiter, attachmentRoutes);

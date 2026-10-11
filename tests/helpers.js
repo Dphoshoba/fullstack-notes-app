@@ -12,11 +12,11 @@ export const connectTestDb = async () => {
   if (mongoose.connection.readyState === 0) {
     const uri = global.__MONGO_URI__ || process.env.MONGODB_URI;
     await mongoose.connect(uri);
-    // Ensure indexes are created
-    await Promise.all(
-      Object.values(mongoose.models).map(model => model.createIndexes())
-    );
   }
+  // Ensure all model indexes are fully built before running assertions
+  await Promise.all(
+    Object.values(mongoose.models).map((model) => model.init())
+  );
 };
 
 export const disconnectTestDb = async () => {

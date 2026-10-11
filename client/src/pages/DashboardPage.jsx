@@ -1344,14 +1344,36 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen overflow-x-clip bg-slate-50 text-slate-950">
       <header className="border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div className="min-w-0">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8">
+          <div className="min-w-0 shrink-0">
             <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
             <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">
               {DASHBOARD_SECTIONS.find((section) => section.id === activeSection)?.label || "Home"}
             </h1>
           </div>
-          <div className="-mx-4 flex max-w-full gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:shrink-0">
+          <label className="relative order-last w-full lg:order-none lg:mx-auto lg:max-w-md lg:flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setPage(1);
+                if (activeSection !== "notes") {
+                  setActiveSection("notes");
+                }
+              }}
+              onFocus={() => {
+                if (activeSection !== "notes") {
+                  setActiveSection("notes");
+                }
+              }}
+              className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              placeholder={t("searchNotes")}
+              aria-label={t("searchNotes")}
+            />
+          </label>
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={loadNotes}
@@ -2551,20 +2573,6 @@ export default function DashboardPage() {
                 {t("shownCount", { shown: notes.length, total: pagination.total })}
               </p>
             </div>
-            <label className="relative w-full">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => {
-                  setSearchTerm(event.target.value);
-                  setPage(1);
-                }}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                placeholder={t("searchNotes")}
-                aria-label={t("searchNotes")}
-              />
-            </label>
             <label className="w-full">
               <span className="sr-only">{t("scopeFilter")}</span>
               <select

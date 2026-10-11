@@ -19,6 +19,15 @@ module.exports = async () => {
   process.env.RESEND_API_KEY = "re_test";
   process.env.EMAIL_FROM = "Test <no-reply@test.com>";
 
+  // In CI, use a hosted MongoDB service (faster + more reliable than
+  // downloading a binary). Locally, fall back to the in-memory server.
+  if (process.env.CI_MONGODB_URI) {
+    const uri = process.env.CI_MONGODB_URI;
+    process.env.MONGODB_URI = uri;
+    global.__MONGO_URI__ = uri;
+    return;
+  }
+
   mongoServer = await MongoMemoryServer.create({
     instance: {
       port: 27018

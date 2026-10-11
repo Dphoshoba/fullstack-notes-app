@@ -1343,7 +1343,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
+      <header className="relative z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8">
           <div className="min-w-0 shrink-0">
             <p className="text-sm font-semibold text-emerald-700">AI Business Notes Workspace</p>
@@ -1351,7 +1351,7 @@ export default function DashboardPage() {
               {DASHBOARD_SECTIONS.find((section) => section.id === activeSection)?.label || "Home"}
             </h1>
           </div>
-          <label className="relative order-last w-full lg:order-none lg:mx-auto lg:max-w-md lg:flex-1">
+          <label className="relative w-full lg:mx-auto lg:max-w-md lg:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="search"

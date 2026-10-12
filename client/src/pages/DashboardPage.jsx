@@ -6,6 +6,7 @@ import {
   Bot,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   Copy,
   CreditCard,
   Download,
@@ -2566,80 +2567,88 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="premium-panel mb-4 grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-5">
-            <div>
+          <div className="premium-panel mb-4 p-3 sm:p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+            <div className="flex shrink-0 items-center gap-2">
               <h2 className="text-lg font-semibold text-slate-950">{t("notes")}</h2>
-              <p className="text-sm text-slate-500">
+              <span className="hidden text-sm text-slate-500 sm:inline">
                 {t("shownCount", { shown: notes.length, total: pagination.total })}
-              </p>
+              </span>
             </div>
-            <label className="w-full">
-              <span className="sr-only">{t("scopeFilter")}</span>
-              <select
-                value={scopeFilter}
-                onChange={(event) => {
-                  setScopeFilter(event.target.value);
-                  setPage(1);
-                }}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                aria-label={t("scopeFilter")}
-              >
-                <option value="all">{t("allNotes")}</option>
-                <option value="private">{t("myPrivateNotes")}</option>
-                <option value="workspace">{t("workspaceNotes")}</option>
-              </select>
-            </label>
-            <label className="w-full">
-              <span className="sr-only">{t("noteTypeFilter")}</span>
-              <select
-                value={noteTypeFilter}
-                onChange={(event) => {
-                  setNoteTypeFilter(event.target.value);
-                  setPage(1);
-                }}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                aria-label={t("noteTypeFilter")}
-              >
-                <option value="all">{t("allNotes")}</option>
-                <option value="standard">{t("standardNotes")}</option>
-                <option value="meeting">{t("meetingNotes")}</option>
-              </select>
-            </label>
-            <label className="w-full">
-              <span className="sr-only">{t("categoryFilter")}</span>
-              <select
-                value={categoryFilter}
-                onChange={(event) => {
-                  setCategoryFilter(event.target.value);
-                  setPage(1);
-                }}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                aria-label={t("categoryFilter")}
-              >
-                <option value="">{t("allCategories")}</option>
-                {categoryOptions.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="w-full">
-              <span className="sr-only">{t("favoritesFilter")}</span>
-              <select
-                value={favoritesFilter}
-                onChange={(event) => {
-                  setFavoritesFilter(event.target.value);
-                  setPage(1);
-                }}
-                className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
-                aria-label={t("favoritesFilter")}
-              >
-                <option value="">{t("showAllNotes")}</option>
-                <option value="true">{t("showFavoritesOnly")}</option>
-              </select>
-            </label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex lg:flex-1 lg:items-center lg:gap-2">
+              <label className="relative w-full">
+                <span className="sr-only">{t("scopeFilter")}</span>
+                <select
+                  value={scopeFilter}
+                  onChange={(event) => {
+                    setScopeFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full appearance-none rounded-md border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  aria-label={t("scopeFilter")}
+                >
+                  <option value="all">{t("allNotes")}</option>
+                  <option value="private">{t("myPrivateNotes")}</option>
+                  <option value="workspace">{t("workspaceNotes")}</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </label>
+              <label className="relative w-full">
+                <span className="sr-only">{t("noteTypeFilter")}</span>
+                <select
+                  value={noteTypeFilter}
+                  onChange={(event) => {
+                    setNoteTypeFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full appearance-none rounded-md border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  aria-label={t("noteTypeFilter")}
+                >
+                  <option value="all">{t("allNotes")}</option>
+                  <option value="standard">{t("standardNotes")}</option>
+                  <option value="meeting">{t("meetingNotes")}</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </label>
+              <label className="relative w-full">
+                <span className="sr-only">{t("categoryFilter")}</span>
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => {
+                    setCategoryFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full appearance-none rounded-md border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  aria-label={t("categoryFilter")}
+                >
+                  <option value="">{t("allCategories")}</option>
+                  {categoryOptions.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </label>
+              <label className="relative w-full">
+                <span className="sr-only">{t("favoritesFilter")}</span>
+                <select
+                  value={favoritesFilter}
+                  onChange={(event) => {
+                    setFavoritesFilter(event.target.value);
+                    setPage(1);
+                  }}
+                  className="h-9 w-full appearance-none rounded-md border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                  aria-label={t("favoritesFilter")}
+                >
+                  <option value="">{t("showAllNotes")}</option>
+                  <option value="true">{t("showFavoritesOnly")}</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </label>
+            </div>
           </div>
+        </div>
 
           {error ? (
             <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

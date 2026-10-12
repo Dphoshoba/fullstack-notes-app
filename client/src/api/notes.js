@@ -156,3 +156,23 @@ export async function downloadAttachmentFile(attachment) {
   link.remove();
   window.URL.revokeObjectURL(url);
 }
+
+export async function fetchNoteTemplates() {
+  const data = await apiRequest("/api/notes/templates");
+  return data.data;
+}
+
+export async function createNoteTemplate(input) {
+  const data = await apiRequest("/api/notes/templates", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  return data.data;
+}
+
+export async function deleteNoteTemplate(id) {
+  await apiRequest(`/api/notes/templates/${id}`, {
+    method: "DELETE"
+  });
+}
+

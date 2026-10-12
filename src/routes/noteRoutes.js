@@ -11,6 +11,7 @@ import { createComment, listComments } from "../controllers/commentController.js
 import { createAttachment, listAttachments } from "../controllers/attachmentController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { authenticate } from "../middleware/authenticate.js";
+import { cacheGetResponse } from "../middleware/cache.js";
 import { uploadLimiter } from "../middleware/rateLimiters.js";
 import { validate } from "../middleware/validate.js";
 import {
@@ -27,7 +28,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get("/", validate(listNotesSchema), asyncHandler(listNotes));
+router.get("/", validate(listNotesSchema), cacheGetResponse(60), asyncHandler(listNotes));
 router.post("/", validate(createNoteSchema), asyncHandler(createNote));
 router.get("/:noteId/comments", validate(noteCommentsSchema), asyncHandler(listComments));
 router.post("/:noteId/comments", validate(createCommentSchema), asyncHandler(createComment));
@@ -45,3 +46,4 @@ router.patch("/:id", validate(updateNoteSchema), asyncHandler(updateNote));
 router.delete("/:id", validate(noteIdSchema), asyncHandler(deleteNote));
 
 export default router;
+

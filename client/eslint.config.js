@@ -27,8 +27,7 @@ export default [
         console: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
-        MediaRecorder: "readonly",
-        cancelAnimationFrame: "readonly"
+        MediaRecorder: "readonly"
       },
       parserOptions: {
         ecmaFeatures: {

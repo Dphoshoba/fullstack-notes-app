@@ -713,12 +713,13 @@ function NoteCard({
   aiLoadingAction,
   usageLimitReached,
   deletingId,
-  currentUser
+  currentUser,
+  defaultExpanded = false
 }) {
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [actionsOpen, setActionsOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(defaultExpanded);
   const [activityCounts, setActivityCounts] = useState({
     comments: note.commentsCount || 0,
     attachments: note.attachmentsCount || 0
@@ -1429,10 +1430,11 @@ export function NoteList({
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sortedNotes.map((note) => (
+        {sortedNotes.map((note, index) => (
           <NoteCard
             key={note.id}
             note={note}
+            defaultExpanded={index === 0}
             onDelete={onDelete}
             onEdit={setEditingNote}
             onUpdate={onUpdate}

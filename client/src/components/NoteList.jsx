@@ -1,4 +1,4 @@
-import { Bot, Copy, Download, Edit3, FileText, Loader2, MessageSquare, Paperclip, Pin, Save, SearchX, Share2, Sparkles, Star, Tags, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { Bot, Copy, Download, Edit3, FileText, Loader2, MessageSquare, MoreHorizontal, Paperclip, Pin, Save, SearchX, Share2, Sparkles, Star, Tags, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -713,11 +713,13 @@ function NoteCard({
   aiLoadingAction,
   usageLimitReached,
   deletingId,
-  currentUser
+  currentUser,
+  defaultExpanded = false
 }) {
   const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(defaultExpanded);
   const [activityCounts, setActivityCounts] = useState({
     comments: note.commentsCount || 0,
     attachments: note.attachmentsCount || 0
@@ -876,56 +878,71 @@ function NoteCard({
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <button
-          type="button"
-          onClick={copyNote}
-          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
-          title={t("copyNote")}
-        >
-          <Copy className="h-3.5 w-3.5" />
-          {t("copyNote")}
-        </button>
-        <button
-          type="button"
-          onClick={shareNote}
-          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
-          title={t("shareNote")}
-        >
-          <Share2 className="h-3.5 w-3.5" />
-          {t("shareNote")}
-        </button>
-        <button
-          type="button"
-          onClick={exportNoteAsText}
-          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
-          title={t("exportAsText")}
-        >
-          <Download className="h-3.5 w-3.5" />
-          {t("exportAsText")}
-        </button>
-        <button
-          type="button"
-          onClick={() => onRunAiAction?.("summary", note)}
-          disabled={aiActionDisabled}
-          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label={`${t("summarizeThisNote")}: ${note.title}`}
-          title={usageLimitReached ? t("upgradeToContinue") : t("summarizeThisNote")}
-        >
-          {summaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
-          {t("summarize")}
-        </button>
-        <button
-          type="button"
-          onClick={() => onRunAiAction?.("tags", note)}
-          disabled={aiActionDisabled}
-          className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label={`${t("suggestTagsForThisNote")}: ${note.title}`}
-          title={usageLimitReached ? t("upgradeToContinue") : t("suggestTagsForThisNote")}
-        >
-          {tagsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Tags className="h-3.5 w-3.5" />}
-          {t("suggestTags")}
-        </button>
+      <div className="mt-5 flex flex-col gap-2">
+        {actionsOpen ? (
+          <>
+            <button
+              type="button"
+              onClick={copyNote}
+              className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+              title={t("copyNote")}
+            >
+              <Copy className="h-3.5 w-3.5" />
+              {t("copyNote")}
+            </button>
+            <button
+              type="button"
+              onClick={shareNote}
+              className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+              title={t("shareNote")}
+            >
+              <Share2 className="h-3.5 w-3.5" />
+              {t("shareNote")}
+            </button>
+            <button
+              type="button"
+              onClick={exportNoteAsText}
+              className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+              title={t("exportAsText")}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {t("exportAsText")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onRunAiAction?.("summary", note)}
+              disabled={aiActionDisabled}
+              className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label={`${t("summarizeThisNote")}: ${note.title}`}
+              title={usageLimitReached ? t("upgradeToContinue") : t("summarizeThisNote")}
+            >
+              {summaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+              {t("summarize")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onRunAiAction?.("tags", note)}
+              disabled={aiActionDisabled}
+              className="premium-button inline-flex h-8 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label={`${t("suggestTagsForThisNote")}: ${note.title}`}
+              title={usageLimitReached ? t("upgradeToContinue") : t("suggestTagsForThisNote")}
+            >
+              {tagsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Tags className="h-3.5 w-3.5" />}
+              {t("suggestTags")}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setActionsOpen(true)}
+            className="premium-button inline-flex h-8 w-fit items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+            aria-expanded={false}
+            aria-haspopup="menu"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+            {t("moreActions")}
+          </button>
+        )}
       </div>
 
       <div className="mt-5 border-t border-slate-200 pt-4">
@@ -1413,10 +1430,11 @@ export function NoteList({
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sortedNotes.map((note) => (
+        {sortedNotes.map((note, index) => (
           <NoteCard
             key={note.id}
             note={note}
+            defaultExpanded={index === 0}
             onDelete={onDelete}
             onEdit={setEditingNote}
             onUpdate={onUpdate}

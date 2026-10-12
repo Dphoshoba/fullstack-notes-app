@@ -89,6 +89,7 @@ export const translations = {
     copiedToClipboard: "Copied to clipboard",
     copyFailed: "Could not copy to clipboard.",
     copyNote: "Copy note",
+    moreActions: "More actions",
     copyResult: "Copy result",
     copySuggestions: "Copy suggestions",
     couldNotSave: "Could not save",

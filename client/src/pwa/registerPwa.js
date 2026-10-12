@@ -1,4 +1,4 @@
-/* global navigator, console */
+
 import { registerSW } from "virtual:pwa-register";
 
 let updateServiceWorker;

@@ -20,7 +20,14 @@ export default [
         URLSearchParams: "readonly",
         window: "readonly",
         requestAnimationFrame: "readonly",
-        cancelAnimationFrame: "readonly"
+        cancelAnimationFrame: "readonly",
+        navigator: "readonly",
+        Blob: "readonly",
+        FormData: "readonly",
+        console: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        MediaRecorder: "readonly"
       },
       parserOptions: {
         ecmaFeatures: {

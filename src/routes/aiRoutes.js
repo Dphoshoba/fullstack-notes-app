@@ -16,10 +16,13 @@ import {
   improveWriting,
   smartInsights,
   smartSuggestions,
+  transcribeAudioNote,
   suggestTags,
   summarizeNote
 } from "../controllers/aiController.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
+import { uploadLimiter } from "../middleware/rateLimiters.js";
+import { uploadAudio } from "../middleware/uploadAudio.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { enforceAiUsage } from "../middleware/enforceAiUsage.js";
 import { validate } from "../middleware/validate.js";
@@ -54,5 +57,7 @@ router.post("/extract-attendees-decisions", validate(noteAiSchema), asyncHandler
 router.post("/smart-insights", validate(smartInsightsSchema), asyncHandler(smartInsights));
 router.post("/meeting-intelligence", validate(meetingIntelligenceSchema), asyncHandler(meetingIntelligence));
 router.post("/meeting-follow-up-email", validate(meetingFollowUpEmailSchema), asyncHandler(meetingFollowUpEmail));
+
+router.post("/transcribe-audio", uploadLimiter, uploadAudio.single("audio"), asyncHandler(transcribeAudioNote));
 
 export default router;

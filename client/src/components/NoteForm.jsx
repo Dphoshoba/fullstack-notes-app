@@ -1,4 +1,4 @@
-import { ChevronDown, Copy, Loader2, Plus, Sparkles } from "lucide-react";
+import { Copy, Loader2, Plus, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { getSmartSuggestions } from "../api/ai.js";

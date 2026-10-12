@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getSmartSuggestions } from "../api/ai.js";
 import { Button } from "./Button.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
+import { VoiceRecorder } from "./VoiceRecorder.jsx";
 
 const meetingTemplate = ["Agenda", "", "Discussion", "", "Decisions", "", "Action items", "", "Next steps"].join("\n");
 
@@ -145,7 +146,7 @@ export function NoteForm({
   defaultVisibility = "private",
   prefillValues = null
 }) {
-  const { t } = useI18n();
+  const { t, language: preferredLanguage } = useI18n();
   const [values, setValues] = useState({ ...initialValues, visibility: defaultVisibility });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -353,9 +354,21 @@ export function NoteForm({
       </div>
 
       <div>
-        <label className="text-sm font-medium text-slate-700" htmlFor="body">
-          {t("body")}
-        </label>
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-medium text-slate-700" htmlFor="body">
+            {t("body")}
+          </label>
+          <VoiceRecorder
+            language={preferredLanguage}
+            prompt={values.noteType === "meeting" ? (t("meetingPromptHint") || "Transcribe this meeting note. Keep it faithful to the spoken words.") : ""}
+            onTranscript={(text) => {
+              setValues((current) => ({
+                ...current,
+                body: current.body ? `${current.body}\n${text}` : text
+              }));
+            }}
+          />
+        </div>
         <textarea
           id="body"
           name="body"

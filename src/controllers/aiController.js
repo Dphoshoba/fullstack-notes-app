@@ -18,6 +18,7 @@ import {
   improveWriting as improveNoteWriting,
   smartSuggestions as generateSmartSuggestions,
   suggestTags as suggestNoteTags,
+  transcribeAudio,
   summarizeNote as summarizeNoteText
 } from "../services/aiService.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -1010,5 +1011,23 @@ export const dailyBriefing = async (req, res) => {
       suggestedFocus: narrative.suggestedFocus,
       productivityReminder: narrative.productivityReminder
     }
+  });
+};
+
+export const transcribeAudioNote = async (req, res) => {
+  const file = req.file;
+
+  if (!file) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Audio file is required");
+  }
+
+  const language = String(req.body?.language || "").trim().slice(0, 5);
+  const prompt = String(req.body?.prompt || "").trim().slice(0, 500);
+
+  const text = await transcribeAudio(file.buffer, { language, prompt });
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: { text }
   });
 };

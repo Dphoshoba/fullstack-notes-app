@@ -119,3 +119,26 @@ export async function generateMeetingIntelligence({ noteId, content }) {
   });
   return data.data;
 }
+
+export async function transcribeAudio(audioBlob, options = {}) {
+  const formData = new FormData();
+  const filename = `voice-${Date.now()}.webm`;
+  formData.append("audio", audioBlob, filename);
+
+  const language = String(options.language || "").trim();
+  if (language) {
+    formData.append("language", language);
+  }
+
+  const prompt = String(options.prompt || "").trim();
+  if (prompt) {
+    formData.append("prompt", prompt);
+  }
+
+  const data = await apiRequest("/api/ai/transcribe-audio", {
+    method: "POST",
+    body: formData
+  });
+
+  return data.data;
+}

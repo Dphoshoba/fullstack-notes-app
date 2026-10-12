@@ -20,6 +20,12 @@ export default [
         URLSearchParams: "readonly",
         window: "readonly",
         requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly",
+        navigator: "readonly",
+        Blob: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        MediaRecorder: "readonly",
         cancelAnimationFrame: "readonly"
       },
       parserOptions: {

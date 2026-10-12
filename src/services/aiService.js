@@ -1139,3 +1139,38 @@ const normalizeTasks = (items) =>
       status: "open"
     }))
     .filter((item) => item.text);
+export const transcribeAudio = async (audioBuffer, options = {}) => {
+  const apiKey = env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new ApiError(StatusCodes.SERVICE_UNAVAILABLE, AI_UNAVAILABLE_MESSAGE);
+  }
+
+  const language = String(options.language || "").trim().slice(0, 5);
+  const prompt = String(options.prompt || "").trim().slice(0, 500);
+
+  try {
+    const response = await getClient().audio.transcriptions.create({
+      file: audioBuffer,
+      model: "whisper-1",
+      ...(language ? { language } : {}),
+      ...(prompt ? { prompt } : {}),
+      response_format: "json",
+      temperature: 0
+    });
+
+    return String(response?.text || "").trim();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    safeLog("error", "Whisper transcription failed", {
+      status: error?.status,
+      code: error?.code,
+      message: String(error?.message || "unknown").slice(0, 300)
+    });
+
+    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+  }
+};

@@ -23,6 +23,8 @@ export default [
         cancelAnimationFrame: "readonly",
         navigator: "readonly",
         Blob: "readonly",
+        FormData: "readonly",
+        console: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
         MediaRecorder: "readonly",

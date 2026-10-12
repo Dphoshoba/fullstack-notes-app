@@ -58,6 +58,6 @@ router.post("/smart-insights", validate(smartInsightsSchema), asyncHandler(smart
 router.post("/meeting-intelligence", validate(meetingIntelligenceSchema), asyncHandler(meetingIntelligence));
 router.post("/meeting-follow-up-email", validate(meetingFollowUpEmailSchema), asyncHandler(meetingFollowUpEmail));
 
-router.post("/transcribe-audio", uploadLimiter, uploadAudio, asyncHandler(transcribeAudioNote));
+router.post("/transcribe-audio", uploadLimiter, uploadAudio.single("audio"), asyncHandler(transcribeAudioNote));
 
 export default router;

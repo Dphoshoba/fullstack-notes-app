@@ -1,7 +1,8 @@
-import { Copy, Loader2, Plus, Sparkles } from "lucide-react";
+import { Bookmark, Copy, Loader2, Plus, Save, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { getSmartSuggestions } from "../api/ai.js";
+import { createNoteTemplate, fetchNoteTemplates } from "../api/notes.js";
 import { Button } from "./Button.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
 import { VoiceRecorder } from "./VoiceRecorder.jsx";
@@ -154,6 +155,61 @@ export function NoteForm({
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState("");
   const [suggestionsCopied, setSuggestionsCopied] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [templateName, setTemplateName] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateNotice, setTemplateNotice] = useState("");
+
+  const loadTemplates = async () => {
+    try {
+      const list = await fetchNoteTemplates();
+      setTemplates(list || []);
+    } catch {
+      // templates optional
+    }
+  };
+
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const handleSelectTemplate = (templateId) => {
+    if (!templateId) return;
+    const found = templates.find((item) => item.id === templateId);
+    if (!found) return;
+    setValues((current) => ({
+      ...current,
+      title: found.title || current.title,
+      body: found.body || current.body,
+      category: found.category || current.category,
+      noteType: found.noteType || current.noteType
+    }));
+  };
+
+  const handleSaveAsTemplate = async (event) => {
+    event.preventDefault();
+    if (!templateName.trim()) return;
+    setSavingTemplate(true);
+    setTemplateNotice("");
+    try {
+      const created = await createNoteTemplate({
+        name: templateName.trim(),
+        noteType: values.noteType,
+        category: values.category,
+        title: values.title,
+        body: values.body
+      });
+      setTemplates((current) => [created, ...current]);
+      setTemplateName("");
+      setShowSaveTemplate(false);
+      setTemplateNotice(t("templateSaved") || "Template saved successfully.");
+    } catch (err) {
+      setTemplateNotice(err.message);
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
 
   useEffect(() => {
     if (!prefillValues) {
@@ -278,6 +334,65 @@ export function NoteForm({
 
   return (
     <form onSubmit={submit} className="space-y-2">
+      <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600" htmlFor="template-selector">
+            <Bookmark className="h-3.5 w-3.5 text-emerald-600" />
+            {t("template") || "Template"}
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowSaveTemplate(!showSaveTemplate)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+          >
+            <Save className="h-3 w-3" />
+            {t("saveAsTemplate") || "Save as template"}
+          </button>
+        </div>
+
+        {templates.length > 0 ? (
+          <div className="mt-2">
+            <select
+              id="template-selector"
+              onChange={(e) => handleSelectTemplate(e.target.value)}
+              defaultValue=""
+              className="h-8 w-full rounded-md border border-slate-300 bg-white px-2.5 text-xs text-slate-700 outline-none transition focus:border-emerald-600"
+            >
+              <option value="">{t("selectTemplate") || "Select a template..."}</option>
+              {templates.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>
+                  {tpl.name} ({tpl.noteType})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        {showSaveTemplate ? (
+          <div className="mt-2.5 flex items-center gap-2">
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder={t("templateNamePlaceholder") || "e.g. Weekly Standup"}
+              className="h-8 flex-1 rounded-md border border-slate-300 bg-white px-2.5 text-xs outline-none focus:border-emerald-600"
+            />
+            <button
+              type="button"
+              onClick={handleSaveAsTemplate}
+              disabled={savingTemplate || !templateName.trim()}
+              className="inline-flex h-8 items-center justify-center rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+            >
+              {savingTemplate ? <Loader2 className="h-3 w-3 animate-spin" /> : t("save") || "Save"}
+            </button>
+          </div>
+        ) : null}
+
+        {templateNotice ? (
+          <p className="mt-2 text-xs text-slate-600">{templateNotice}</p>
+        ) : null}
+      </div>
+
       <div>
         <label className="text-sm font-medium text-slate-700" htmlFor="noteType">
           {t("noteType")}

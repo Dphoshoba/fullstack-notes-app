@@ -6,9 +6,13 @@ import { useI18n } from "../context/I18nContext.jsx";
 export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabled = false }) {
   const { t } = useI18n();
   const mediaRecorderRef = useRef(null);
+  const elapsedRef = useRef(0);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
+  const silenceRef = useRef(0);
+  const silenceRafRef = useRef(null);
+  const audioContextRef = useRef(null);
 
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -35,6 +39,8 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
   const startRecording = async () => {
     setError("");
     setElapsed(0);
+    silenceRef.current = 0;
+    elapsedRef.current = 0;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -66,6 +72,14 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
           clearInterval(timerRef.current);
           timerRef.current = null;
         }
+        if (silenceRafRef.current) {
+          cancelAnimationFrame(silenceRafRef.current);
+          silenceRafRef.current = null;
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close().catch(() => {});
+          audioContextRef.current = null;
+        }
 
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
         chunksRef.current = [];
@@ -93,6 +107,59 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
       timerRef.current = setInterval(() => {
         setElapsed((current) => current + 1);
       }, 1000);
+
+      // Silence detection via Web Audio API analyser
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextCtor) {
+          const audioContext = new AudioContextCtor();
+          audioContextRef.current = audioContext;
+          const source = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.8;
+          source.connect(analyser);
+
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          const SILENCE_THRESHOLD = 12; // RMS floor for "silent"
+          const SILENCE_SECONDS = 2.5; // consecutive silence before auto-stop
+          const MAX_DURATION = 180; // hard cap (3 min) to avoid runaway recordings
+
+          const sample = () => {
+            if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
+              return;
+            }
+            analyser.getByteTimeDomainData(data);
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) {
+              const v = (data[i] - 128) / 128;
+              sum += v * v;
+            }
+            const rms = Math.sqrt(sum / data.length) * 100;
+
+            if (rms < SILENCE_THRESHOLD) {
+              silenceRef.current += 1;
+            } else {
+              silenceRef.current = 0;
+            }
+
+            if (silenceRef.current >= SILENCE_SECONDS * 10) {
+              stopRecording();
+              return;
+            }
+            if (elapsedRef.current >= MAX_DURATION) {
+              stopRecording();
+              return;
+            }
+
+            silenceRafRef.current = requestAnimationFrame(sample);
+          };
+
+          silenceRafRef.current = requestAnimationFrame(sample);
+        }
+      } catch {
+        // Silence detection is best-effort; recording still works without it.
+      }
     } catch (err) {
       if (err?.name === "NotAllowed" || err?.name === "PermissionDeniedError") {
         setError(t("micPermissionDenied") || "Microphone access was denied. Please allow it in your browser settings.");

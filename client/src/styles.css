@@ -78,3 +78,33 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Dark mode */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background: #0f172a;
+}
+
+.dark .premium-card {
+  @apply border-slate-700 bg-slate-800;
+}
+
+.dark .premium-panel {
+  @apply border-slate-700 bg-slate-800;
+}
+
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}

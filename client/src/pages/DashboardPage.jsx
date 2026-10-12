@@ -18,6 +18,7 @@ import {
   Mail,
   MessageSquare,
   Pin,
+  Plus,
   RefreshCw,
   Save,
   Search,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ThemeToggle } from "../components/ThemeToggle.jsx";
 
 import {
   createExecutiveSummary,
@@ -1344,6 +1346,21 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-slate-50 text-slate-950">
+      <button
+        type="button"
+        onClick={() => {
+          setActiveSection("notes");
+          setNotePrefillValues({});
+          requestAnimationFrame(() => {
+            createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          });
+        }}
+        className="fixed bottom-6 right-4 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-800 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-200 sm:bottom-8 sm:right-8"
+        aria-label="Create a new note"
+        title="Create a new note"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
       <header className="relative z-40 border-b border-slate-200/80 bg-white/95 shadow-sm shadow-slate-950/[0.03] backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-4 sm:px-6 lg:flex-nowrap lg:gap-4 lg:px-8">
           <div className="order-1 min-w-0 flex-1 lg:flex-none">
@@ -1375,6 +1392,7 @@ export default function DashboardPage() {
             />
           </label>
           <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3">
+            <ThemeToggle />
             <button
               type="button"
               onClick={loadNotes}
@@ -1898,12 +1916,29 @@ export default function DashboardPage() {
       ) : null}
 
       {isTeamSection ? (
-        <WorkspaceDashboardSection
-          workspaceInfo={workspaceInfo}
-          hasWorkspace={hasWorkspace}
-          t={t}
-          onGoToSettings={goToSettingsSection}
-        />
+        <div className="mx-auto max-w-3xl px-4 pt-6 sm:px-6 lg:px-8">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setPage(1);
+                setActiveSection("notes");
+              }}
+              className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              placeholder="Search your notes…"
+              aria-label="Search notes"
+            />
+          </label>
+          <WorkspaceDashboardSection
+            workspaceInfo={workspaceInfo}
+            hasWorkspace={hasWorkspace}
+            t={t}
+            onGoToSettings={goToSettingsSection}
+          />
+        </div>
       ) : null}
 
       {isSettingsSection ? (
@@ -1913,6 +1948,23 @@ export default function DashboardPage() {
           aria-labelledby="dashboard-tab-settings"
           className="mx-auto max-w-3xl px-4 py-6 sm:px-6 lg:px-8"
         >
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="relative block flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setPage(1);
+                  setActiveSection("notes");
+                }}
+                className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                placeholder="Search your notes…"
+                aria-label="Search notes"
+              />
+            </label>
+          </div>
           <div className="premium-panel p-5">
             <h2 className="text-lg font-semibold text-slate-950">{t("settings")}</h2>
             <p className="mt-1 text-sm text-slate-600">

@@ -18,7 +18,9 @@ export default [
         Headers: "readonly",
         localStorage: "readonly",
         URLSearchParams: "readonly",
-        window: "readonly"
+        window: "readonly",
+        requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly"
       },
       parserOptions: {
         ecmaFeatures: {

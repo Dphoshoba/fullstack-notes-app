@@ -276,7 +276,7 @@ export function NoteForm({
   };
 
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form onSubmit={submit} className="space-y-2">
       <div>
         <label className="text-sm font-medium text-slate-700" htmlFor="noteType">
           {t("noteType")}
@@ -286,7 +286,7 @@ export function NoteForm({
           name="noteType"
           value={values.noteType}
           onChange={updateField}
-          className="premium-input mt-2 h-11 w-full px-3 text-sm"
+          className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
         >
           <option value="standard">{t("standardNote")}</option>
           <option value="meeting">{t("meetingNote")}</option>
@@ -303,7 +303,7 @@ export function NoteForm({
                 name="meetingDate"
                 value={values.meetingDate}
                 onChange={updateField}
-                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                className="mt-1.5 h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               />
             </label>
             <label className="block">
@@ -313,7 +313,7 @@ export function NoteForm({
                 name="followUpDate"
                 value={values.followUpDate}
                 onChange={updateField}
-                className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                className="mt-1.5 h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               />
             </label>
           </div>
@@ -323,7 +323,7 @@ export function NoteForm({
               name="attendees"
               value={values.attendees}
               onChange={updateField}
-              className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              className="mt-1.5 h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               placeholder={t("attendeesHint")}
             />
           </label>
@@ -347,7 +347,7 @@ export function NoteForm({
           value={values.title}
           onChange={updateField}
           required
-          className="premium-input mt-2 h-11 w-full px-3 text-sm"
+          className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
           placeholder={t("title")}
         />
       </div>
@@ -362,7 +362,7 @@ export function NoteForm({
           value={values.body}
           onChange={updateField}
           required
-          rows="5"
+          rows="4"
           className="premium-input mt-2 w-full resize-none px-3 py-3 text-sm"
           placeholder={t("body")}
         />
@@ -378,7 +378,7 @@ export function NoteForm({
           value={hasWorkspace ? values.visibility : "private"}
           onChange={updateField}
           disabled={!hasWorkspace}
-          className="premium-input mt-2 h-11 w-full px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
+          className="premium-input mt-1.5 h-9 w-full px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
         >
           <option value="private">{t("privateNote")}</option>
           <option value="workspace">{t("workspaceNote")}</option>
@@ -398,7 +398,7 @@ export function NoteForm({
           value={values.category}
           onChange={updateField}
           required
-          className="premium-input mt-2 h-11 w-full px-3 text-sm"
+          className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
           placeholder={t("category")}
         />
       </div>
@@ -412,12 +412,12 @@ export function NoteForm({
           name="tags"
           value={values.tags}
           onChange={updateField}
-          className="premium-input mt-2 h-11 w-full px-3 text-sm"
+          className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
           placeholder={t("tags")}
         />
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         <button
           type="button"
           onClick={requestSmartSuggestions}

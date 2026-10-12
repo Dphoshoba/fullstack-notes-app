@@ -934,13 +934,19 @@ function NoteCard({
         ) : (
           <button
             type="button"
-            onClick={() => setActionsOpen(true)}
+            onClick={() => setActionsOpen((current) => !current)}
             className="premium-button inline-flex h-8 w-fit items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
-            aria-expanded={false}
+            aria-expanded={actionsOpen}
             aria-haspopup="menu"
+            aria-label={actionsOpen ? t("hideActions") : t("moreActions")}
+            title={actionsOpen ? t("hideActions") : t("moreActions")}
           >
-            <MoreHorizontal className="h-4 w-4" />
-            {t("moreActions")}
+            {actionsOpen ? (
+              <X className="h-4 w-4" />
+            ) : (
+              <MoreHorizontal className="h-4 w-4" />
+            )}
+            {actionsOpen ? t("hideActions") : t("moreActions")}
           </button>
         )}
       </div>

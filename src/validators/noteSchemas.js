@@ -84,6 +84,13 @@ export const noteIdSchema = Joi.object({
   }).required()
 });
 
+export const noteHistoryIdSchema = Joi.object({
+  params: Joi.object({
+    id: objectId.required(),
+    historyId: objectId.required()
+  }).required()
+});
+
 export const createNoteSchema = Joi.object({
   body: Joi.object({
     title: Joi.string().trim().min(1).max(120).required(),

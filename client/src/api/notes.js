@@ -74,6 +74,18 @@ export async function updateNote(id, input) {
   return data.data;
 }
 
+export async function fetchNoteHistory(id) {
+  const data = await apiRequest(`/api/notes/${id}/history`);
+  return data.data;
+}
+
+export async function restoreNoteHistory(id, historyId) {
+  const data = await apiRequest(`/api/notes/${id}/history/${historyId}/restore`, {
+    method: "POST"
+  });
+  return data.data;
+}
+
 export async function fetchComments(noteId) {
   const data = await apiRequest(`/api/notes/${noteId}/comments`);
   return data.data;

@@ -58,6 +58,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead
 } from "../api/notifications.js";
+import { subscribeToNotifications } from "../api/realtime.js";
 import { fetchUsage, fetchUsers, updateUserRole } from "../api/users.js";
 import { fetchMyWorkspace } from "../api/workspaces.js";
 import { DailyBriefingSection } from "../components/dashboard/DailyBriefingSection.jsx";
@@ -578,10 +579,10 @@ export default function DashboardPage() {
     trackEvent("dashboard_view");
   }, []);
 
-  const addToast = (type, message) => {
+  const addToast = useCallback((type, message) => {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((current) => [...current, { id, type, message }]);
-  };
+  }, []);
 
   const rememberGuideOnboarding = () => {
     localStorage.setItem(GUIDE_ONBOARDING_KEY, "true");
@@ -681,6 +682,22 @@ export default function DashboardPage() {
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return undefined;
+    }
+
+    return subscribeToNotifications({
+      onNotification(notification) {
+        setNotifications((current) => [
+          notification,
+          ...current.filter((item) => item.id !== notification.id)
+        ]);
+        addToast("success", notification.title || t("notification"));
+      }
+    });
+  }, [addToast, t, user?.id]);
 
   const handleMarkNotificationRead = async (notificationId) => {
     setMarkingNotificationId(notificationId);
@@ -795,7 +812,7 @@ export default function DashboardPage() {
       }
     }
     },
-    [categoryFilter, debouncedSearchTerm, favoritesFilter, noteTypeFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
+    [addToast, categoryFilter, debouncedSearchTerm, favoritesFilter, noteTypeFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
   );
 
   useEffect(() => {
@@ -826,7 +843,7 @@ export default function DashboardPage() {
     } finally {
       setUsageLoading(false);
     }
-  }, [t]);
+  }, [addToast, t]);
 
   useEffect(() => {
     loadUsage();
@@ -855,7 +872,7 @@ export default function DashboardPage() {
     };
 
     refreshBilling();
-  }, [loadUsage, t]);
+  }, [addToast, loadUsage, t]);
 
   const handleCreate = async (input) => {
     const note = await createNote(input);
@@ -2729,6 +2746,10 @@ export default function DashboardPage() {
               aiLoadingAction={aiLoadingAction}
               usageLimitReached={usageLimitReached}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
+              onNoteRestored={(note) => {
+                setNotes((current) => current.map((item) => (item.id === note.id ? note : item)));
+                addToast("success", t("noteRestored", { title: note.title }));
+              }}
               onUpdateError={(err) =>
                 addToast(
                   "error",

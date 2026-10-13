@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { Attachment } from "../models/Attachment.js";
 import { Comment } from "../models/Comment.js";
 import { Note } from "../models/Note.js";
+import { NoteHistory } from "../models/NoteHistory.js";
 import { User } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -71,6 +72,28 @@ const normalizeNoteInput = (input, { defaultNoteType } = {}) => {
     meetingMeta: normalizeMeetingMeta(input.meetingMeta)
   };
 };
+
+const historySnapshot = (note) => ({
+  title: note.title,
+  body: note.body,
+  tags: [...(note.tags || [])],
+  category: note.category,
+  noteType: note.noteType || "standard",
+  meetingMeta: note.meetingMeta ? note.meetingMeta.toObject?.() || note.meetingMeta : undefined,
+  visibility: note.visibility || "private",
+  organizationId: note.organizationId || null,
+  pinned: Boolean(note.pinned),
+  starred: Boolean(note.starred),
+  updatedAt: note.updatedAt
+});
+
+const saveNoteHistory = async (note, userId, changeType = "update") =>
+  NoteHistory.create({
+    noteId: note._id,
+    editedBy: userId,
+    changeType,
+    snapshot: historySnapshot(note)
+  });
 
 const buildVisibilityFilter = (user, scope = "all") => {
   const privateFilter = {
@@ -248,9 +271,86 @@ export const updateNote = async (req, res) => {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Create or join a workspace to share notes.");
   }
 
+  await saveNoteHistory(note, req.user.id, "update");
+
   Object.assign(note, normalizeNoteInput(req.body), {
     visibility: nextVisibility,
     organizationId: nextVisibility === "workspace" ? req.user.organizationId : null
+  });
+  await note.save();
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: note
+  });
+};
+
+export const listNoteHistory = async (req, res) => {
+  const note = await Note.findOne({
+    _id: req.params.id,
+    ...buildVisibilityFilter(req.user)
+  });
+
+  if (!note) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
+  }
+
+  const history = await NoteHistory.find({ noteId: note._id })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .populate("editedBy", "name email")
+    .lean();
+
+  return res.status(StatusCodes.OK).json({
+    success: true,
+    data: history.map((item) => {
+      const { _id, ...historyItem } = item;
+      delete historyItem.__v;
+
+      return {
+        ...historyItem,
+        id: _id.toString()
+      };
+    })
+  });
+};
+
+export const restoreNoteHistory = async (req, res) => {
+  const note = await Note.findOne({
+    _id: req.params.id,
+    ...buildVisibilityFilter(req.user)
+  });
+
+  if (!note) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
+  }
+
+  const isOwner = note.owner.toString() === req.user.id;
+
+  if (!isOwner) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "You do not have permission for this note");
+  }
+
+  const history = await NoteHistory.findOne({
+    _id: req.params.historyId,
+    noteId: note._id
+  });
+
+  if (!history) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "History version not found");
+  }
+
+  await saveNoteHistory(note, req.user.id, "restore");
+
+  const snapshot = { ...(history.snapshot?.toObject?.() || history.snapshot || {}) };
+  delete snapshot.updatedAt;
+
+  Object.assign(note, {
+    ...snapshot,
+    organizationId:
+      (snapshot.visibility || "private") === "workspace"
+        ? snapshot.organizationId || req.user.organizationId
+        : null
   });
   await note.save();
 
@@ -280,7 +380,7 @@ export const deleteNote = async (req, res) => {
     throw new ApiError(StatusCodes.FORBIDDEN, "You do not have permission for this note");
   }
 
-  await note.deleteOne();
+  await Promise.all([note.deleteOne(), NoteHistory.deleteMany({ noteId: note._id })]);
 
   return res.status(StatusCodes.NO_CONTENT).send();
 };

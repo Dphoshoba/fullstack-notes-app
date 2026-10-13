@@ -44,6 +44,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: false,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//],
@@ -91,5 +94,18 @@ export default defineConfig({
   ],
   server: {
     port: 5173
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          query: ["@tanstack/react-query"],
+          icons: ["lucide-react"],
+          capacitor: ["@capacitor/core"],
+          realtime: ["socket.io-client"]
+        }
+      }
+    }
   }
 });

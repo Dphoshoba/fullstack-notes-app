@@ -4,7 +4,9 @@ import {
   createNote,
   deleteNote,
   getNote,
+  listNoteHistory,
   listNotes,
+  restoreNoteHistory,
   updateNote
 } from "../controllers/noteController.js";
 import { createComment, listComments } from "../controllers/commentController.js";
@@ -17,6 +19,7 @@ import { validate } from "../middleware/validate.js";
 import {
   createNoteSchema,
   listNotesSchema,
+  noteHistoryIdSchema,
   noteIdSchema,
   updateNoteSchema
 } from "../validators/noteSchemas.js";
@@ -40,6 +43,8 @@ router.post(
   uploadAttachment.single("file"),
   asyncHandler(createAttachment)
 );
+router.get("/:id/history", validate(noteIdSchema), asyncHandler(listNoteHistory));
+router.post("/:id/history/:historyId/restore", validate(noteHistoryIdSchema), asyncHandler(restoreNoteHistory));
 router.get("/:id", validate(noteIdSchema), asyncHandler(getNote));
 router.put("/:id", validate(updateNoteSchema), asyncHandler(updateNote));
 router.patch("/:id", validate(updateNoteSchema), asyncHandler(updateNote));

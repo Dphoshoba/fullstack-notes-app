@@ -4,7 +4,7 @@ import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   {
-    ignores: ["android/**", "dist/**", "node_modules/**"]
+    ignores: ["android/**", "dist/**", "ios/App/App/public/**", "node_modules/**"]
   },
   js.configs.recommended,
   {

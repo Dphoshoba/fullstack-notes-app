@@ -1,4 +1,4 @@
-import { Copy, Loader2, Mail, Plus, Save, Settings, Users } from "lucide-react";
+import { CheckCircle2, Copy, Loader2, Mail, Mic, Plus, Save, Settings, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -33,6 +33,11 @@ export default function SettingsPage() {
   const [inviteSaving, setInviteSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [microphoneStatus, setMicrophoneStatus] = useState({
+    checking: false,
+    tone: "idle",
+    message: ""
+  });
 
   const canManageMembers = ["owner", "manager"].includes(workspaceInfo.role);
   const hasWorkspace = Boolean(workspaceInfo.workspace);
@@ -167,6 +172,56 @@ export default function SettingsPage() {
     setMessage(t("inviteLinkCopied"));
   };
 
+  const checkMicrophoneAccess = async () => {
+    setMicrophoneStatus({ checking: true, tone: "idle", message: "" });
+    const isNativeCapacitor = Boolean(window.Capacitor?.isNativePlatform?.());
+
+    if (!window.isSecureContext && !isNativeCapacitor) {
+      setMicrophoneStatus({
+        checking: false,
+        tone: "error",
+        message: t("microphoneRequiresHttps")
+      });
+      return;
+    }
+
+    if (!window.navigator.mediaDevices?.getUserMedia) {
+      setMicrophoneStatus({
+        checking: false,
+        tone: "error",
+        message: t("microphoneUnsupported")
+      });
+      return;
+    }
+
+    try {
+      const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMicrophoneStatus({
+        checking: false,
+        tone: "success",
+        message: t("microphoneGranted")
+      });
+    } catch (err) {
+      const errorName = err?.name || "";
+      let message = t("microphoneBlocked");
+
+      if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
+        message = t("microphoneNotFound");
+      } else if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
+        message = t("microphonePermissionDenied");
+      } else if (errorName === "NotReadableError" || errorName === "TrackStartError") {
+        message = t("microphoneInUse");
+      }
+
+      setMicrophoneStatus({
+        checking: false,
+        tone: "error",
+        message
+      });
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
@@ -251,6 +306,49 @@ export default function SettingsPage() {
                   {t("save")}
                 </button>
               </form>
+
+              <div className="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-md bg-white p-2 text-emerald-700 shadow-sm shadow-slate-950/5">
+                    <Mic className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-slate-950">{t("microphoneAccess")}</h3>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">{t("microphoneAccessDescription")}</p>
+                    <button
+                      type="button"
+                      onClick={checkMicrophoneAccess}
+                      disabled={microphoneStatus.checking}
+                      className="premium-button mt-3 inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/5 transition hover:bg-slate-50 disabled:opacity-60"
+                    >
+                      {microphoneStatus.checking ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : microphoneStatus.tone === "success" ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+                      ) : (
+                        <Mic className="h-4 w-4" />
+                      )}
+                      {t("checkMicrophone")}
+                    </button>
+                    {microphoneStatus.message ? (
+                      <p
+                        className={`mt-3 rounded-md border px-3 py-2 text-sm font-medium ${
+                          microphoneStatus.tone === "success"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-amber-200 bg-amber-50 text-amber-800"
+                        }`}
+                      >
+                        {microphoneStatus.message}
+                      </p>
+                    ) : null}
+                    <ul className="mt-3 space-y-1 text-xs leading-5 text-slate-500">
+                      <li>{t("microphoneHelpIos")}</li>
+                      <li>{t("microphoneHelpAndroid")}</li>
+                      <li>{t("microphoneHelpBrowser")}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </section>
 
             <section className="premium-panel p-5">

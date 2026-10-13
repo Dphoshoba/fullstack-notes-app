@@ -22,7 +22,7 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!("mediaRecorder" in window) || !navigator.mediaDevices?.getUserMedia) {
+    if (!window.MediaRecorder || !window.navigator.mediaDevices?.getUserMedia) {
       setSupported(false);
     }
   }, []);
@@ -43,7 +43,12 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
     elapsedRef.current = 0;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      if (!window.MediaRecorder || !window.navigator.mediaDevices?.getUserMedia) {
+        setSupported(false);
+        return;
+      }
+
+      const stream = await window.navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true }
       });
       streamRef.current = stream;
@@ -161,7 +166,7 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
         // Silence detection is best-effort; recording still works without it.
       }
     } catch (err) {
-      if (err?.name === "NotAllowed" || err?.name === "PermissionDeniedError") {
+      if (err?.name === "NotAllowedError" || err?.name === "NotAllowed" || err?.name === "PermissionDeniedError") {
         setError(t("micPermissionDenied") || "Microphone access was denied. Please allow it in your browser settings.");
       } else {
         setError(t("micUnavailable") || "Could not access the microphone. Try again.");

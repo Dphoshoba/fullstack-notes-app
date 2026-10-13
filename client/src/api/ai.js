@@ -122,7 +122,16 @@ export async function generateMeetingIntelligence({ noteId, content }) {
 
 export async function transcribeAudio(audioBlob, options = {}) {
   const formData = new FormData();
-  const filename = `voice-${Date.now()}.webm`;
+  const extensionByType = {
+    "audio/mp4": "m4a",
+    "audio/mpeg": "mp3",
+    "audio/ogg": "ogg",
+    "audio/wav": "wav",
+    "audio/webm": "webm"
+  };
+  const baseType = String(audioBlob?.type || "").split(";")[0];
+  const extension = extensionByType[baseType] || "webm";
+  const filename = `voice-${Date.now()}.${extension}`;
   formData.append("audio", audioBlob, filename);
 
   const language = String(options.language || "").trim();

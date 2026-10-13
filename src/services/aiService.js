@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 import { StatusCodes } from "http-status-codes";
 import OpenAI, { toFile } from "openai";
 
@@ -87,6 +89,30 @@ const getClient = () => {
   return client;
 };
 
+const createSilentWavBuffer = ({ durationSeconds = 1, sampleRate = 16000 } = {}) => {
+  const channels = 1;
+  const bytesPerSample = 2;
+  const sampleCount = Math.max(1, Math.floor(durationSeconds * sampleRate));
+  const dataSize = sampleCount * channels * bytesPerSample;
+  const buffer = Buffer.alloc(44 + dataSize);
+
+  buffer.write("RIFF", 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write("WAVE", 8);
+  buffer.write("fmt ", 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(channels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * channels * bytesPerSample, 28);
+  buffer.writeUInt16LE(channels * bytesPerSample, 32);
+  buffer.writeUInt16LE(bytesPerSample * 8, 34);
+  buffer.write("data", 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  return buffer;
+};
+
 const truncateInput = (value, maxLength = 12000) => String(value || "").slice(0, maxLength);
 
 const cleanStringArray = (items, maxItems) =>
@@ -136,7 +162,52 @@ const runTextPrompt = async ({ system, user, maxCompletionTokens = 700 }) => {
       message: String(error?.message || "unknown").slice(0, 300)
     });
 
-    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+    const apiError = new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+    apiError.details = {
+      provider: "openai",
+      status: error?.status || null,
+      code: error?.code || null,
+      type: error?.type || null
+    };
+    throw apiError;
+  }
+};
+
+export const checkOpenAiTranscription = async () => {
+  const apiKeyConfigured = Boolean(env.OPENAI_API_KEY);
+
+  if (!apiKeyConfigured) {
+    return {
+      success: false,
+      apiKeyConfigured,
+      message: "OPENAI_API_KEY is missing"
+    };
+  }
+
+  try {
+    const text = await transcribeAudio(createSilentWavBuffer(), {
+      filename: "openai-transcription-test.wav",
+      mimeType: "audio/wav",
+      prompt: "This is a connection test. Return empty text if there is no speech."
+    });
+
+    return {
+      success: true,
+      apiKeyConfigured,
+      message: "OpenAI transcription request succeeded",
+      textLength: text.length
+    };
+  } catch (error) {
+    return {
+      success: false,
+      apiKeyConfigured,
+      message: error.message || AI_UNAVAILABLE_MESSAGE,
+      details: error.details || {
+        status: error?.statusCode || error?.status || null,
+        code: error?.code || null,
+        type: error?.type || null
+      }
+    };
   }
 };
 
@@ -1171,9 +1242,17 @@ export const transcribeAudio = async (audioBuffer, options = {}) => {
     safeLog("error", "Whisper transcription failed", {
       status: error?.status,
       code: error?.code,
+      type: error?.type,
       message: String(error?.message || "unknown").slice(0, 300)
     });
 
-    throw new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+    const apiError = new ApiError(StatusCodes.BAD_GATEWAY, AI_UNAVAILABLE_MESSAGE);
+    apiError.details = {
+      provider: "openai",
+      status: error?.status || null,
+      code: error?.code || null,
+      type: error?.type || null
+    };
+    throw apiError;
   }
 };

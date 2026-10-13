@@ -3,6 +3,7 @@ import { Router } from "express";
 import { env } from "../config/env.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
+import { checkOpenAiTranscription } from "../services/aiService.js";
 import { sendEmail } from "../services/emailService.js";
 
 const router = Router();
@@ -55,6 +56,25 @@ router.post(
         error: error.message
       });
     }
+  })
+);
+
+router.post(
+  "/openai-transcription-status",
+  logAuthHeader,
+  authenticate,
+  logAuthenticatedUser,
+  asyncHandler(async (_req, res) => {
+    console.log("OPENAI_API_KEY exists:", Boolean(env.OPENAI_API_KEY));
+
+    const status = await checkOpenAiTranscription();
+    console.log("OpenAI transcription status:", {
+      success: status.success,
+      apiKeyConfigured: status.apiKeyConfigured,
+      details: status.details || null
+    });
+
+    return res.status(status.success ? 200 : 502).json(status);
   })
 );
 

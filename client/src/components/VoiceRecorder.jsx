@@ -11,8 +11,10 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
   const streamRef = useRef(null);
   const timerRef = useRef(null);
   const silenceRef = useRef(0);
+  const silenceStartedAtRef = useRef(null);
   const silenceRafRef = useRef(null);
   const audioContextRef = useRef(null);
+  const recordingStartedAtRef = useRef(0);
 
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -40,7 +42,9 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
     setError("");
     setElapsed(0);
     silenceRef.current = 0;
+    silenceStartedAtRef.current = null;
     elapsedRef.current = 0;
+    recordingStartedAtRef.current = window.performance?.now?.() || Date.now();
 
     try {
       if (!window.MediaRecorder || !window.navigator.mediaDevices?.getUserMedia) {
@@ -49,7 +53,12 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
       }
 
       const stream = await window.navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true }
+        audio: {
+          autoGainControl: true,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       });
       streamRef.current = stream;
       chunksRef.current = [];
@@ -78,7 +87,7 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
           timerRef.current = null;
         }
         if (silenceRafRef.current) {
-          cancelAnimationFrame(silenceRafRef.current);
+          window.cancelAnimationFrame(silenceRafRef.current);
           silenceRafRef.current = null;
         }
         if (audioContextRef.current) {
@@ -110,7 +119,11 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
       setRecording(true);
 
       timerRef.current = setInterval(() => {
-        setElapsed((current) => current + 1);
+        setElapsed((current) => {
+          const next = current + 1;
+          elapsedRef.current = next;
+          return next;
+        });
       }, 1000);
 
       // Silence detection via Web Audio API analyser
@@ -126,14 +139,18 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
           source.connect(analyser);
 
           const data = new Uint8Array(analyser.frequencyBinCount);
-          const SILENCE_THRESHOLD = 12; // RMS floor for "silent"
-          const SILENCE_SECONDS = 2.5; // consecutive silence before auto-stop
+          const SILENCE_THRESHOLD = 5; // lower floor so softer voices count as speech
+          const SILENCE_SECONDS = 4; // consecutive silence before auto-stop
+          const MIN_RECORDING_SECONDS = 3; // avoid stopping before the user starts speaking
           const MAX_DURATION = 180; // hard cap (3 min) to avoid runaway recordings
 
           const sample = () => {
             if (!mediaRecorderRef.current || mediaRecorderRef.current.state === "inactive") {
               return;
             }
+
+            const now = window.performance?.now?.() || Date.now();
+            const elapsedSeconds = (now - recordingStartedAtRef.current) / 1000;
             analyser.getByteTimeDomainData(data);
             let sum = 0;
             for (let i = 0; i < data.length; i++) {
@@ -144,23 +161,29 @@ export function VoiceRecorder({ onTranscript, language = "", prompt = "", disabl
 
             if (rms < SILENCE_THRESHOLD) {
               silenceRef.current += 1;
+              silenceStartedAtRef.current ??= now;
             } else {
               silenceRef.current = 0;
+              silenceStartedAtRef.current = null;
             }
 
-            if (silenceRef.current >= SILENCE_SECONDS * 10) {
+            const silentSeconds = silenceStartedAtRef.current
+              ? (now - silenceStartedAtRef.current) / 1000
+              : 0;
+
+            if (elapsedSeconds >= MIN_RECORDING_SECONDS && silentSeconds >= SILENCE_SECONDS) {
               stopRecording();
               return;
             }
-            if (elapsedRef.current >= MAX_DURATION) {
+            if (elapsedSeconds >= MAX_DURATION) {
               stopRecording();
               return;
             }
 
-            silenceRafRef.current = requestAnimationFrame(sample);
+            silenceRafRef.current = window.requestAnimationFrame(sample);
           };
 
-          silenceRafRef.current = requestAnimationFrame(sample);
+          silenceRafRef.current = window.requestAnimationFrame(sample);
         }
       } catch {
         // Silence detection is best-effort; recording still works without it.

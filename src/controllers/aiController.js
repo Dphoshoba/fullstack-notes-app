@@ -1024,7 +1024,12 @@ export const transcribeAudioNote = async (req, res) => {
   const language = String(req.body?.language || "").trim().slice(0, 5);
   const prompt = String(req.body?.prompt || "").trim().slice(0, 500);
 
-  const text = await transcribeAudio(file.buffer, { language, prompt });
+  const text = await transcribeAudio(file.buffer, {
+    filename: file.originalname,
+    language,
+    mimeType: file.mimetype,
+    prompt
+  });
 
   return res.status(StatusCodes.OK).json({
     success: true,

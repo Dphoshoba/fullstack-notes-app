@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
 
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -1148,10 +1148,13 @@ export const transcribeAudio = async (audioBuffer, options = {}) => {
 
   const language = String(options.language || "").trim().slice(0, 5);
   const prompt = String(options.prompt || "").trim().slice(0, 500);
+  const filename = String(options.filename || "voice.webm").trim() || "voice.webm";
+  const mimeType = String(options.mimeType || "audio/webm").trim() || "audio/webm";
 
   try {
+    const audioFile = await toFile(audioBuffer, filename, { type: mimeType });
     const response = await getClient().audio.transcriptions.create({
-      file: audioBuffer,
+      file: audioFile,
       model: "whisper-1",
       ...(language ? { language } : {}),
       ...(prompt ? { prompt } : {}),

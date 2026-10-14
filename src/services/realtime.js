@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 
+import { isAllowedOrigin } from "../config/allowedOrigins.js";
 import { User } from "../models/User.js";
 import { verifyAccessToken } from "../utils/tokens.js";
 
@@ -8,7 +9,13 @@ let io = null;
 export const initRealtime = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_ORIGIN?.split(",") || ["http://localhost:5173"],
+      origin(origin, callback) {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       credentials: true
     }
   });

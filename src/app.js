@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 
+import { isAllowedOrigin } from "./config/allowedOrigins.js";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFound } from "./middleware/notFound.js";
@@ -25,7 +26,6 @@ import workspaceRoutes from "./routes/workspaceRoutes.js";
 import { getMetricsText } from "./services/metrics.js";
 
 const app = express();
-const allowedOrigins = env.CLIENT_ORIGIN.split(",");
 
 app.set("trust proxy", 1);
 
@@ -49,7 +49,7 @@ app.use(helmet({
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

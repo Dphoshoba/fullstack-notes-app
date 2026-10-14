@@ -3,18 +3,45 @@ import { API_BASE_URL } from "../config.js";
 const TOKEN_KEY = "notes_api_access_token";
 export const AUTH_EXPIRED_EVENT = "notes_api_auth_expired";
 let refreshPromise = null;
+let authExpired = false;
 
 export const tokenStorage = {
   get() {
     return localStorage.getItem(TOKEN_KEY);
   },
   set(token) {
+    authExpired = false;
     localStorage.setItem(TOKEN_KEY, token);
   },
   clear() {
     localStorage.removeItem(TOKEN_KEY);
   }
 };
+
+function isAuthEndpoint(path) {
+  return (
+    path === "/api/auth/login" ||
+    path === "/api/auth/logout" ||
+    path === "/api/auth/register" ||
+    path === "/api/auth/refresh"
+  );
+}
+
+function createAuthExpiredError() {
+  const error = new Error("Please log in again.");
+  error.status = 401;
+  error.code = "AUTH_EXPIRED";
+  return error;
+}
+
+function expireSession() {
+  tokenStorage.clear();
+
+  if (!authExpired) {
+    authExpired = true;
+    window.dispatchEvent(new window.CustomEvent(AUTH_EXPIRED_EVENT));
+  }
+}
 
 async function refreshAccessToken() {
   if (!refreshPromise) {
@@ -63,18 +90,22 @@ async function sendRequest(path, options, token) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const isAuthEndpoint =
-    path === "/api/auth/login" || path === "/api/auth/register" || path === "/api/auth/refresh";
+  const authEndpoint = isAuthEndpoint(path);
+
+  if (authExpired && !authEndpoint) {
+    throw createAuthExpiredError();
+  }
+
   let token = tokenStorage.get();
   let response = await sendRequest(path, options, token);
 
-  if (response.status === 401 && token && !isAuthEndpoint) {
+  if (response.status === 401 && token && !authEndpoint) {
     try {
       token = await refreshAccessToken();
       response = await sendRequest(path, options, token);
     } catch {
-      tokenStorage.clear();
-      window.dispatchEvent(new window.CustomEvent(AUTH_EXPIRED_EVENT));
+      expireSession();
+      throw createAuthExpiredError();
     }
   }
 
@@ -85,11 +116,10 @@ export async function apiRequest(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const isExpiredSession = response.status === 401 && !isAuthEndpoint;
+    const isExpiredSession = response.status === 401 && !authEndpoint;
 
     if (isExpiredSession) {
-      tokenStorage.clear();
-      window.dispatchEvent(new window.CustomEvent(AUTH_EXPIRED_EVENT));
+      expireSession();
     }
 
     const message = isExpiredSession ? "Please log in again." : payload.message || "Something went wrong";

@@ -132,6 +132,12 @@ const endOfDay = (value = new Date()) => {
   return date;
 };
 
+const addDays = (value, days) => {
+  const date = new Date(value);
+  date.setDate(date.getDate() + days);
+  return date;
+};
+
 const getActionDueAt = (note) => {
   if (!note.dueDate) {
     return null;
@@ -239,6 +245,29 @@ const buildActionNoteFilters = (filter) => {
 
   if (filter === "done") {
     return { actionStatus: "done" };
+  }
+
+  return {};
+};
+
+const buildAgendaDateRange = (filter) => {
+  const today = new Date();
+
+  if (filter === "today") {
+    const todayParam = formatDateParam(today);
+    return { dueFrom: todayParam, dueTo: todayParam };
+  }
+
+  if (filter === "tomorrow") {
+    const tomorrowParam = formatDateParam(addDays(today, 1));
+    return { dueFrom: tomorrowParam, dueTo: tomorrowParam };
+  }
+
+  if (filter === "next7") {
+    return {
+      dueFrom: formatDateParam(today),
+      dueTo: formatDateParam(addDays(today, 6))
+    };
   }
 
   return {};
@@ -529,9 +558,11 @@ function ActionCalendarSection({
   error,
   searchTerm,
   statusFilter,
+  dateFilter,
   markingId,
   onSearchChange,
   onStatusFilterChange,
+  onDateFilterChange,
   onRefresh,
   onUpdateStatus,
   onOpenNote,
@@ -539,6 +570,12 @@ function ActionCalendarSection({
   t
 }) {
   const groups = groupAgendaNotes(notes);
+  const dateFilters = [
+    ["all", t("allDates")],
+    ["today", t("dueToday")],
+    ["tomorrow", t("tomorrow")],
+    ["next7", t("next7Days")]
+  ];
   const summary = {
     total: notes.length,
     active: notes.filter((note) => note.actionStatus !== "done").length,
@@ -608,6 +645,27 @@ function ActionCalendarSection({
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           </label>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2" aria-label={t("dateRange")}>
+          {dateFilters.map(([value, label]) => {
+            const active = dateFilter === value;
+
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onDateFilterChange(value)}
+                className={`inline-flex min-h-9 items-center justify-center rounded-md border px-3 text-xs font-semibold transition ${
+                  active
+                    ? "border-emerald-700 bg-emerald-700 text-white shadow-sm shadow-emerald-950/10"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -761,6 +819,7 @@ export default function DashboardPage() {
   const [agendaSearchTerm, setAgendaSearchTerm] = useState("");
   const [debouncedAgendaSearchTerm, setDebouncedAgendaSearchTerm] = useState("");
   const [agendaStatusFilter, setAgendaStatusFilter] = useState("");
+  const [agendaDateFilter, setAgendaDateFilter] = useState("all");
   const [markingAgendaNoteId, setMarkingAgendaNoteId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1319,12 +1378,15 @@ export default function DashboardPage() {
     setAgendaError("");
 
     try {
+      const dateRange = buildAgendaDateRange(agendaDateFilter);
       const result = await fetchNotes({
         page: 1,
         limit: 100,
         search: debouncedAgendaSearchTerm,
         hasDueDate: true,
         actionStatus: agendaStatusFilter,
+        dueFrom: dateRange.dueFrom,
+        dueTo: dateRange.dueTo,
         scope: "all"
       });
       setAgendaNotes(result.notes || []);
@@ -1334,7 +1396,7 @@ export default function DashboardPage() {
     } finally {
       setAgendaLoading(false);
     }
-  }, [addToast, agendaStatusFilter, debouncedAgendaSearchTerm, isCalendarSection, t]);
+  }, [addToast, agendaDateFilter, agendaStatusFilter, debouncedAgendaSearchTerm, isCalendarSection, t]);
 
   useEffect(() => {
     loadAgendaNotes();
@@ -2281,9 +2343,11 @@ export default function DashboardPage() {
           error={agendaError}
           searchTerm={agendaSearchTerm}
           statusFilter={agendaStatusFilter}
+          dateFilter={agendaDateFilter}
           markingId={markingAgendaNoteId}
           onSearchChange={setAgendaSearchTerm}
           onStatusFilterChange={setAgendaStatusFilter}
+          onDateFilterChange={setAgendaDateFilter}
           onRefresh={loadAgendaNotes}
           onUpdateStatus={updateAgendaNoteStatus}
           onOpenNote={openNoteTarget}

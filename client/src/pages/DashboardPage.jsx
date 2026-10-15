@@ -408,7 +408,7 @@ function AgendaSummaryCard({ label, value, description, tone = "slate" }) {
   );
 }
 
-function AgendaNoteCard({ note, markingId, onUpdateStatus, t }) {
+function AgendaNoteCard({ note, markingId, onUpdateStatus, onOpenNote, t }) {
   const status = note.actionStatus || "open";
   const done = status === "done";
   const updating = markingId === note.id;
@@ -417,7 +417,13 @@ function AgendaNoteCard({ note, markingId, onUpdateStatus, t }) {
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm shadow-slate-950/[0.03]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h4 className="truncate text-sm font-semibold text-slate-950">{note.title}</h4>
+          <button
+            type="button"
+            onClick={() => onOpenNote(note.id)}
+            className="block max-w-full truncate text-left text-sm font-semibold text-slate-950 hover:text-emerald-700"
+          >
+            {note.title}
+          </button>
           <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
             <CalendarDays className="h-3.5 w-3.5" />
             {formatAgendaDate(note)}
@@ -483,7 +489,7 @@ function AgendaNoteCard({ note, markingId, onUpdateStatus, t }) {
   );
 }
 
-function AgendaGroup({ title, description, notes, tone = "slate", markingId, onUpdateStatus, t }) {
+function AgendaGroup({ title, description, notes, tone = "slate", markingId, onUpdateStatus, onOpenNote, t }) {
   const toneClass = {
     red: "border-red-200 bg-red-50/70 text-red-900",
     blue: "border-blue-200 bg-blue-50/70 text-blue-900",
@@ -505,7 +511,7 @@ function AgendaGroup({ title, description, notes, tone = "slate", markingId, onU
       {notes.length ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {notes.map((note) => (
-            <AgendaNoteCard key={note.id} note={note} markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
+            <AgendaNoteCard key={note.id} note={note} markingId={markingId} onUpdateStatus={onUpdateStatus} onOpenNote={onOpenNote} t={t} />
           ))}
         </div>
       ) : (
@@ -528,6 +534,7 @@ function ActionCalendarSection({
   onStatusFilterChange,
   onRefresh,
   onUpdateStatus,
+  onOpenNote,
   onCreateActionNote,
   t
 }) {
@@ -647,11 +654,11 @@ function ActionCalendarSection({
 
       {!loading && notes.length ? (
         <div className="mt-5 space-y-4">
-          <AgendaGroup title={t("overdue")} description={t("overdueDescription")} notes={groups.overdue} tone="red" markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
-          <AgendaGroup title={t("dueToday")} description={t("dueTodayDescription")} notes={groups.today} tone="blue" markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
-          <AgendaGroup title={t("dueThisWeek")} description={t("dueThisWeekDescription")} notes={groups.week} tone="emerald" markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
-          <AgendaGroup title={t("upcoming")} description={t("upcomingDescription")} notes={groups.upcoming} markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
-          <AgendaGroup title={t("done")} description={t("doneDescription")} notes={groups.done} markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
+          <AgendaGroup title={t("overdue")} description={t("overdueDescription")} notes={groups.overdue} tone="red" markingId={markingId} onUpdateStatus={onUpdateStatus} onOpenNote={onOpenNote} t={t} />
+          <AgendaGroup title={t("dueToday")} description={t("dueTodayDescription")} notes={groups.today} tone="blue" markingId={markingId} onUpdateStatus={onUpdateStatus} onOpenNote={onOpenNote} t={t} />
+          <AgendaGroup title={t("dueThisWeek")} description={t("dueThisWeekDescription")} notes={groups.week} tone="emerald" markingId={markingId} onUpdateStatus={onUpdateStatus} onOpenNote={onOpenNote} t={t} />
+          <AgendaGroup title={t("upcoming")} description={t("upcomingDescription")} notes={groups.upcoming} markingId={markingId} onUpdateStatus={onUpdateStatus} onOpenNote={onOpenNote} t={t} />
+          <AgendaGroup title={t("done")} description={t("doneDescription")} notes={groups.done} markingId={markingId} onUpdateStatus={onUpdateStatus} onOpenNote={onOpenNote} t={t} />
         </div>
       ) : null}
     </section>
@@ -738,6 +745,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get("section");
+  const targetNoteId = searchParams.get("note") || "";
   const activeSection = normalizeDashboardSection(sectionParam);
   const isHomeSection = activeSection === "home";
   const isNotesSection = activeSection === "notes";
@@ -830,6 +838,7 @@ export default function DashboardPage() {
   const [workspaceInfo, setWorkspaceInfo] = useState({ workspace: null, role: "staff" });
   const notesRequestIdRef = useRef(0);
   const createNoteRef = useRef(null);
+  const shownReminderNoteIdsRef = useRef(new Set());
 
   const setActiveSection = useCallback(
     (section) => {
@@ -844,6 +853,33 @@ export default function DashboardPage() {
       });
     },
     [setSearchParams]
+  );
+
+  const setTargetNote = useCallback(
+    (noteId) => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        if (noteId) {
+          next.set("section", "notes");
+          next.set("note", noteId);
+        } else {
+          next.delete("note");
+        }
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+
+  const openNoteTarget = useCallback(
+    (noteId) => {
+      if (!noteId) {
+        return;
+      }
+
+      setTargetNote(noteId);
+    },
+    [setTargetNote]
   );
 
   const goToSettingsSection = useCallback(() => {
@@ -898,6 +934,19 @@ export default function DashboardPage() {
         exportActionItems(note.meetingMeta?.actionItems).length
     )
     .sort((a, b) => noteTimestamp(b) - noteTimestamp(a));
+  const homeActionNotes = [...notes]
+    .filter((note) => note.dueDate && note.actionStatus !== "done")
+    .sort((a, b) => (getActionDueAt(a)?.getTime() || 0) - (getActionDueAt(b)?.getTime() || 0));
+  const homeActionGroups = groupAgendaNotes(homeActionNotes);
+  const reminderActionNotes = notes
+    .filter((note) => {
+      if (!note.reminderAt || note.actionStatus === "done") {
+        return false;
+      }
+
+      return new Date(note.reminderAt).getTime() <= Date.now();
+    })
+    .slice(0, 3);
   const commandCenterActionItems = recentMeetingNotes
     .flatMap((note) => exportActionItems(note.meetingMeta?.actionItems))
     .map((item) => item.text)
@@ -999,6 +1048,17 @@ export default function DashboardPage() {
     const id = `${Date.now()}-${Math.random()}`;
     setToasts((current) => [...current, { id, type, message }]);
   }, []);
+
+  useEffect(() => {
+    for (const note of reminderActionNotes) {
+      if (shownReminderNoteIdsRef.current.has(note.id)) {
+        continue;
+      }
+
+      shownReminderNoteIdsRef.current.add(note.id);
+      addToast("success", t("actionReminderDue", { title: note.title }));
+    }
+  }, [addToast, reminderActionNotes, t]);
 
   const rememberGuideOnboarding = () => {
     localStorage.setItem(GUIDE_ONBOARDING_KEY, "true");
@@ -2018,6 +2078,19 @@ export default function DashboardPage() {
                               <p className="mt-1 text-xs text-slate-500">
                                 {new Date(notification.createdAt).toLocaleString()}
                               </p>
+                              {notification.metadata?.noteId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setNotificationsOpen(false);
+                                    openNoteTarget(notification.metadata.noteId);
+                                  }}
+                                  className="mt-2 mr-2 inline-flex min-h-9 items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  {t("openNote")}
+                                </button>
+                              ) : null}
                               {!notification.read ? (
                                 <button
                                   type="button"
@@ -2213,6 +2286,7 @@ export default function DashboardPage() {
           onStatusFilterChange={setAgendaStatusFilter}
           onRefresh={loadAgendaNotes}
           onUpdateStatus={updateAgendaNoteStatus}
+          onOpenNote={openNoteTarget}
           onCreateActionNote={createActionNoteFromCalendar}
           t={t}
         />
@@ -2328,6 +2402,85 @@ export default function DashboardPage() {
           <DailyBriefingSection />
 
           <section className="premium-panel p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">{t("actionNotesOverview")}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t("actionNotesOverviewDescription")}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSection("calendar")}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                <CalendarDays className="h-4 w-4" />
+                {t("calendar")}
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-700">{t("overdue")}</p>
+                <p className="mt-2 text-2xl font-bold text-red-900">{homeActionGroups.overdue.length}</p>
+              </div>
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{t("dueToday")}</p>
+                <p className="mt-2 text-2xl font-bold text-emerald-900">{homeActionGroups.today.length}</p>
+              </div>
+              <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{t("upcoming")}</p>
+                <p className="mt-2 text-2xl font-bold text-blue-900">
+                  {homeActionGroups.week.length + homeActionGroups.upcoming.length}
+                </p>
+              </div>
+            </div>
+
+            {reminderActionNotes.length ? (
+              <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-semibold text-amber-900">{t("remindersDue")}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {reminderActionNotes.map((note) => (
+                    <button
+                      key={note.id}
+                      type="button"
+                      onClick={() => openNoteTarget(note.id)}
+                      className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 transition hover:bg-amber-100"
+                    >
+                      {note.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {homeActionNotes.length ? (
+              <ul className="mt-4 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+                {homeActionNotes.slice(0, 5).map((note) => (
+                  <li key={note.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      onClick={() => openNoteTarget(note.id)}
+                      className="min-w-0 text-left"
+                    >
+                      <span className="block truncate text-sm font-semibold text-slate-900">{note.title}</span>
+                      <span className="mt-1 block text-xs text-slate-500">{formatAgendaDate(note)}</span>
+                    </button>
+                    <span className="w-fit rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+                      {actionStatusLabel(note.actionStatus || "open", t)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <SectionEmptyState
+                title={t("noActionNotesInGroup")}
+                description={t("emptyCalendarDescription")}
+                actionLabel={t("createActionNote")}
+                onAction={createActionNoteFromCalendar}
+              />
+            )}
+          </section>
+
+          <section className="premium-panel p-4 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-slate-950">AI Insights</h2>
@@ -2401,8 +2554,14 @@ export default function DashboardPage() {
               <ul className="mt-4 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
                 {recentNotesPreview.map((note) => (
                   <li key={note.id} className="px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">{note.title}</p>
-                    <p className="mt-1 line-clamp-1 text-xs text-slate-500">{note.body}</p>
+                    <button
+                      type="button"
+                      onClick={() => openNoteTarget(note.id)}
+                      className="block w-full text-left"
+                    >
+                      <span className="block text-sm font-semibold text-slate-900 hover:text-emerald-700">{note.title}</span>
+                      <span className="mt-1 block line-clamp-1 text-xs text-slate-500">{note.body}</span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -3327,6 +3486,8 @@ export default function DashboardPage() {
               onRunAiAction={runAiAction}
               aiLoadingAction={aiLoadingAction}
               usageLimitReached={usageLimitReached}
+              targetNoteId={targetNoteId}
+              onTargetNoteChange={setTargetNote}
               onUpdateSuccess={(note) => addToast("success", t("updated", { title: note.title }))}
               onNoteRestored={(note) => {
                 setNotes((current) => current.map((item) => (item.id === note.id ? note : item)));

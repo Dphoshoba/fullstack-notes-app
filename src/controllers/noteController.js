@@ -311,15 +311,24 @@ export const getNote = async (req, res) => {
   const note = await Note.findOne({
     _id: req.params.id,
     ...buildVisibilityFilter(req.user)
-  });
+  }).lean();
 
   if (!note) {
     throw new ApiError(StatusCodes.NOT_FOUND, "Note not found");
   }
 
+  const [commentsCount, attachmentsCount] = await Promise.all([
+    Comment.countDocuments({ noteId: note._id }),
+    Attachment.countDocuments({ noteId: note._id })
+  ]);
+
   return res.status(StatusCodes.OK).json({
     success: true,
-    data: note
+    data: {
+      ...serializeNote(note),
+      commentsCount,
+      attachmentsCount
+    }
   });
 };
 

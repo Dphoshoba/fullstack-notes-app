@@ -85,6 +85,11 @@ export async function createNote(input) {
   return data.data;
 }
 
+export async function fetchNote(id) {
+  const data = await apiRequest(`/api/notes/${id}`);
+  return data.data;
+}
+
 export async function deleteNote(id) {
   await apiRequest(`/api/notes/${id}`, {
     method: "DELETE"

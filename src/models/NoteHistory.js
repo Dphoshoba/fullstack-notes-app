@@ -40,10 +40,11 @@ const noteHistorySchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform: (_doc, ret) => {
-        ret.id = String(ret._id);
-        delete ret._id;
-        delete ret.__v;
-        return ret;
+        const output = /** @type {Record<string, any>} */ (ret);
+        output.id = String(output._id);
+        delete output._id;
+        delete output.__v;
+        return output;
       }
     }
   }

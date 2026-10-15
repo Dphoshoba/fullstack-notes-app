@@ -6,6 +6,7 @@ import { Organization } from "../models/Organization.js";
 import { User } from "../models/User.js";
 import { WorkspaceInvite } from "../models/WorkspaceInvite.js";
 import { sendWorkspaceInviteEmail } from "../services/emailService.js";
+import { logger } from "../services/logger.js";
 import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -170,12 +171,12 @@ export const createWorkspaceInvite = async (req, res) => {
     });
 
     if (emailSent) {
-      console.log(`Invite email sent to: ${invitedEmail}`);
+      logger.info("Workspace invite email sent", { invitedEmail });
     } else {
-      console.warn("Workspace invite email could not be sent.");
+      logger.warn("Workspace invite email could not be sent", { invitedEmail });
     }
   } catch (error) {
-    console.warn("Workspace invite email could not be sent:", error.message);
+    logger.warn("Workspace invite email could not be sent", { invitedEmail, error: error.message });
   }
 
   return res.status(StatusCodes.CREATED).json({

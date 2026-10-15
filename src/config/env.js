@@ -53,5 +53,6 @@ export const env = {
   COOKIE_SECURE: process.env.COOKIE_SECURE === "true",
   REDIS_URL: process.env.REDIS_URL || "",
   SENTRY_DSN: process.env.SENTRY_DSN || "",
+  ENABLE_DEBUG_ROUTES: process.env.ENABLE_DEBUG_ROUTES === "true",
   LOG_LEVEL: process.env.LOG_LEVEL || "info"
 };

@@ -77,7 +77,9 @@ app.use("/api/attachments", uploadLimiter, attachmentRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/billing", billingLimiter, billingRoutes);
 app.use("/api/comments", commentRoutes);
-app.use("/api/debug", debugRoutes);
+if (env.NODE_ENV !== "production" || env.ENABLE_DEBUG_ROUTES) {
+  app.use("/api/debug", debugRoutes);
+}
 app.use("/api/notes/templates", noteTemplateRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/notifications", notificationRoutes);

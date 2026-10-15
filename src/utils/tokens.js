@@ -2,6 +2,15 @@ import jwt from "jsonwebtoken";
 
 import { env } from "../config/env.js";
 
+/**
+ * @typedef {import("jsonwebtoken").JwtPayload & {
+ *   sub: string,
+ *   email?: string,
+ *   role?: string,
+ *   jti?: string
+ * }} AppJwtPayload
+ */
+
 export const signAccessToken = (user) =>
   jwt.sign(
     {
@@ -10,7 +19,7 @@ export const signAccessToken = (user) =>
       role: user.role
     },
     env.JWT_ACCESS_SECRET,
-    { expiresIn: env.ACCESS_TOKEN_EXPIRES_IN }
+    { expiresIn: /** @type {any} */ (env.ACCESS_TOKEN_EXPIRES_IN) }
   );
 
 export const signRefreshToken = (user, tokenId) =>
@@ -20,9 +29,19 @@ export const signRefreshToken = (user, tokenId) =>
       jti: tokenId
     },
     env.JWT_REFRESH_SECRET,
-    { expiresIn: env.REFRESH_TOKEN_EXPIRES_IN }
+    { expiresIn: /** @type {any} */ (env.REFRESH_TOKEN_EXPIRES_IN) }
   );
 
-export const verifyAccessToken = (token) => jwt.verify(token, env.JWT_ACCESS_SECRET);
+const verifyTokenPayload = (token, secret) => {
+  const payload = jwt.verify(token, secret);
 
-export const verifyRefreshToken = (token) => jwt.verify(token, env.JWT_REFRESH_SECRET);
+  if (typeof payload === "string" || !payload.sub) {
+    throw new Error("Invalid token payload");
+  }
+
+  return /** @type {AppJwtPayload} */ (payload);
+};
+
+export const verifyAccessToken = (token) => verifyTokenPayload(token, env.JWT_ACCESS_SECRET);
+
+export const verifyRefreshToken = (token) => verifyTokenPayload(token, env.JWT_REFRESH_SECRET);

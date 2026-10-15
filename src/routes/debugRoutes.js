@@ -5,16 +5,17 @@ import { authenticate } from "../middleware/authenticate.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { checkOpenAiTranscription } from "../services/aiService.js";
 import { sendEmail } from "../services/emailService.js";
+import { logger } from "../services/logger.js";
 
 const router = Router();
 
 const logAuthHeader = (req, _res, next) => {
-  console.log("Auth header received:", Boolean(req.get("authorization")));
+  logger.info("Debug auth header received", { hasAuthorization: Boolean(req.get("authorization")) });
   next();
 };
 
 const logAuthenticatedUser = (req, _res, next) => {
-  console.log("User authenticated:", req.user?.id);
+  logger.info("Debug user authenticated", { userId: req.user?.id });
   next();
 };
 
@@ -26,8 +27,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const { to } = req.body;
 
-    console.log("RESEND_API_KEY exists:", Boolean(env.RESEND_API_KEY));
-    console.log("EMAIL_FROM value:", env.EMAIL_FROM);
+    logger.info("Debug email configuration", {
+      resendConfigured: Boolean(env.RESEND_API_KEY),
+      emailFromConfigured: Boolean(env.EMAIL_FROM)
+    });
 
     try {
       const emailSent = await sendEmail({
@@ -37,7 +40,7 @@ router.post(
         text: "If you received this, Resend is working."
       });
 
-      console.log("Resend response:", { emailSent });
+      logger.info("Debug email send response", { emailSent });
 
       if (!emailSent) {
         throw new Error("Email service returned false");
@@ -48,7 +51,7 @@ router.post(
         message: "Test email sent"
       });
     } catch (error) {
-      console.warn("Test email failed:", error.message);
+      logger.warn("Debug test email failed", { error: error.message });
 
       return res.status(500).json({
         success: false,
@@ -65,13 +68,13 @@ router.post(
   authenticate,
   logAuthenticatedUser,
   asyncHandler(async (_req, res) => {
-    console.log("OPENAI_API_KEY exists:", Boolean(env.OPENAI_API_KEY));
+    logger.info("Debug OpenAI configuration", { openAiConfigured: Boolean(env.OPENAI_API_KEY) });
 
     const status = await checkOpenAiTranscription();
-    console.log("OpenAI transcription status:", {
+    logger.info("OpenAI transcription debug status", {
       success: status.success,
       apiKeyConfigured: status.apiKeyConfigured,
-      details: status.details || null
+      hasDetails: Boolean(status.details)
     });
 
     return res.status(status.success ? 200 : 502).json(status);

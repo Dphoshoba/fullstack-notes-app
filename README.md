@@ -360,6 +360,7 @@ Backend environment variables:
 - `OPENAI_API_KEY` is set for real AI-powered summaries, tag suggestions, meeting minutes, and action item extraction.
 - `OPENAI_MODEL` is set if you want to override the default AI model.
 - `RESEND_API_KEY` and `EMAIL_FROM` are set if email notifications are enabled.
+- `ENABLE_DEBUG_ROUTES=false` for production. Only set it to `true` temporarily when testing protected debug endpoints.
 
 Frontend environment variables:
 
@@ -496,6 +497,7 @@ If login works but refresh/logout cookies do not behave correctly, check:
 - Use a MongoDB database user with only the permissions the app needs.
 - Keep file uploads limited to approved types: PDF, JPG, JPEG, PNG, WEBP, DOC, DOCX, TXT, and MD.
 - Keep upload size limits enabled and review the limit before accepting larger files.
+- Keep temporary debug routes disabled in production unless you are actively troubleshooting, and turn them off again after testing.
 - Store production secrets in Render and Netlify environment settings, not in source files.
 - Rotate secrets immediately if they are exposed.
 - Do not use demo seed accounts in a real production database.

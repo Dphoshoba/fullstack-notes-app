@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { StatusCodes } from "http-status-codes";
 
+import { env } from "../config/env.js";
 import { Attachment } from "../models/Attachment.js";
 import { Note } from "../models/Note.js";
 import { User } from "../models/User.js";
@@ -11,7 +12,8 @@ import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadsDir } from "../middleware/uploadAttachment.js";
 
-const getNoteLink = () => `${process.env.CLIENT_ORIGIN?.split(",")[0] || "http://localhost:5173"}/dashboard`;
+const getClientOrigin = () => env.CLIENT_ORIGIN.split(",")[0];
+const getNoteLink = (noteId) => `${getClientOrigin()}/dashboard?section=notes&note=${noteId}`;
 
 const canManageWorkspace = (user) => ["owner", "manager"].includes(user.workspaceRole);
 
@@ -106,7 +108,7 @@ export const createAttachment = async (req, res) => {
         to: owner.email,
         uploaderName: req.user.name,
         noteTitle: note.title,
-        noteLink: getNoteLink()
+        noteLink: getNoteLink(note.id)
       });
     }
   }

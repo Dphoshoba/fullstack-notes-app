@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 
+import { env } from "../config/env.js";
 import { Comment } from "../models/Comment.js";
 import { Note } from "../models/Note.js";
 import { User } from "../models/User.js";
@@ -7,7 +8,8 @@ import { sendNewCommentEmail } from "../services/emailService.js";
 import { createNotification } from "../services/notificationService.js";
 import { ApiError } from "../utils/ApiError.js";
 
-const getNoteLink = () => `${process.env.CLIENT_ORIGIN?.split(",")[0] || "http://localhost:5173"}/dashboard`;
+const getClientOrigin = () => env.CLIENT_ORIGIN.split(",")[0];
+const getNoteLink = (noteId) => `${getClientOrigin()}/dashboard?section=notes&note=${noteId}`;
 
 const canManageWorkspace = (user) => ["owner", "manager"].includes(user.workspaceRole);
 
@@ -91,7 +93,7 @@ export const createComment = async (req, res) => {
         to: owner.email,
         commenterName: req.user.name,
         noteTitle: note.title,
-        noteLink: getNoteLink()
+        noteLink: getNoteLink(note.id)
       });
     }
   }

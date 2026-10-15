@@ -425,7 +425,7 @@ export const restoreNoteHistory = async (req, res) => {
 
   await saveNoteHistory(note, req.user.id, "restore");
 
-  const snapshot = { ...(history.snapshot?.toObject?.() || history.snapshot || {}) };
+  const snapshot = { ...(history.toObject().snapshot || {}) };
   delete snapshot.updatedAt;
 
   Object.assign(note, {

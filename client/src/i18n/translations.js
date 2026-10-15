@@ -383,7 +383,7 @@ export const translations = {
     noPriority: "No priority",
     noNoteHistory: "No note history yet. Edit this note to create the first saved version.",
     noteIndex: "Note index",
-    noteIndexDescription: "Open a compact title list and jump to a note on this page.",
+    noteIndexDescription: "Open a compact title list of all your notes and jump to any note.",
     noteRequiredFields: "Title, body, and category are required.",
     noteHistory: "Note history",
     noteHistoryLoadError: "Note history could not be loaded.",

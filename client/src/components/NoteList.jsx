@@ -12,6 +12,7 @@ import {
   fetchComments,
   fetchNote,
   fetchNoteHistory,
+  fetchNotes,
   restoreNoteHistory,
   uploadAttachment,
   updateComment
@@ -1242,7 +1243,7 @@ function ViewNoteModal({ note, onClose, onEdit }) {
   );
 }
 
-function NoteTitleIndexModal({ notes, onClose, onJumpToNote }) {
+function NoteTitleIndexModal({ notes, loading, error, onClose, onJumpToNote }) {
   const { t } = useI18n();
 
   return (
@@ -1260,6 +1261,11 @@ function NoteTitleIndexModal({ notes, onClose, onJumpToNote }) {
               {t("noteIndex")}
             </h2>
             <p className="mt-1 text-sm text-slate-500">{t("noteIndexDescription")}</p>
+            {!loading && !error ? (
+              <p className="mt-2 text-xs font-semibold text-slate-500">
+                {t("notesCount", { count: notes.length })}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
@@ -1273,8 +1279,27 @@ function NoteTitleIndexModal({ notes, onClose, onJumpToNote }) {
         </div>
 
         <div className="overflow-y-auto px-5 py-5">
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 rounded-md bg-slate-50 px-4 py-8 text-sm font-medium text-slate-600">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("loadingNotes")}
+            </div>
+          ) : null}
+
+          {error ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {error}
+            </p>
+          ) : null}
+
+          {!loading && !error && !notes.length ? (
+            <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              {t("emptyNotesTitle")}
+            </p>
+          ) : null}
+
           <div className="space-y-2">
-            {notes.map((note, index) => (
+            {!loading && !error ? notes.map((note, index) => (
               <button
                 key={note.id}
                 type="button"
@@ -1293,7 +1318,7 @@ function NoteTitleIndexModal({ notes, onClose, onJumpToNote }) {
                   </span>
                 </span>
               </button>
-            ))}
+            )) : null}
           </div>
         </div>
       </section>
@@ -1945,6 +1970,9 @@ export function NoteList({
   const [viewingExternalNote, setViewingExternalNote] = useState(null);
   const [targetLoading, setTargetLoading] = useState(false);
   const [indexOpen, setIndexOpen] = useState(false);
+  const [indexNotes, setIndexNotes] = useState([]);
+  const [indexLoading, setIndexLoading] = useState(false);
+  const [indexError, setIndexError] = useState("");
   const [viewMode, setViewMode] = useState("cards");
   const noteCardRefs = useRef({});
   const sortedNotes = useMemo(() => sortNotes(notes), [notes]);
@@ -1980,6 +2008,32 @@ export function NoteList({
     window.setTimeout(() => {
       noteCardRefs.current[noteId]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 50);
+  };
+
+  const openNoteIndex = async () => {
+    setIndexOpen(true);
+    setIndexError("");
+    setIndexLoading(true);
+
+    try {
+      const allNotes = [];
+      let nextPage = 1;
+      let pages = 1;
+
+      do {
+        const result = await fetchNotes({ page: nextPage, limit: 100, scope: "all" });
+        allNotes.push(...(result.notes || []));
+        pages = result.pagination?.pages || 1;
+        nextPage += 1;
+      } while (nextPage <= pages);
+
+      setIndexNotes(sortNotes(allNotes));
+    } catch (err) {
+      setIndexError(err.message || t("notesLoadError", { message: "" }));
+      setIndexNotes(sortedNotes);
+    } finally {
+      setIndexLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -2094,10 +2148,10 @@ export function NoteList({
           </div>
           <button
             type="button"
-            onClick={() => setIndexOpen(true)}
+            onClick={openNoteIndex}
             className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
           >
-            <FileText className="h-3.5 w-3.5" />
+            {indexLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
             {t("showNoteTitles")}
           </button>
         </div>
@@ -2232,7 +2286,9 @@ export function NoteList({
 
       {indexOpen ? (
         <NoteTitleIndexModal
-          notes={sortedNotes}
+          notes={indexNotes.length || indexLoading || indexError ? indexNotes : sortedNotes}
+          loading={indexLoading}
+          error={indexError}
           onClose={() => setIndexOpen(false)}
           onJumpToNote={jumpToNote}
         />

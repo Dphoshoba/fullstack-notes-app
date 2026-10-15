@@ -122,7 +122,12 @@ export async function apiRequest(path, options = {}) {
       expireSession();
     }
 
-    const message = isExpiredSession ? "Please log in again." : payload.message || "Something went wrong";
+    const detailMessage = Array.isArray(payload.details)
+      ? payload.details.map((detail) => detail.message).filter(Boolean).join(" ")
+      : "";
+    const message = isExpiredSession
+      ? "Please log in again."
+      : [payload.message || "Something went wrong", detailMessage].filter(Boolean).join(": ");
     const error = new Error(message);
     error.status = response.status;
     error.details = payload.details;

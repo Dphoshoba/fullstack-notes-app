@@ -1,7 +1,7 @@
 import Joi from "joi";
 
 const objectId = Joi.string().hex().length(24);
-const optionalDate = Joi.alternatives().try(Joi.date(), Joi.string().trim().allow(""));
+const optionalDate = Joi.alternatives().try(Joi.date(), Joi.string().trim().allow(""), Joi.valid(null));
 const dueTime = Joi.string()
   .trim()
   .pattern(/^([01]\d|2[0-3]):[0-5]\d$/)

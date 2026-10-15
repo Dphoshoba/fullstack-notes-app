@@ -111,6 +111,42 @@ const escapeMarkdownTable = (value) => escapeMarkdown(value).replace(/\|/g, "\\|
 
 const formatExportDay = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 
+const formatDateParam = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const buildActionNoteFilters = (filter) => {
+  const today = new Date();
+  const todayParam = formatDateParam(today);
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + (6 - today.getDay()));
+
+  if (filter === "action") {
+    return { hasDueDate: true };
+  }
+
+  if (filter === "today") {
+    return { hasDueDate: true, dueFrom: todayParam, dueTo: todayParam };
+  }
+
+  if (filter === "due-week") {
+    return { hasDueDate: true, dueFrom: todayParam, dueTo: formatDateParam(weekEnd) };
+  }
+
+  if (filter === "overdue") {
+    return { overdue: true };
+  }
+
+  if (filter === "done") {
+    return { actionStatus: "done" };
+  }
+
+  return {};
+};
+
 const exportLines = (value) => {
   if (Array.isArray(value)) {
     return value
@@ -357,6 +393,7 @@ export default function DashboardPage() {
   const [scopeFilter, setScopeFilter] = useState("all");
   const [pinnedFilter, setPinnedFilter] = useState("");
   const [thisWeekFilter, setThisWeekFilter] = useState("");
+  const [actionFilter, setActionFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -531,7 +568,13 @@ export default function DashboardPage() {
       };
     }
 
-    if (categoryFilter || noteTypeFilter !== "all" || scopeFilter !== "all" || thisWeekFilter === "true") {
+    if (
+      categoryFilter ||
+      noteTypeFilter !== "all" ||
+      scopeFilter !== "all" ||
+      thisWeekFilter === "true" ||
+      actionFilter !== "all"
+    ) {
       return {
         title: t("emptyFilteredTitle"),
         description: t("emptyFilteredDescription"),
@@ -763,6 +806,11 @@ export default function DashboardPage() {
     setPage(1);
   };
 
+  const toggleActionFilter = (filter) => {
+    setActionFilter((current) => (current === filter ? "all" : filter));
+    setPage(1);
+  };
+
   const dismissToast = (id) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   };
@@ -776,7 +824,8 @@ export default function DashboardPage() {
       nextStarred = favoritesFilter,
       nextScope = scopeFilter,
       nextPinned = pinnedFilter,
-      nextThisWeek = thisWeekFilter
+      nextThisWeek = thisWeekFilter,
+      nextActionFilter = actionFilter
     } = {}) => {
     const requestId = notesRequestIdRef.current + 1;
     notesRequestIdRef.current = requestId;
@@ -785,6 +834,7 @@ export default function DashboardPage() {
 
     try {
       const result = await fetchNotes({
+        ...buildActionNoteFilters(nextActionFilter),
         page: nextPage,
         limit: NOTES_LIMIT,
         search: nextSearch,
@@ -812,7 +862,7 @@ export default function DashboardPage() {
       }
     }
     },
-    [addToast, categoryFilter, debouncedSearchTerm, favoritesFilter, noteTypeFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
+    [actionFilter, addToast, categoryFilter, debouncedSearchTerm, favoritesFilter, noteTypeFilter, page, pinnedFilter, scopeFilter, t, thisWeekFilter]
   );
 
   useEffect(() => {
@@ -2631,6 +2681,71 @@ export default function DashboardPage() {
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                   {t("thisWeek")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleActionFilter("action")}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    actionFilter === "action"
+                      ? "border-blue-300 bg-blue-50 text-blue-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={actionFilter === "action"}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {t("actionNotes")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleActionFilter("today")}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    actionFilter === "today"
+                      ? "border-blue-300 bg-blue-50 text-blue-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={actionFilter === "today"}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {t("dueToday")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleActionFilter("due-week")}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    actionFilter === "due-week"
+                      ? "border-blue-300 bg-blue-50 text-blue-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={actionFilter === "due-week"}
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {t("dueThisWeek")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleActionFilter("overdue")}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    actionFilter === "overdue"
+                      ? "border-red-300 bg-red-50 text-red-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={actionFilter === "overdue"}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {t("overdue")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleActionFilter("done")}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition ${
+                    actionFilter === "done"
+                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                  aria-pressed={actionFilter === "done"}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {t("done")}
                 </button>
               </div>
             </div>

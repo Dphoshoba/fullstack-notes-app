@@ -20,11 +20,13 @@ import {
   Pin,
   Plus,
   RefreshCw,
+  RotateCcw,
   Save,
   Search,
   Settings,
   Shield,
   Star,
+  PlayCircle,
   Trash2,
   User,
   UserPlus,
@@ -388,8 +390,28 @@ const roleBadgeClassName = (role) => {
   return "bg-slate-100 text-slate-700 ring-slate-200";
 };
 
-function AgendaNoteCard({ note, markingId, onMarkDone, t }) {
-  const done = note.actionStatus === "done";
+function AgendaSummaryCard({ label, value, description, tone = "slate" }) {
+  const toneClass = {
+    red: "border-red-200 bg-red-50 text-red-900",
+    blue: "border-blue-200 bg-blue-50 text-blue-900",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    amber: "border-amber-200 bg-amber-50 text-amber-900",
+    slate: "border-slate-200 bg-white text-slate-900"
+  }[tone];
+
+  return (
+    <div className={`rounded-lg border p-4 shadow-sm shadow-slate-950/[0.03] ${toneClass}`}>
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</p>
+      <p className="mt-2 text-2xl font-bold">{value}</p>
+      <p className="mt-1 text-xs leading-5 opacity-75">{description}</p>
+    </div>
+  );
+}
+
+function AgendaNoteCard({ note, markingId, onUpdateStatus, t }) {
+  const status = note.actionStatus || "open";
+  const done = status === "done";
+  const updating = markingId === note.id;
 
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm shadow-slate-950/[0.03]">
@@ -423,22 +445,45 @@ function AgendaNoteCard({ note, markingId, onMarkDone, t }) {
           </span>
         ))}
       </div>
-      {!done ? (
-        <button
-          type="button"
-          onClick={() => onMarkDone(note)}
-          disabled={markingId === note.id}
-          className="mt-4 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
-        >
-          {markingId === note.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-          {t("markDone")}
-        </button>
-      ) : null}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {status === "open" ? (
+          <button
+            type="button"
+            onClick={() => onUpdateStatus(note, "in_progress")}
+            disabled={updating}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:opacity-60"
+          >
+            {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
+            {t("startTask")}
+          </button>
+        ) : null}
+        {!done ? (
+          <button
+            type="button"
+            onClick={() => onUpdateStatus(note, "done")}
+            disabled={updating}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+          >
+            {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            {t("markDone")}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onUpdateStatus(note, "open")}
+            disabled={updating}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            {t("reopenTask")}
+          </button>
+        )}
+      </div>
     </article>
   );
 }
 
-function AgendaGroup({ title, description, notes, tone = "slate", markingId, onMarkDone, t }) {
+function AgendaGroup({ title, description, notes, tone = "slate", markingId, onUpdateStatus, t }) {
   const toneClass = {
     red: "border-red-200 bg-red-50/70 text-red-900",
     blue: "border-blue-200 bg-blue-50/70 text-blue-900",
@@ -460,7 +505,7 @@ function AgendaGroup({ title, description, notes, tone = "slate", markingId, onM
       {notes.length ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {notes.map((note) => (
-            <AgendaNoteCard key={note.id} note={note} markingId={markingId} onMarkDone={onMarkDone} t={t} />
+            <AgendaNoteCard key={note.id} note={note} markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
           ))}
         </div>
       ) : (
@@ -482,11 +527,18 @@ function ActionCalendarSection({
   onSearchChange,
   onStatusFilterChange,
   onRefresh,
-  onMarkDone,
+  onUpdateStatus,
   onCreateActionNote,
   t
 }) {
   const groups = groupAgendaNotes(notes);
+  const summary = {
+    total: notes.length,
+    active: notes.filter((note) => note.actionStatus !== "done").length,
+    overdue: groups.overdue.length,
+    today: groups.today.length,
+    done: groups.done.length
+  };
 
   return (
     <section
@@ -550,6 +602,14 @@ function ActionCalendarSection({
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           </label>
         </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <AgendaSummaryCard label={t("totalActionNotes")} value={summary.total} description={t("totalActionNotesDescription")} />
+          <AgendaSummaryCard label={t("activeActionNotes")} value={summary.active} description={t("activeActionNotesDescription")} tone="blue" />
+          <AgendaSummaryCard label={t("dueToday")} value={summary.today} description={t("dueTodayDescription")} tone="emerald" />
+          <AgendaSummaryCard label={t("overdue")} value={summary.overdue} description={t("overdueDescription")} tone="red" />
+          <AgendaSummaryCard label={t("done")} value={summary.done} description={t("doneDescription")} tone="slate" />
+        </div>
       </div>
 
       {error ? (
@@ -587,11 +647,11 @@ function ActionCalendarSection({
 
       {!loading && notes.length ? (
         <div className="mt-5 space-y-4">
-          <AgendaGroup title={t("overdue")} description={t("overdueDescription")} notes={groups.overdue} tone="red" markingId={markingId} onMarkDone={onMarkDone} t={t} />
-          <AgendaGroup title={t("dueToday")} description={t("dueTodayDescription")} notes={groups.today} tone="blue" markingId={markingId} onMarkDone={onMarkDone} t={t} />
-          <AgendaGroup title={t("dueThisWeek")} description={t("dueThisWeekDescription")} notes={groups.week} tone="emerald" markingId={markingId} onMarkDone={onMarkDone} t={t} />
-          <AgendaGroup title={t("upcoming")} description={t("upcomingDescription")} notes={groups.upcoming} markingId={markingId} onMarkDone={onMarkDone} t={t} />
-          <AgendaGroup title={t("done")} description={t("doneDescription")} notes={groups.done} markingId={markingId} onMarkDone={onMarkDone} t={t} />
+          <AgendaGroup title={t("overdue")} description={t("overdueDescription")} notes={groups.overdue} tone="red" markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
+          <AgendaGroup title={t("dueToday")} description={t("dueTodayDescription")} notes={groups.today} tone="blue" markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
+          <AgendaGroup title={t("dueThisWeek")} description={t("dueThisWeekDescription")} notes={groups.week} tone="emerald" markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
+          <AgendaGroup title={t("upcoming")} description={t("upcomingDescription")} notes={groups.upcoming} markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
+          <AgendaGroup title={t("done")} description={t("doneDescription")} notes={groups.done} markingId={markingId} onUpdateStatus={onUpdateStatus} t={t} />
         </div>
       ) : null}
     </section>
@@ -1307,14 +1367,19 @@ export default function DashboardPage() {
     }, 100);
   };
 
-  const markAgendaNoteDone = async (note) => {
+  const updateAgendaNoteStatus = async (note, actionStatus) => {
     setMarkingAgendaNoteId(note.id);
 
     try {
-      const updatedNote = await updateNote(note.id, { actionStatus: "done" });
+      const updatedNote = await updateNote(note.id, { actionStatus });
       setAgendaNotes((current) => current.map((item) => (item.id === updatedNote.id ? updatedNote : item)));
       setNotes((current) => current.map((item) => (item.id === updatedNote.id ? updatedNote : item)));
-      addToast("success", t("actionNoteCompleted", { title: updatedNote.title }));
+      addToast(
+        "success",
+        actionStatus === "done"
+          ? t("actionNoteCompleted", { title: updatedNote.title })
+          : t("actionNoteStatusUpdated", { title: updatedNote.title })
+      );
     } catch (err) {
       addToast("error", t("updateNoteError", { message: err.message }));
     } finally {
@@ -2147,7 +2212,7 @@ export default function DashboardPage() {
           onSearchChange={setAgendaSearchTerm}
           onStatusFilterChange={setAgendaStatusFilter}
           onRefresh={loadAgendaNotes}
-          onMarkDone={markAgendaNoteDone}
+          onUpdateStatus={updateAgendaNoteStatus}
           onCreateActionNote={createActionNoteFromCalendar}
           t={t}
         />

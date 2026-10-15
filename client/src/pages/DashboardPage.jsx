@@ -1081,9 +1081,9 @@ export default function DashboardPage() {
   const startFirstNoteOnboarding = () => {
     setActiveSection("notes");
     setNotePrefillValues({
-      title: "Q1 Project Plan",
-      body: "Goals:\nKey decisions:\nNext steps:\n",
-      category: "Work",
+      title: "My First Note",
+      body: "Start typing here...",
+      category: "General",
       noteType: "standard"
     });
     window.setTimeout(() => {
@@ -1132,7 +1132,7 @@ export default function DashboardPage() {
 
   const startInviteOnboarding = () => {
     localStorage.setItem("notes_api_onboarding_invite_started", "true");
-    addToast("success", t("inviteSent"));
+    addToast("success", t("openSettingsToInviteTeam"));
     navigate("/settings?section=workspace");
   };
 
@@ -2299,6 +2299,7 @@ export default function DashboardPage() {
           onStepAction={handleOnboardingStepAction}
           onDismiss={completeFirstTimeOnboarding}
           dismissLabel={t("skipForNow")}
+          t={t}
         />
       ) : null}
 

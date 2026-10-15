@@ -5,25 +5,25 @@ export const GETTING_STARTED_STEPS = [
   {
     id: "note",
     step: 1,
-    title: "Create a business note",
-    helper: "Create notes for projects, meetings, and ideas"
+    titleKey: "onboardingBusinessNoteTitle",
+    helperKey: "onboardingBusinessNoteHelper"
   },
   {
     id: "ai",
     step: 2,
-    title: "Use AI tools on the note",
-    helper: "Use AI to summarize and organize your work"
+    titleKey: "onboardingAiTitle",
+    helperKey: "onboardingAiHelper"
   },
   {
     id: "meetings",
     step: 3,
-    title: "Generate meeting intelligence",
-    helper: "Turn meetings into actionable follow-ups"
+    titleKey: "onboardingMeetingsTitle",
+    helperKey: "onboardingMeetingsHelper"
   },
   {
     id: "team",
     step: 4,
-    title: "Invite your team",
-    helper: "Collaborate with your team on shared notes"
+    titleKey: "onboardingTeamTitle",
+    helperKey: "onboardingTeamHelper"
   }
 ];

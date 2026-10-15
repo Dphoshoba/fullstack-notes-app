@@ -15,11 +15,13 @@ export function OnboardingWelcomePanel({
   stepCompletion,
   onStepAction,
   onDismiss,
-  dismissLabel = "Dismiss for now"
+  dismissLabel = "Dismiss for now",
+  t = (key) => key
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(completedCount === 0);
   const total = GETTING_STARTED_STEPS.length;
   const done = completedCount >= total;
+  const progress = total ? Math.round((completedCount / total) * 100) : 0;
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
@@ -36,10 +38,10 @@ export function OnboardingWelcomePanel({
             aria-expanded={expanded}
           >
             <span className="truncate text-sm font-semibold text-slate-950">
-              {done ? "You're all set" : "Getting started"}
+              {done ? t("onboardingCompleteTitle") : t("onboardingProgressTitle")}
             </span>
             <span className="hidden truncate text-sm text-slate-500 sm:inline">
-              {completedCount} of {total} steps complete
+              {t("onboardingProgress", { completed: completedCount, total })}
             </span>
             <ChevronDown
               className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`}
@@ -59,9 +61,14 @@ export function OnboardingWelcomePanel({
         {expanded ? (
           <div className="border-t border-slate-100 px-4 pb-4 pt-3">
             <p className="text-sm leading-6 text-slate-600">
-              Follow these four steps to capture notes, run AI, handle meetings, and collaborate with
-              your team.
+              {t("onboardingDescription")}
             </p>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-emerald-700 transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
 
             <ol className="mt-3 grid gap-2.5 md:grid-cols-2">
               {GETTING_STARTED_STEPS.map((step) => {
@@ -87,8 +94,8 @@ export function OnboardingWelcomePanel({
                         {completed ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-slate-950">{step.title}</span>
-                        <span className="mt-0.5 block text-xs leading-5 text-slate-600">{step.helper}</span>
+                        <span className="block text-sm font-semibold text-slate-950">{t(step.titleKey)}</span>
+                        <span className="mt-0.5 block text-xs leading-5 text-slate-600">{t(step.helperKey)}</span>
                       </span>
                     </button>
                   </li>
@@ -103,7 +110,7 @@ export function OnboardingWelcomePanel({
                 className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 sm:w-auto"
               >
                 <FileText className="h-4 w-4" />
-                Get started — create a note
+                {t("onboardingPrimaryAction")}
               </button>
               <button
                 type="button"

@@ -19,6 +19,7 @@ The React frontend now has a Capacitor Android wrapper in `client/android`.
 For release testing, use the mobile and production checklist in `docs/MOBILE_STABILITY_CHECKLIST.md`.
 For production monitoring and incident checks, use `docs/OPERATIONS_RUNBOOK.md`.
 For the current stable release checkpoint, see `docs/RELEASE_NOTES.md`.
+Public launch pages are available at `/privacy`, `/terms`, and `/support`.
 
 From `client/`:
 

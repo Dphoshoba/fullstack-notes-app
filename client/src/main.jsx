@@ -9,6 +9,7 @@ import AcceptInvitePage from "./pages/AcceptInvitePage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import GuidePage from "./pages/GuidePage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import LegalPage from "./pages/LegalPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
@@ -27,6 +28,9 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <LandingPage /> },
         { path: "invite/:token", element: <AcceptInvitePage /> },
+        { path: "privacy", element: <LegalPage type="privacy" /> },
+        { path: "terms", element: <LegalPage type="terms" /> },
+        { path: "support", element: <LegalPage type="support" /> },
         { path: "login", element: <LoginPage /> },
         { path: "register", element: <RegisterPage /> },
         {

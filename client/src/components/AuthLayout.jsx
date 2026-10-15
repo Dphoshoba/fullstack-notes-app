@@ -9,7 +9,7 @@ export function AuthLayout({ title, subtitle, footer, children }) {
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <div className="mx-auto grid min-h-screen w-full max-w-6xl grid-cols-1 lg:grid-cols-[0.85fr_1.15fr]">
         <section className="flex flex-col justify-between border-b border-slate-200 bg-white px-6 py-8 lg:border-b-0 lg:border-r lg:px-10">
-          <Link to="/dashboard" className="text-sm font-bold tracking-wide text-slate-950">
+          <Link to="/" className="text-sm font-bold tracking-wide text-slate-950">
             Notes API
           </Link>
           <div className="py-12 lg:py-0">
@@ -21,7 +21,14 @@ export function AuthLayout({ title, subtitle, footer, children }) {
               {t("heroCopy")}
             </p>
           </div>
-          <p className="text-xs text-slate-500">{t("backendLabel")}</p>
+          <div className="space-y-3">
+            <p className="text-xs text-slate-500">{t("backendLabel")}</p>
+            <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-500">
+              <Link to="/privacy" className="hover:text-slate-900">Privacy</Link>
+              <Link to="/terms" className="hover:text-slate-900">Terms</Link>
+              <Link to="/support" className="hover:text-slate-900">Support</Link>
+            </div>
+          </div>
         </section>
 
         <section className="flex items-center justify-center px-6 py-10">

@@ -234,6 +234,7 @@ export default function LandingPage() {
             <a href="#pricing" onClick={() => trackClick("click_pricing", { location: "nav" })} className="hover:text-slate-950">Pricing</a>
             <a href="#faq" className="hover:text-slate-950">FAQ</a>
             <Link to="/guide" className="hover:text-slate-950">Guide</Link>
+            <Link to="/support" className="hover:text-slate-950">Support</Link>
           </div>
           <div className="flex items-center gap-2">
             <Link
@@ -760,6 +761,17 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <footer className="border-t border-slate-200 bg-white px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+          <p>© 2026 Notes Workspace. Built for notes, meetings, AI, and team knowledge.</p>
+          <div className="flex flex-wrap gap-4 font-semibold">
+            <Link to="/privacy" className="hover:text-slate-950">Privacy</Link>
+            <Link to="/terms" className="hover:text-slate-950">Terms</Link>
+            <Link to="/support" className="hover:text-slate-950">Support</Link>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

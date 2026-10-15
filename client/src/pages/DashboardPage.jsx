@@ -1922,7 +1922,7 @@ export default function DashboardPage() {
   }, [adminOpen, isAdmin, loadAdminUsers, loadAnalyticsSummary]);
 
   return (
-    <main className="min-h-screen overflow-x-clip bg-slate-50 text-slate-950">
+    <main className="min-h-screen overflow-x-clip bg-slate-50 pb-28 text-slate-950 md:pb-0">
       <button
         type="button"
         onClick={() => {
@@ -1932,7 +1932,7 @@ export default function DashboardPage() {
             createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
           });
         }}
-        className="fixed bottom-6 right-4 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-800 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-200 sm:bottom-8 sm:right-8"
+        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+5.75rem)] right-4 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-700 text-white shadow-lg shadow-emerald-950/30 transition hover:scale-105 hover:bg-emerald-800 focus:outline-none focus:ring-4 focus:ring-emerald-200 md:bottom-8 md:right-8"
         aria-label="Create a new note"
         title="Create a new note"
       >

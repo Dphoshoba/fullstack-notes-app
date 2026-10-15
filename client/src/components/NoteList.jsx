@@ -358,6 +358,66 @@ function MeetingSummary({ note }) {
   );
 }
 
+function NoteMetadataBadges({ note }) {
+  const { t } = useI18n();
+  const hasActionMetadata = hasActionNoteFields(note);
+  const actionOverdue = isActionOverdue(note);
+
+  return (
+    <>
+      <div className="mt-5 flex flex-wrap gap-2">
+        <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+          {note.category || "General"}
+        </span>
+        {note.starred ? (
+          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+            <Star className="h-3 w-3 fill-current" />
+            {t("starred")}
+          </span>
+        ) : null}
+        {note.noteType === "meeting" ? (
+          <span className="inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200">
+            {t("meeting")}
+          </span>
+        ) : null}
+        <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+          {(note.visibility || "private") === "workspace" ? t("workspaceNote") : t("privateNote")}
+        </span>
+      </div>
+
+      {hasActionMetadata ? (
+        <div className="mt-4 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-blue-900">
+              {t("actionNote")}
+            </span>
+            {note.dueDate ? (
+              <span
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${
+                  actionOverdue
+                    ? "bg-red-50 text-red-700 ring-red-200"
+                    : "bg-blue-50 text-blue-700 ring-blue-200"
+                }`}
+              >
+                <Clock3 className="h-3 w-3" />
+                {actionOverdue ? t("overdue") : t("due")}: {formatActionDueDate(note)}
+              </span>
+            ) : null}
+            <span className="inline-flex rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+              {actionStatusLabel(note.actionStatus || "open", t)}
+            </span>
+            {note.priority ? (
+              <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${priorityBadgeClass(note.priority)}`}>
+                {priorityLabel(note.priority, t)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function NoteAttachments({ note, currentUser, onAttachmentError, onCountChange }) {
   const { t } = useI18n();
   const [attachments, setAttachments] = useState([]);
@@ -785,6 +845,7 @@ function NoteCard({
   note,
   onDelete,
   onEdit,
+  onOpen,
   onUpdate,
   onUpdateError,
   onUpdateSuccess,
@@ -810,8 +871,6 @@ function NoteCard({
   const summaryLoading = aiLoadingAction === `summary:${note.id}`;
   const tagsLoading = aiLoadingAction === `tags:${note.id}`;
   const aiActionDisabled = saving || Boolean(aiLoadingAction);
-  const hasActionMetadata = hasActionNoteFields(note);
-  const actionOverdue = isActionOverdue(note);
 
   useEffect(() => {
     setActivityCounts({
@@ -865,13 +924,36 @@ function NoteCard({
     onShareSuccess?.(t("exportSuccess", { format: "TXT" }));
   };
 
+  const openNote = (event) => {
+    if (event.target.closest("button, a, input, textarea, select, label")) {
+      return;
+    }
+
+    onOpen?.(note);
+  };
+
+  const openNoteFromKeyboard = (event) => {
+    if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    onOpen?.(note);
+  };
+
   return (
     <article
       className={`premium-card premium-card-hover p-5 ${
         note.pinned
           ? "border-emerald-300 bg-emerald-50/80 shadow-emerald-950/10"
           : ""
-      }`}
+      } cursor-pointer focus-within:cursor-auto focus:outline-none focus:ring-4 focus:ring-emerald-100`}
+      role="button"
+      tabIndex={0}
+      onClick={openNote}
+      onKeyDown={openNoteFromKeyboard}
+      aria-label={`${t("viewNote")}: ${note.title}`}
+      title={t("viewNote")}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -930,55 +1012,7 @@ function NoteCard({
         {note.body}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
-          {note.category || "General"}
-        </span>
-        {note.starred ? (
-          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
-            <Star className="h-3 w-3 fill-current" />
-            {t("starred")}
-          </span>
-        ) : null}
-        {note.noteType === "meeting" ? (
-          <span className="inline-flex rounded-md bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-indigo-200">
-            {t("meeting")}
-          </span>
-        ) : null}
-        <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-          {(note.visibility || "private") === "workspace" ? t("workspaceNote") : t("privateNote")}
-        </span>
-      </div>
-
-      {hasActionMetadata ? (
-        <div className="mt-4 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-blue-900">
-              {t("actionNote")}
-            </span>
-            {note.dueDate ? (
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${
-              actionOverdue
-                ? "bg-red-50 text-red-700 ring-red-200"
-                : "bg-blue-50 text-blue-700 ring-blue-200"
-            }`}
-          >
-            <Clock3 className="h-3 w-3" />
-                  {actionOverdue ? t("overdue") : t("due")}: {formatActionDueDate(note)}
-          </span>
-            ) : null}
-            <span className="inline-flex rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
-              {actionStatusLabel(note.actionStatus || "open", t)}
-            </span>
-            {note.priority ? (
-              <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${priorityBadgeClass(note.priority)}`}>
-                {priorityLabel(note.priority, t)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      <NoteMetadataBadges note={note} />
 
       {note.tags?.length ? (
         <div className="mt-5 flex flex-wrap gap-2">
@@ -1132,6 +1166,137 @@ function NoteCard({
         />
       ) : null}
     </article>
+  );
+}
+
+function ViewNoteModal({ note, onClose, onEdit }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
+      <section
+        className="flex max-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col rounded-lg border border-slate-200 bg-white shadow-soft"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="view-note-title"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-700">{t("notes")}</p>
+            <h2 id="view-note-title" className="mt-1 truncate text-xl font-bold text-slate-950">
+              {note.title}
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              {new Date(note.updatedAt || note.createdAt).toLocaleString()}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onEdit(note)}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              title={t("editNote")}
+            >
+              <Edit3 className="h-4 w-4" />
+              {t("edit")}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label={t("close")}
+              title={t("close")}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-5">
+          <div className="rounded-md border border-slate-200 bg-slate-50/80 p-4">
+            <p className="whitespace-pre-wrap text-sm leading-7 text-slate-800">
+              {note.body}
+            </p>
+          </div>
+
+          <NoteMetadataBadges note={note} />
+
+          {note.tags?.length ? (
+            <div className="mt-5 flex flex-wrap gap-2">
+              {note.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <MeetingSummary note={note} />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function NoteTitleIndexModal({ notes, onClose, onJumpToNote }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6">
+      <section
+        className="flex max-h-[calc(100vh-3rem)] w-full max-w-xl flex-col rounded-lg border border-slate-200 bg-white shadow-soft"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="note-index-title"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-emerald-700">{t("notes")}</p>
+            <h2 id="note-index-title" className="mt-1 text-xl font-bold text-slate-950">
+              {t("noteIndex")}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{t("noteIndexDescription")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+            aria-label={t("close")}
+            title={t("close")}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-5 py-5">
+          <div className="space-y-2">
+            {notes.map((note, index) => (
+              <button
+                key={note.id}
+                type="button"
+                onClick={() => onJumpToNote(note.id)}
+                className="flex w-full items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-3 text-left transition hover:border-emerald-200 hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-600">
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-slate-950">
+                    {note.title}
+                  </span>
+                  <span className="mt-1 block text-xs text-slate-500">
+                    {new Date(note.updatedAt || note.createdAt).toLocaleDateString()}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1771,8 +1936,24 @@ export function NoteList({
   hasWorkspace = false,
   currentUser
 }) {
+  const { t } = useI18n();
   const [editingNote, setEditingNote] = useState(null);
+  const [viewingNote, setViewingNote] = useState(null);
+  const [indexOpen, setIndexOpen] = useState(false);
+  const noteCardRefs = useRef({});
   const sortedNotes = useMemo(() => sortNotes(notes), [notes]);
+
+  const openEditNote = (note) => {
+    setViewingNote(null);
+    setEditingNote(note);
+  };
+
+  const jumpToNote = (noteId) => {
+    setIndexOpen(false);
+    window.setTimeout(() => {
+      noteCardRefs.current[noteId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
 
   if (!notes.length) {
     const EmptyIcon = emptyVariant === "search" ? SearchX : FileText;
@@ -1801,28 +1982,70 @@ export function NoteList({
 
   return (
     <>
+      <div className="mb-4 flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm shadow-slate-950/[0.03] sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-950">{t("noteIndex")}</p>
+          <p className="text-xs text-slate-500">{t("noteIndexDescription")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIndexOpen(true)}
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          {t("showNoteTitles")}
+        </button>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {sortedNotes.map((note, index) => (
-          <NoteCard
+          <div
             key={note.id}
-            note={note}
-            defaultExpanded={index === 0}
-            onDelete={onDelete}
-            onEdit={setEditingNote}
-            onUpdate={onUpdate}
-            onUpdateError={onUpdateError}
-            onUpdateSuccess={onUpdateSuccess}
-            onNoteRestored={onNoteRestored}
-            onShareSuccess={onShareSuccess}
-            onShareError={onShareError}
-            onRunAiAction={onRunAiAction}
-            aiLoadingAction={aiLoadingAction}
-            usageLimitReached={usageLimitReached}
-            deletingId={deletingId}
-            currentUser={currentUser}
-          />
+            ref={(element) => {
+              if (element) {
+                noteCardRefs.current[note.id] = element;
+              } else {
+                delete noteCardRefs.current[note.id];
+              }
+            }}
+          >
+            <NoteCard
+              note={note}
+              defaultExpanded={index === 0}
+              onDelete={onDelete}
+              onEdit={openEditNote}
+              onOpen={setViewingNote}
+              onUpdate={onUpdate}
+              onUpdateError={onUpdateError}
+              onUpdateSuccess={onUpdateSuccess}
+              onNoteRestored={onNoteRestored}
+              onShareSuccess={onShareSuccess}
+              onShareError={onShareError}
+              onRunAiAction={onRunAiAction}
+              aiLoadingAction={aiLoadingAction}
+              usageLimitReached={usageLimitReached}
+              deletingId={deletingId}
+              currentUser={currentUser}
+            />
+          </div>
         ))}
       </div>
+
+      {indexOpen ? (
+        <NoteTitleIndexModal
+          notes={sortedNotes}
+          onClose={() => setIndexOpen(false)}
+          onJumpToNote={jumpToNote}
+        />
+      ) : null}
+
+      {viewingNote ? (
+        <ViewNoteModal
+          note={viewingNote}
+          onClose={() => setViewingNote(null)}
+          onEdit={openEditNote}
+        />
+      ) : null}
 
       {editingNote ? (
         <EditNoteModal

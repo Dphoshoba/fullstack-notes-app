@@ -118,6 +118,101 @@ const formatDateParam = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const startOfDay = (value = new Date()) => {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const endOfDay = (value = new Date()) => {
+  const date = new Date(value);
+  date.setHours(23, 59, 59, 999);
+  return date;
+};
+
+const getActionDueAt = (note) => {
+  if (!note.dueDate) {
+    return null;
+  }
+
+  const dueAt = new Date(note.dueDate);
+
+  if (note.dueTime) {
+    const [hours, minutes] = note.dueTime.split(":").map(Number);
+    dueAt.setHours(hours || 0, minutes || 0, 0, 0);
+  } else {
+    dueAt.setHours(23, 59, 59, 999);
+  }
+
+  return dueAt;
+};
+
+const formatAgendaDate = (note) => {
+  const dueAt = getActionDueAt(note);
+
+  if (!dueAt) {
+    return "";
+  }
+
+  return dueAt.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: note.dueTime ? "numeric" : undefined,
+    minute: note.dueTime ? "2-digit" : undefined
+  });
+};
+
+const actionStatusLabel = (status, t) => {
+  if (status === "in_progress") return t("inProgress");
+  if (status === "done") return t("done");
+  return t("open");
+};
+
+const priorityLabel = (priority, t) => {
+  if (priority === "low") return t("priorityLow");
+  if (priority === "medium") return t("priorityMedium");
+  if (priority === "high") return t("priorityHigh");
+  return "";
+};
+
+const groupAgendaNotes = (notes) => {
+  const todayStart = startOfDay();
+  const todayEnd = endOfDay();
+  const weekEnd = endOfDay();
+  weekEnd.setDate(todayStart.getDate() + (6 - todayStart.getDay()));
+
+  const groups = {
+    overdue: [],
+    today: [],
+    week: [],
+    upcoming: [],
+    done: []
+  };
+
+  for (const note of notes) {
+    const dueAt = getActionDueAt(note);
+
+    if (note.actionStatus === "done") {
+      groups.done.push(note);
+    } else if (dueAt && dueAt < todayStart) {
+      groups.overdue.push(note);
+    } else if (dueAt && dueAt <= todayEnd) {
+      groups.today.push(note);
+    } else if (dueAt && dueAt <= weekEnd) {
+      groups.week.push(note);
+    } else {
+      groups.upcoming.push(note);
+    }
+  }
+
+  for (const key of Object.keys(groups)) {
+    groups[key].sort((a, b) => (getActionDueAt(a)?.getTime() || 0) - (getActionDueAt(b)?.getTime() || 0));
+  }
+
+  return groups;
+};
+
 const buildActionNoteFilters = (filter) => {
   const today = new Date();
   const todayParam = formatDateParam(today);
@@ -293,6 +388,216 @@ const roleBadgeClassName = (role) => {
   return "bg-slate-100 text-slate-700 ring-slate-200";
 };
 
+function AgendaNoteCard({ note, markingId, onMarkDone, t }) {
+  const done = note.actionStatus === "done";
+
+  return (
+    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm shadow-slate-950/[0.03]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h4 className="truncate text-sm font-semibold text-slate-950">{note.title}</h4>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+            <CalendarDays className="h-3.5 w-3.5" />
+            {formatAgendaDate(note)}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <span className="rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+            {actionStatusLabel(note.actionStatus || "open", t)}
+          </span>
+          {note.priority ? (
+            <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+              {priorityLabel(note.priority, t)}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <p className="mt-3 line-clamp-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{note.body}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className="rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+          {note.category || "General"}
+        </span>
+        {(note.tags || []).slice(0, 3).map((tag) => (
+          <span key={tag} className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+            {tag}
+          </span>
+        ))}
+      </div>
+      {!done ? (
+        <button
+          type="button"
+          onClick={() => onMarkDone(note)}
+          disabled={markingId === note.id}
+          className="mt-4 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
+        >
+          {markingId === note.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+          {t("markDone")}
+        </button>
+      ) : null}
+    </article>
+  );
+}
+
+function AgendaGroup({ title, description, notes, tone = "slate", markingId, onMarkDone, t }) {
+  const toneClass = {
+    red: "border-red-200 bg-red-50/70 text-red-900",
+    blue: "border-blue-200 bg-blue-50/70 text-blue-900",
+    emerald: "border-emerald-200 bg-emerald-50/70 text-emerald-900",
+    slate: "border-slate-200 bg-slate-50/70 text-slate-900"
+  }[tone];
+
+  return (
+    <section className={`rounded-lg border p-4 ${toneClass}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">{title}</h3>
+          <p className="mt-1 text-xs opacity-75">{description}</p>
+        </div>
+        <span className="rounded-md bg-white/80 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+          {notes.length}
+        </span>
+      </div>
+      {notes.length ? (
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {notes.map((note) => (
+            <AgendaNoteCard key={note.id} note={note} markingId={markingId} onMarkDone={onMarkDone} t={t} />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 rounded-md border border-dashed border-white/80 bg-white/70 px-4 py-6 text-center text-sm text-slate-500">
+          {t("noActionNotesInGroup")}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ActionCalendarSection({
+  notes,
+  loading,
+  error,
+  searchTerm,
+  statusFilter,
+  markingId,
+  onSearchChange,
+  onStatusFilterChange,
+  onRefresh,
+  onMarkDone,
+  onCreateActionNote,
+  t
+}) {
+  const groups = groupAgendaNotes(notes);
+
+  return (
+    <section
+      className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
+      id="dashboard-panel-calendar"
+      role="tabpanel"
+      aria-labelledby="dashboard-tab-calendar"
+    >
+      <div className="premium-panel p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-emerald-700" />
+              <h2 className="text-xl font-bold text-slate-950">{t("calendar")}</h2>
+            </div>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">{t("calendarDescription")}</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <RefreshCw className="h-4 w-4" />
+              {t("refresh")}
+            </button>
+            <button
+              type="button"
+              onClick={onCreateActionNote}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            >
+              <Plus className="h-4 w-4" />
+              {t("createActionNote")}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_220px]">
+          <label className="relative">
+            <span className="sr-only">{t("searchActionNotes")}</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={searchTerm}
+              onChange={(event) => onSearchChange(event.target.value)}
+              className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+              placeholder={t("searchActionNotes")}
+            />
+          </label>
+          <label className="relative">
+            <span className="sr-only">{t("actionStatus")}</span>
+            <select
+              value={statusFilter}
+              onChange={(event) => onStatusFilterChange(event.target.value)}
+              className="h-10 w-full appearance-none rounded-md border border-slate-300 bg-white pl-3 pr-8 text-sm text-slate-950 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+            >
+              <option value="">{t("allStatuses")}</option>
+              <option value="open">{t("open")}</option>
+              <option value="in_progress">{t("inProgress")}</option>
+              <option value="done">{t("done")}</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          </label>
+        </div>
+      </div>
+
+      {error ? (
+        <p className="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      ) : null}
+
+      {loading ? (
+        <div className="mt-5 premium-panel p-5">
+          <div className="h-4 w-48 animate-pulse rounded bg-slate-200" />
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-32 animate-pulse rounded-md bg-slate-100" />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!loading && !notes.length ? (
+        <div className="mt-5 premium-card border-dashed border-slate-300 bg-white/90 px-6 py-14 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+          <p className="mt-4 text-sm font-semibold text-slate-900">{t("emptyCalendarTitle")}</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">{t("emptyCalendarDescription")}</p>
+          <button
+            type="button"
+            onClick={onCreateActionNote}
+            className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800"
+          >
+            <Plus className="h-4 w-4" />
+            {t("createActionNote")}
+          </button>
+        </div>
+      ) : null}
+
+      {!loading && notes.length ? (
+        <div className="mt-5 space-y-4">
+          <AgendaGroup title={t("overdue")} description={t("overdueDescription")} notes={groups.overdue} tone="red" markingId={markingId} onMarkDone={onMarkDone} t={t} />
+          <AgendaGroup title={t("dueToday")} description={t("dueTodayDescription")} notes={groups.today} tone="blue" markingId={markingId} onMarkDone={onMarkDone} t={t} />
+          <AgendaGroup title={t("dueThisWeek")} description={t("dueThisWeekDescription")} notes={groups.week} tone="emerald" markingId={markingId} onMarkDone={onMarkDone} t={t} />
+          <AgendaGroup title={t("upcoming")} description={t("upcomingDescription")} notes={groups.upcoming} markingId={markingId} onMarkDone={onMarkDone} t={t} />
+          <AgendaGroup title={t("done")} description={t("doneDescription")} notes={groups.done} markingId={markingId} onMarkDone={onMarkDone} t={t} />
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 const standardNoteToMarkdown = (exported) =>
   [
     `# ${escapeMarkdown(exported.title)}`,
@@ -376,11 +681,19 @@ export default function DashboardPage() {
   const activeSection = normalizeDashboardSection(sectionParam);
   const isHomeSection = activeSection === "home";
   const isNotesSection = activeSection === "notes";
+  const isCalendarSection = activeSection === "calendar";
   const isAiWorkspaceSection = activeSection === "ai-workspace";
   const isMeetingsSection = activeSection === "meetings";
   const isTeamSection = activeSection === "team";
   const isSettingsSection = activeSection === "settings";
   const [notes, setNotes] = useState([]);
+  const [agendaNotes, setAgendaNotes] = useState([]);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaError, setAgendaError] = useState("");
+  const [agendaSearchTerm, setAgendaSearchTerm] = useState("");
+  const [debouncedAgendaSearchTerm, setDebouncedAgendaSearchTerm] = useState("");
+  const [agendaStatusFilter, setAgendaStatusFilter] = useState("");
+  const [markingAgendaNoteId, setMarkingAgendaNoteId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState("");
@@ -786,6 +1099,14 @@ export default function DashboardPage() {
     return () => window.clearTimeout(timeoutId);
   }, [searchTerm]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedAgendaSearchTerm(agendaSearchTerm);
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [agendaSearchTerm]);
+
   const togglePinnedFilter = () => {
     setPinnedFilter((current) => (current === "true" ? "" : "true"));
     setPage(1);
@@ -869,6 +1190,36 @@ export default function DashboardPage() {
     loadNotes();
   }, [loadNotes]);
 
+  const loadAgendaNotes = useCallback(async () => {
+    if (!isCalendarSection) {
+      return;
+    }
+
+    setAgendaLoading(true);
+    setAgendaError("");
+
+    try {
+      const result = await fetchNotes({
+        page: 1,
+        limit: 100,
+        search: debouncedAgendaSearchTerm,
+        hasDueDate: true,
+        actionStatus: agendaStatusFilter,
+        scope: "all"
+      });
+      setAgendaNotes(result.notes || []);
+    } catch (err) {
+      setAgendaError(err.message);
+      addToast("error", t("notesLoadError", { message: err.message }));
+    } finally {
+      setAgendaLoading(false);
+    }
+  }, [addToast, agendaStatusFilter, debouncedAgendaSearchTerm, isCalendarSection, t]);
+
+  useEffect(() => {
+    loadAgendaNotes();
+  }, [loadAgendaNotes]);
+
   const loadWorkspace = useCallback(async () => {
     try {
       const info = await fetchMyWorkspace();
@@ -934,7 +1285,41 @@ export default function DashboardPage() {
     setOnboardingHidden(true);
     setPage(1);
     await loadNotes({ nextPage: 1 });
+    if (isCalendarSection || note.dueDate) {
+      await loadAgendaNotes();
+    }
     return note;
+  };
+
+  const createActionNoteFromCalendar = () => {
+    setActiveSection("notes");
+    setNotePrefillValues({
+      title: "",
+      body: "",
+      category: "Tasks",
+      isActionNote: true,
+      dueDate: formatDateParam(new Date()),
+      actionStatus: "open",
+      priority: "medium"
+    });
+    window.setTimeout(() => {
+      createNoteRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
+  const markAgendaNoteDone = async (note) => {
+    setMarkingAgendaNoteId(note.id);
+
+    try {
+      const updatedNote = await updateNote(note.id, { actionStatus: "done" });
+      setAgendaNotes((current) => current.map((item) => (item.id === updatedNote.id ? updatedNote : item)));
+      setNotes((current) => current.map((item) => (item.id === updatedNote.id ? updatedNote : item)));
+      addToast("success", t("actionNoteCompleted", { title: updatedNote.title }));
+    } catch (err) {
+      addToast("error", t("updateNoteError", { message: err.message }));
+    } finally {
+      setMarkingAgendaNoteId("");
+    }
   };
 
   const requestDelete = (id) => {
@@ -1750,6 +2135,23 @@ export default function DashboardPage() {
       </header>
 
       <DashboardSectionNav activeSection={activeSection} onChange={setActiveSection} />
+
+      {isCalendarSection ? (
+        <ActionCalendarSection
+          notes={agendaNotes}
+          loading={agendaLoading}
+          error={agendaError}
+          searchTerm={agendaSearchTerm}
+          statusFilter={agendaStatusFilter}
+          markingId={markingAgendaNoteId}
+          onSearchChange={setAgendaSearchTerm}
+          onStatusFilterChange={setAgendaStatusFilter}
+          onRefresh={loadAgendaNotes}
+          onMarkDone={markAgendaNoteDone}
+          onCreateActionNote={createActionNoteFromCalendar}
+          t={t}
+        />
+      ) : null}
 
       {showFirstTimeOnboarding && isHomeSection ? (
         <OnboardingWelcomePanel

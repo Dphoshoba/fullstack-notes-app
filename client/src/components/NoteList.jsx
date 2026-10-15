@@ -17,6 +17,7 @@ import {
 } from "../api/notes.js";
 import { SmartSuggestionsPanel, suggestionsToText } from "./NoteForm.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
+import { sanitizeMultilineText, sanitizeSingleLineText } from "../utils/textSanitizer.js";
 
 const noteTimestamp = (note) => new Date(note.updatedAt || note.createdAt || 0).getTime();
 
@@ -82,7 +83,7 @@ const noteToForm = (note) => ({
 const meetingTemplate = ["Agenda", "", "Discussion", "", "Decisions", "", "Action items", "", "Next steps"].join("\n");
 
 const parseTags = (tags) =>
-  tags
+  sanitizeSingleLineText(tags)
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
@@ -1258,7 +1259,11 @@ function EditNoteModal({
     event.preventDefault();
     setError("");
 
-    if (!form.title.trim() || !form.body.trim() || !form.category.trim()) {
+    const title = sanitizeSingleLineText(form.title);
+    const body = sanitizeMultilineText(form.body);
+    const category = sanitizeSingleLineText(form.category);
+
+    if (!title || !body || !category) {
       setError(t("noteRequiredFields"));
       return;
     }
@@ -1267,10 +1272,10 @@ function EditNoteModal({
 
     try {
       const updatedNote = await onUpdate(note.id, {
-        title: form.title.trim(),
-        body: form.body.trim(),
+        title,
+        body,
         tags: parseTags(form.tags),
-        category: form.category.trim(),
+        category,
         noteType: form.noteType,
         meetingMeta:
           form.noteType === "meeting"

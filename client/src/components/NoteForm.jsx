@@ -5,6 +5,7 @@ import { getSmartSuggestions } from "../api/ai.js";
 import { createNoteTemplate, fetchNoteTemplates } from "../api/notes.js";
 import { Button } from "./Button.jsx";
 import { useI18n } from "../context/I18nContext.jsx";
+import { sanitizeMultilineText, sanitizeSingleLineText } from "../utils/textSanitizer.js";
 import { VoiceRecorder } from "./VoiceRecorder.jsx";
 
 const meetingTemplate = ["Agenda", "", "Discussion", "", "Decisions", "", "Action items", "", "Next steps"].join("\n");
@@ -292,9 +293,9 @@ export function NoteForm({
     event.preventDefault();
     setError("");
 
-    const title = values.title.trim();
-    const body = values.body.trim();
-    const category = values.category.trim();
+    const title = sanitizeSingleLineText(values.title);
+    const body = sanitizeMultilineText(values.body);
+    const category = sanitizeSingleLineText(values.category);
 
     if (!title || !body || !category) {
       setError(t("noteRequiredFields"));
@@ -324,7 +325,7 @@ export function NoteForm({
         visibility: hasWorkspace ? values.visibility : "private",
         starred: values.starred,
         pinned: values.pinned,
-        tags: values.tags
+        tags: sanitizeSingleLineText(values.tags)
           .split(",")
           .map((tag) => tag.trim())
           .filter(Boolean)

@@ -291,13 +291,23 @@ export function NoteForm({
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+
+    const title = values.title.trim();
+    const body = values.body.trim();
+    const category = values.category.trim();
+
+    if (!title || !body || !category) {
+      setError(t("noteRequiredFields"));
+      return;
+    }
+
     setSaving(true);
 
     try {
       const note = await onCreate({
-        title: values.title,
-        body: values.body,
-        category: values.category,
+        title,
+        body,
+        category,
         noteType: values.noteType,
         meetingMeta:
           values.noteType === "meeting"

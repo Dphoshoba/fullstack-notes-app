@@ -7,6 +7,10 @@ const defaultOrigins = [
   "https://notes-app-multilingual.netlify.app"
 ];
 
+const defaultOriginPatterns = [
+  /^https:\/\/[a-z0-9-]+--notes-app-multilingual\.netlify\.app$/i
+];
+
 const normalizeOrigin = (origin = "") => origin.trim().replace(/\/+$/, "");
 
 const splitOrigins = (origins = "") =>
@@ -25,5 +29,9 @@ export const allowedOrigins = Array.from(
 
 export const isAllowedOrigin = (origin) => {
   if (!origin) return true;
-  return allowedOrigins.includes(normalizeOrigin(origin));
+  const normalizedOrigin = normalizeOrigin(origin);
+  return (
+    allowedOrigins.includes(normalizedOrigin) ||
+    defaultOriginPatterns.some((pattern) => pattern.test(normalizedOrigin))
+  );
 };

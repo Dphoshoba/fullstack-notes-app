@@ -458,7 +458,7 @@ VITE_API_BASE_URL=https://your-api.onrender.com
 
 ### Production CORS Notes
 
-The backend only allows requests from `CLIENT_ORIGIN`.
+The backend only allows requests from `CLIENT_ORIGIN` plus the app's Netlify deploy-preview/branch-preview URLs.
 
 For local development:
 
@@ -472,6 +472,12 @@ For production:
 ```bash
 CLIENT_ORIGIN=https://your-app.netlify.app
 COOKIE_SECURE=true
+```
+
+This repository also allows preview URLs that belong to the same Netlify site, such as:
+
+```text
+https://deploy-preview-11--notes-app-multilingual.netlify.app
 ```
 
 If login works but refresh/logout cookies do not behave correctly, check:

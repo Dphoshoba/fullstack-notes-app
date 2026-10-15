@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import mongoose from "mongoose";
 
 import { env } from "../config/env.js";
+import { Sentry } from "../services/sentry.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const formatMongooseValidation = (error) =>
@@ -35,6 +36,10 @@ export const errorHandler = (error, _req, res, _next) => {
   if (error?.code === "LIMIT_FILE_SIZE") {
     statusCode = StatusCodes.BAD_REQUEST;
     message = "File too large. Maximum size is 10MB.";
+  }
+
+  if (statusCode >= StatusCodes.INTERNAL_SERVER_ERROR && env.SENTRY_DSN) {
+    Sentry.captureException(error);
   }
 
   const response = {

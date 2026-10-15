@@ -291,7 +291,13 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-            <section ref={userSettingsRef} id="account-settings" className="premium-panel scroll-mt-6 p-5">
+            <section
+              ref={userSettingsRef}
+              id="account-settings"
+              className={`premium-panel scroll-mt-6 p-5 lg:block ${
+                activeSection === "account" ? "block" : "hidden"
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5 text-emerald-700" />
                 <h2 className="text-lg font-semibold text-slate-950">{t("userSettings")}</h2>
@@ -395,7 +401,13 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            <section ref={workspaceRef} id="workspace-settings" className="premium-panel scroll-mt-6 p-5">
+            <section
+              ref={workspaceRef}
+              id="workspace-settings"
+              className={`premium-panel scroll-mt-6 p-5 lg:block ${
+                activeSection === "workspace" ? "block" : "hidden"
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-emerald-700" />
                 <h2 className="text-lg font-semibold text-slate-950">{t("workspace")}</h2>

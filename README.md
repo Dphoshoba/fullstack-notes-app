@@ -19,6 +19,7 @@ The React frontend now has a Capacitor Android wrapper in `client/android`.
 For release testing, use the mobile and production checklist in `docs/MOBILE_STABILITY_CHECKLIST.md`.
 For production monitoring and incident checks, use `docs/OPERATIONS_RUNBOOK.md`.
 For the current stable release checkpoint, see `docs/RELEASE_NOTES.md`.
+For public launch readiness, use `docs/PUBLIC_LAUNCH_CHECKLIST.md`.
 Public launch pages are available at `/privacy`, `/terms`, and `/support`.
 
 From `client/`:
@@ -371,6 +372,7 @@ Frontend environment variables:
 
 - `VITE_API_BASE_URL` is your deployed backend URL, for example `https://your-api.onrender.com`.
 - Do not include a trailing slash in `VITE_API_BASE_URL`.
+- `VITE_SUPPORT_EMAIL` is the public support inbox used by `/support`.
 
 Before deploying:
 
@@ -454,6 +456,7 @@ client/dist
 
 ```bash
 VITE_API_BASE_URL=https://your-api.onrender.com
+VITE_SUPPORT_EMAIL=support@example.com
 ```
 
 7. Deploy the site.

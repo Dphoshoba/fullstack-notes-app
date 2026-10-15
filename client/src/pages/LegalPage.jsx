@@ -1,7 +1,7 @@
 import { ArrowLeft, CheckCircle2, HelpCircle, Mail, NotebookTabs, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const supportEmail = "support@notesworkspace.app";
+import { SUPPORT_EMAIL } from "../config.js";
 
 const pageContent = {
   privacy: {
@@ -184,7 +184,7 @@ export default function LegalPage({ type }) {
                 Send a short message with the feature, device, browser, and screenshot or error text.
               </p>
               <a
-                href={`mailto:${supportEmail}?subject=Notes%20Workspace%20Support%20Request`}
+                href={`mailto:${SUPPORT_EMAIL}?subject=Notes%20Workspace%20Support%20Request`}
                 className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
               >
                 <Mail className="h-4 w-4" />

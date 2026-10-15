@@ -21,6 +21,7 @@ import {
   transcribeAudio,
   summarizeNote as summarizeNoteText
 } from "../services/aiService.js";
+import { logger } from "../services/logger.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const notePayload = (note) => ({
@@ -724,7 +725,7 @@ export const insightsDashboard = async (req, res) => {
   let suggestedFocusAreas = [];
   let followUpSuggestions = [];
   if (recentNotes.length) {
-    console.info("[aiInsights] OpenAI request start", {
+    logger.info("AI insights OpenAI request start", {
       userId: req.user.id,
       notesAnalyzed: Math.min(recentNotes.length, 12)
     });
@@ -750,7 +751,7 @@ export const insightsDashboard = async (req, res) => {
       suggestedFocusAreas = generated.suggestedFocusAreas;
       followUpSuggestions = generated.followUpSuggestions;
     } catch {
-      console.error("[aiInsights] OpenAI generation failed, using fallback", {
+      logger.error("AI insights generation failed, using fallback", {
         userId: req.user.id
       });
       // Keep endpoint resilient and avoid exposing provider failures.
@@ -993,7 +994,7 @@ export const dailyBriefing = async (req, res) => {
         productivityReminder: generated.productivityReminder || fallbackNarrative.productivityReminder
       };
     } catch {
-      console.error("[dailyBriefing] OpenAI narrative failed, using local fallback", {
+      logger.error("Daily briefing narrative failed, using local fallback", {
         userId: req.user?.id
       });
     }

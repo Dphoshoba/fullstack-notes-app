@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import OpenAI, { toFile } from "openai";
 
 import { env } from "../config/env.js";
+import { logger } from "./logger.js";
 import { ApiError } from "../utils/ApiError.js";
 
 const AI_UNAVAILABLE_MESSAGE = "AI service unavailable. Please try again.";
@@ -70,8 +71,8 @@ const EMPTY_DAILY_BRIEFING_NARRATIVE = {
 let client;
 
 const safeLog = (level, message, metadata = {}) => {
-  const logger = console[level] || console.log;
-  logger(`[aiService] ${message}`, metadata);
+  const log = typeof logger[level] === "function" ? logger[level].bind(logger) : logger.info.bind(logger);
+  log(`AI service: ${message}`, metadata);
 };
 
 const getClient = () => {

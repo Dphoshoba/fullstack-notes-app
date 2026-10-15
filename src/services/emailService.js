@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 import { env } from "../config/env.js";
+import { logger } from "./logger.js";
 
 let resendClient;
 let warnedMissingConfig = false;
@@ -14,7 +15,7 @@ const isEmailConfigured = () => Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
 const getResendClient = () => {
   if (!isEmailConfigured()) {
     if (!warnedMissingConfig) {
-      console.warn("Resend email service is not configured. Transactional email skipped.");
+      logger.warn("Resend email service is not configured. Transactional email skipped");
       warnedMissingConfig = true;
     }
 
@@ -75,13 +76,15 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     });
 
     if (result?.error) {
-      console.warn("Transactional email could not be sent:", result.error.message || "Unknown Resend error");
+      logger.warn("Transactional email could not be sent", {
+        error: result.error.message || "Unknown Resend error"
+      });
       return false;
     }
 
     return true;
   } catch (error) {
-    console.warn("Transactional email could not be sent:", error.message);
+    logger.warn("Transactional email could not be sent", { error: error.message });
     return false;
   }
 };

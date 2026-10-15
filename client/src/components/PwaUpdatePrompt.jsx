@@ -20,6 +20,12 @@ export function PwaUpdatePrompt() {
       }
     };
 
+    const checkWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        checkForPwaUpdate();
+      }
+    };
+
     window.addEventListener(PWA_UPDATE_AVAILABLE_EVENT, showUpdatePrompt);
     const intervalId = window.setInterval(() => {
       checkForPwaUpdate();
@@ -27,11 +33,13 @@ export function PwaUpdatePrompt() {
 
     window.addEventListener("focus", checkForPwaUpdate);
     window.addEventListener("online", checkForPwaUpdate);
+    document.addEventListener("visibilitychange", checkWhenVisible);
 
     return () => {
       window.removeEventListener(PWA_UPDATE_AVAILABLE_EVENT, showUpdatePrompt);
       window.removeEventListener("focus", checkForPwaUpdate);
       window.removeEventListener("online", checkForPwaUpdate);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
       window.clearInterval(intervalId);
     };
   }, []);

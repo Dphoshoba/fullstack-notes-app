@@ -16,6 +16,8 @@ The API defaults to `http://localhost:4000`.
 
 The React frontend now has a Capacitor Android wrapper in `client/android`.
 
+For release testing, use the mobile and production checklist in `docs/MOBILE_STABILITY_CHECKLIST.md`.
+
 From `client/`:
 
 ```bash

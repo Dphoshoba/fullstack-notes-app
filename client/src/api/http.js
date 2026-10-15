@@ -34,6 +34,12 @@ function createAuthExpiredError() {
   return error;
 }
 
+function createConnectionError() {
+  const error = new Error("Connection failed. Check your internet connection and try again.");
+  error.code = "NETWORK_ERROR";
+  return error;
+}
+
 function expireSession() {
   tokenStorage.clear();
 
@@ -82,11 +88,19 @@ function createRequestHeaders(options, token) {
 }
 
 async function sendRequest(path, options, token) {
-  return fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: createRequestHeaders(options, token),
-    credentials: "include"
-  });
+  try {
+    return await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers: createRequestHeaders(options, token),
+      credentials: "include"
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw createConnectionError();
+    }
+
+    throw error;
+  }
 }
 
 export async function apiRequest(path, options = {}) {

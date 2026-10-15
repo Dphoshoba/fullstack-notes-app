@@ -136,6 +136,7 @@ export const translations = {
     done: "Done",
     doneDescription: "Completed action notes.",
     download: "Download",
+    due: "Due",
     dueDate: "Due date",
     dueThisWeek: "Due this week",
     dueThisWeekDescription: "Action notes due before the week ends.",

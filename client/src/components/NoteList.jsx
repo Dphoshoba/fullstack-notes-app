@@ -140,6 +140,27 @@ const priorityBadgeClass = (priority) => {
   return "bg-sky-50 text-sky-700 ring-sky-200";
 };
 
+const formatActionDueDate = (note) => {
+  if (!note.dueDate) {
+    return "";
+  }
+
+  const dueAt = new Date(note.dueDate);
+
+  if (note.dueTime) {
+    const [hours, minutes] = note.dueTime.split(":").map(Number);
+    dueAt.setHours(hours || 0, minutes || 0, 0, 0);
+  }
+
+  return dueAt.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: note.dueTime ? "numeric" : undefined,
+    minute: note.dueTime ? "2-digit" : undefined
+  });
+};
+
 const isActionOverdue = (note) => {
   if (!note.dueDate || note.actionStatus === "done") {
     return false;
@@ -927,7 +948,15 @@ function NoteCard({
         <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
           {(note.visibility || "private") === "workspace" ? t("workspaceNote") : t("privateNote")}
         </span>
-        {hasActionMetadata && note.dueDate ? (
+      </div>
+
+      {hasActionMetadata ? (
+        <div className="mt-4 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-blue-900">
+              {t("actionNote")}
+            </span>
+            {note.dueDate ? (
           <span
             className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${
               actionOverdue
@@ -936,21 +965,20 @@ function NoteCard({
             }`}
           >
             <Clock3 className="h-3 w-3" />
-            {actionOverdue ? t("overdue") : t("dueDate")}: {formatMeetingDate(note.dueDate)}
-            {note.dueTime ? ` ${note.dueTime}` : ""}
+                  {actionOverdue ? t("overdue") : t("due")}: {formatActionDueDate(note)}
           </span>
-        ) : null}
-        {hasActionMetadata ? (
-          <span className="inline-flex rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
-            {actionStatusLabel(note.actionStatus || "open", t)}
-          </span>
-        ) : null}
-        {note.priority ? (
-          <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${priorityBadgeClass(note.priority)}`}>
-            {priorityLabel(note.priority, t)}
-          </span>
-        ) : null}
-      </div>
+            ) : null}
+            <span className="inline-flex rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+              {actionStatusLabel(note.actionStatus || "open", t)}
+            </span>
+            {note.priority ? (
+              <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${priorityBadgeClass(note.priority)}`}>
+                {priorityLabel(note.priority, t)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {note.tags?.length ? (
         <div className="mt-5 flex flex-wrap gap-2">

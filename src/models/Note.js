@@ -128,6 +128,34 @@ const noteSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
       index: true
+    },
+    dueDate: {
+      type: Date,
+      default: null,
+      index: true
+    },
+    dueTime: {
+      type: String,
+      trim: true,
+      maxlength: 5,
+      default: ""
+    },
+    reminderAt: {
+      type: Date,
+      default: null,
+      index: true
+    },
+    actionStatus: {
+      type: String,
+      enum: ["open", "in_progress", "done"],
+      default: "open",
+      index: true
+    },
+    priority: {
+      type: String,
+      enum: ["", "low", "medium", "high"],
+      default: "",
+      index: true
     }
   },
   {
@@ -150,8 +178,11 @@ noteSchema.index({ owner: 1, category: 1, createdAt: -1 });
 noteSchema.index({ owner: 1, starred: 1, createdAt: -1 });
 noteSchema.index({ owner: 1, pinned: 1, updatedAt: -1 });
 noteSchema.index({ owner: 1, noteType: 1, createdAt: -1 });
+noteSchema.index({ owner: 1, dueDate: 1, actionStatus: 1 });
+noteSchema.index({ owner: 1, priority: 1, dueDate: 1 });
 noteSchema.index({ organizationId: 1, createdAt: -1 });
 noteSchema.index({ organizationId: 1, category: 1, createdAt: -1 });
 noteSchema.index({ organizationId: 1, noteType: 1, createdAt: -1 });
+noteSchema.index({ organizationId: 1, dueDate: 1, actionStatus: 1 });
 
 export const Note = mongoose.model("Note", noteSchema);

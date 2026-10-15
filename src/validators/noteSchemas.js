@@ -2,6 +2,13 @@ import Joi from "joi";
 
 const objectId = Joi.string().hex().length(24);
 const optionalDate = Joi.alternatives().try(Joi.date(), Joi.string().trim().allow(""));
+const dueTime = Joi.string()
+  .trim()
+  .pattern(/^([01]\d|2[0-3]):[0-5]\d$/)
+  .allow("")
+  .messages({ "string.pattern.base": "dueTime must use HH:mm format" });
+const actionStatus = Joi.string().valid("open", "in_progress", "done");
+const priority = Joi.string().valid("", "low", "medium", "high");
 const shortStringArray = (maxItems, maxLength) =>
   Joi.array().items(Joi.string().trim().max(maxLength)).max(maxItems).default([]);
 const meetingMetaSchema = Joi.object({
@@ -74,7 +81,12 @@ export const listNotesSchema = Joi.object({
     scope: Joi.string().valid("all", "private", "workspace").default("all"),
     starred: Joi.boolean(),
     pinned: Joi.boolean(),
-    thisWeek: Joi.boolean()
+    thisWeek: Joi.boolean(),
+    hasDueDate: Joi.boolean(),
+    actionStatus,
+    dueFrom: optionalDate,
+    dueTo: optionalDate,
+    overdue: Joi.boolean()
   }).default()
 });
 
@@ -101,7 +113,12 @@ export const createNoteSchema = Joi.object({
     meetingMeta: meetingMetaSchema,
     visibility: Joi.string().valid("private", "workspace").default("private"),
     starred: Joi.boolean().default(false),
-    pinned: Joi.boolean().default(false)
+    pinned: Joi.boolean().default(false),
+    dueDate: optionalDate.default(null),
+    dueTime: dueTime.default(""),
+    reminderAt: optionalDate.default(null),
+    actionStatus: actionStatus.default("open"),
+    priority: priority.default("")
   }).required()
 });
 
@@ -118,7 +135,12 @@ export const updateNoteSchema = Joi.object({
     meetingMeta: updateMeetingMetaSchema,
     visibility: Joi.string().valid("private", "workspace"),
     starred: Joi.boolean(),
-    pinned: Joi.boolean()
+    pinned: Joi.boolean(),
+    dueDate: optionalDate,
+    dueTime,
+    reminderAt: optionalDate,
+    actionStatus,
+    priority
   })
     .min(1)
     .required()

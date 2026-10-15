@@ -47,27 +47,54 @@ const normalizeMeetingMeta = (meetingMeta = {}) => ({
   priorityLevel: String(meetingMeta.priorityLevel || "").trim()
 });
 
+const normalizeActionFields = (input) => {
+  const normalized = { ...input };
+
+  if (Object.hasOwn(normalized, "dueDate")) {
+    normalized.dueDate = normalized.dueDate || null;
+  }
+
+  if (Object.hasOwn(normalized, "dueTime")) {
+    normalized.dueTime = String(normalized.dueTime || "").trim();
+  }
+
+  if (Object.hasOwn(normalized, "reminderAt")) {
+    normalized.reminderAt = normalized.reminderAt || null;
+  }
+
+  if (Object.hasOwn(normalized, "actionStatus")) {
+    normalized.actionStatus = normalized.actionStatus || "open";
+  }
+
+  if (Object.hasOwn(normalized, "priority")) {
+    normalized.priority = normalized.priority || "";
+  }
+
+  return normalized;
+};
+
 /**
  * @param {any} input
  * @param {{ defaultNoteType?: string }} [options]
  */
 const normalizeNoteInput = (input, { defaultNoteType } = {}) => {
+  const normalizedInput = normalizeActionFields(input);
   const noteType = input.noteType || defaultNoteType;
 
   if (!noteType && !input.meetingMeta) {
-    return input;
+    return normalizedInput;
   }
 
   if (noteType !== "meeting") {
     return {
-      ...input,
+      ...normalizedInput,
       noteType: "standard",
       meetingMeta: undefined
     };
   }
 
   return {
-    ...input,
+    ...normalizedInput,
     noteType,
     meetingMeta: normalizeMeetingMeta(input.meetingMeta)
   };
@@ -84,6 +111,11 @@ const historySnapshot = (note) => ({
   organizationId: note.organizationId || null,
   pinned: Boolean(note.pinned),
   starred: Boolean(note.starred),
+  dueDate: note.dueDate || null,
+  dueTime: note.dueTime || "",
+  reminderAt: note.reminderAt || null,
+  actionStatus: note.actionStatus || "open",
+  priority: note.priority || "",
   updatedAt: note.updatedAt
 });
 
@@ -149,6 +181,48 @@ const buildNoteFilter = (user, query) => {
     weekStart.setHours(0, 0, 0, 0);
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     filter.createdAt = { $gte: weekStart };
+  }
+
+  if (typeof query.hasDueDate === "boolean") {
+    if (query.hasDueDate) {
+      filter.dueDate = { $ne: null };
+    } else {
+      filter.$and = [
+        ...(filter.$and || []),
+        { $or: [{ dueDate: null }, { dueDate: { $exists: false } }] }
+      ];
+    }
+  }
+
+  if (query.actionStatus) {
+    filter.actionStatus = query.actionStatus;
+  }
+
+  if (query.dueFrom || query.dueTo) {
+    const dueDateRange = typeof filter.dueDate === "object" && !Array.isArray(filter.dueDate)
+      ? { ...filter.dueDate }
+      : {};
+
+    if (query.dueFrom) {
+      const dueFrom = new Date(query.dueFrom);
+      dueFrom.setHours(0, 0, 0, 0);
+      dueDateRange.$gte = dueFrom;
+    }
+
+    if (query.dueTo) {
+      const dueTo = new Date(query.dueTo);
+      dueTo.setHours(23, 59, 59, 999);
+      dueDateRange.$lte = dueTo;
+    }
+
+    filter.dueDate = dueDateRange;
+  }
+
+  if (query.overdue === true) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    filter.dueDate = { ...(typeof filter.dueDate === "object" && !Array.isArray(filter.dueDate) ? filter.dueDate : {}), $lt: today };
+    filter.actionStatus = { $ne: "done" };
   }
 
   return filter;

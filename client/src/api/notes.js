@@ -10,7 +10,12 @@ export async function fetchNotes({
   starred = "",
   scope = "all",
   pinned = "",
-  thisWeek = ""
+  thisWeek = "",
+  hasDueDate = "",
+  actionStatus = "",
+  dueFrom = "",
+  dueTo = "",
+  overdue = ""
 } = {}) {
   const params = new URLSearchParams({
     page: String(page),
@@ -39,6 +44,26 @@ export async function fetchNotes({
 
   if (thisWeek !== "") {
     params.set("thisWeek", String(thisWeek));
+  }
+
+  if (hasDueDate !== "") {
+    params.set("hasDueDate", String(hasDueDate));
+  }
+
+  if (actionStatus) {
+    params.set("actionStatus", actionStatus);
+  }
+
+  if (dueFrom) {
+    params.set("dueFrom", dueFrom);
+  }
+
+  if (dueTo) {
+    params.set("dueTo", dueTo);
+  }
+
+  if (overdue !== "") {
+    params.set("overdue", String(overdue));
   }
 
   if (scope) {

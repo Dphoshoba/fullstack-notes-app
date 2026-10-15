@@ -27,6 +27,11 @@ export interface Note {
   noteType: 'standard' | 'meeting';
   pinned: boolean;
   starred: boolean;
+  dueDate?: string | null;
+  dueTime?: string;
+  reminderAt?: string | null;
+  actionStatus?: 'open' | 'in_progress' | 'done';
+  priority?: '' | 'low' | 'medium' | 'high';
   createdAt: string;
   updatedAt: string;
 }

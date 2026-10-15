@@ -21,7 +21,13 @@ const initialValues = {
   followUpDate: "",
   visibility: "private",
   starred: false,
-  pinned: false
+  pinned: false,
+  isActionNote: false,
+  dueDate: "",
+  dueTime: "",
+  reminderAt: "",
+  actionStatus: "open",
+  priority: ""
 };
 
 export const suggestionsToText = (suggestions) =>
@@ -325,6 +331,11 @@ export function NoteForm({
         visibility: hasWorkspace ? values.visibility : "private",
         starred: values.starred,
         pinned: values.pinned,
+        dueDate: values.isActionNote ? values.dueDate : null,
+        dueTime: values.isActionNote ? values.dueTime : "",
+        reminderAt: values.isActionNote ? values.reminderAt : null,
+        actionStatus: values.isActionNote ? values.actionStatus : "open",
+        priority: values.isActionNote ? values.priority : "",
         tags: sanitizeSingleLineText(values.tags)
           .split(",")
           .map((tag) => tag.trim())
@@ -599,6 +610,82 @@ export function NoteForm({
         />
         {t("pinThisNote")}
       </label>
+
+      <div className="rounded-md border border-slate-200 bg-slate-50/60 p-3">
+        <label className="flex min-h-8 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-800">
+          <input
+            type="checkbox"
+            name="isActionNote"
+            checked={values.isActionNote}
+            onChange={updateField}
+            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+          />
+          {t("actionNote")}
+        </label>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{t("actionNoteDescription")}</p>
+
+        {values.isActionNote ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("dueDate")}</span>
+              <input
+                type="date"
+                name="dueDate"
+                value={values.dueDate}
+                onChange={updateField}
+                className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("dueTime")}</span>
+              <input
+                type="time"
+                name="dueTime"
+                value={values.dueTime}
+                onChange={updateField}
+                className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("reminderAt")}</span>
+              <input
+                type="datetime-local"
+                name="reminderAt"
+                value={values.reminderAt}
+                onChange={updateField}
+                className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-slate-700">{t("actionStatus")}</span>
+              <select
+                name="actionStatus"
+                value={values.actionStatus}
+                onChange={updateField}
+                className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
+              >
+                <option value="open">{t("open")}</option>
+                <option value="in_progress">{t("inProgress")}</option>
+                <option value="done">{t("done")}</option>
+              </select>
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="text-sm font-medium text-slate-700">{t("priority")}</span>
+              <select
+                name="priority"
+                value={values.priority}
+                onChange={updateField}
+                className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
+              >
+                <option value="">{t("noPriority")}</option>
+                <option value="low">{t("priorityLow")}</option>
+                <option value="medium">{t("priorityMedium")}</option>
+                <option value="high">{t("priorityHigh")}</option>
+              </select>
+            </label>
+          </div>
+        ) : null}
+      </div>
 
       {error ? <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
 

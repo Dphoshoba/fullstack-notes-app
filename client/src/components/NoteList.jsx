@@ -77,7 +77,19 @@ const noteToForm = (note) => ({
   followUpDate: note.meetingMeta?.followUpDate ? note.meetingMeta.followUpDate.slice(0, 10) : "",
   visibility: note.visibility || "private",
   starred: Boolean(note.starred),
-  pinned: Boolean(note.pinned)
+  pinned: Boolean(note.pinned),
+  isActionNote: Boolean(
+    note.dueDate ||
+      note.dueTime ||
+      note.reminderAt ||
+      note.priority ||
+      (note.actionStatus && note.actionStatus !== "open")
+  ),
+  dueDate: note.dueDate ? note.dueDate.slice(0, 10) : "",
+  dueTime: note.dueTime || "",
+  reminderAt: note.reminderAt ? note.reminderAt.slice(0, 16) : "",
+  actionStatus: note.actionStatus || "open",
+  priority: note.priority || ""
 });
 
 const meetingTemplate = ["Agenda", "", "Discussion", "", "Decisions", "", "Action items", "", "Next steps"].join("\n");
@@ -98,6 +110,51 @@ const formatMeetingDate = (value) => {
     day: "numeric",
     year: "numeric"
   });
+};
+
+const hasActionNoteFields = (note) =>
+  Boolean(
+    note.dueDate ||
+      note.dueTime ||
+      note.reminderAt ||
+      note.priority ||
+      (note.actionStatus && note.actionStatus !== "open")
+  );
+
+const actionStatusLabel = (status, t) => {
+  if (status === "in_progress") return t("inProgress");
+  if (status === "done") return t("done");
+  return t("open");
+};
+
+const priorityLabel = (priority, t) => {
+  if (priority === "low") return t("priorityLow");
+  if (priority === "medium") return t("priorityMedium");
+  if (priority === "high") return t("priorityHigh");
+  return "";
+};
+
+const priorityBadgeClass = (priority) => {
+  if (priority === "high") return "bg-red-50 text-red-700 ring-red-200";
+  if (priority === "medium") return "bg-amber-50 text-amber-700 ring-amber-200";
+  return "bg-sky-50 text-sky-700 ring-sky-200";
+};
+
+const isActionOverdue = (note) => {
+  if (!note.dueDate || note.actionStatus === "done") {
+    return false;
+  }
+
+  const dueAt = new Date(note.dueDate);
+
+  if (note.dueTime) {
+    const [hours, minutes] = note.dueTime.split(":").map(Number);
+    dueAt.setHours(hours || 0, minutes || 0, 0, 0);
+  } else {
+    dueAt.setHours(23, 59, 59, 999);
+  }
+
+  return dueAt.getTime() < Date.now();
 };
 
 const toTextLines = (value) => {
@@ -732,6 +789,8 @@ function NoteCard({
   const summaryLoading = aiLoadingAction === `summary:${note.id}`;
   const tagsLoading = aiLoadingAction === `tags:${note.id}`;
   const aiActionDisabled = saving || Boolean(aiLoadingAction);
+  const hasActionMetadata = hasActionNoteFields(note);
+  const actionOverdue = isActionOverdue(note);
 
   useEffect(() => {
     setActivityCounts({
@@ -868,6 +927,29 @@ function NoteCard({
         <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
           {(note.visibility || "private") === "workspace" ? t("workspaceNote") : t("privateNote")}
         </span>
+        {hasActionMetadata && note.dueDate ? (
+          <span
+            className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold ring-1 ${
+              actionOverdue
+                ? "bg-red-50 text-red-700 ring-red-200"
+                : "bg-blue-50 text-blue-700 ring-blue-200"
+            }`}
+          >
+            <Clock3 className="h-3 w-3" />
+            {actionOverdue ? t("overdue") : t("dueDate")}: {formatMeetingDate(note.dueDate)}
+            {note.dueTime ? ` ${note.dueTime}` : ""}
+          </span>
+        ) : null}
+        {hasActionMetadata ? (
+          <span className="inline-flex rounded-md bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+            {actionStatusLabel(note.actionStatus || "open", t)}
+          </span>
+        ) : null}
+        {note.priority ? (
+          <span className={`inline-flex rounded-md px-2 py-1 text-xs font-semibold ring-1 ${priorityBadgeClass(note.priority)}`}>
+            {priorityLabel(note.priority, t)}
+          </span>
+        ) : null}
       </div>
 
       {note.tags?.length ? (
@@ -1291,7 +1373,12 @@ function EditNoteModal({
             : undefined,
         visibility: hasWorkspace ? form.visibility : "private",
         starred: form.starred,
-        pinned: form.pinned
+        pinned: form.pinned,
+        dueDate: form.isActionNote ? form.dueDate : null,
+        dueTime: form.isActionNote ? form.dueTime : "",
+        reminderAt: form.isActionNote ? form.reminderAt : null,
+        actionStatus: form.isActionNote ? form.actionStatus : "open",
+        priority: form.isActionNote ? form.priority : ""
       });
       onUpdateSuccess?.(updatedNote);
       onClose();
@@ -1447,6 +1534,82 @@ function EditNoteModal({
                 placeholder={t("tagsHint")}
               />
             </label>
+
+            <div className="rounded-md border border-slate-200 bg-slate-50/70 p-3 sm:col-span-2">
+              <label className="flex min-h-8 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-800">
+                <input
+                  type="checkbox"
+                  name="isActionNote"
+                  checked={form.isActionNote}
+                  onChange={updateField}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                />
+                {t("actionNote")}
+              </label>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{t("actionNoteDescription")}</p>
+
+              {form.isActionNote ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">{t("dueDate")}</span>
+                    <input
+                      type="date"
+                      name="dueDate"
+                      value={form.dueDate}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">{t("dueTime")}</span>
+                    <input
+                      type="time"
+                      name="dueTime"
+                      value={form.dueTime}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">{t("reminderAt")}</span>
+                    <input
+                      type="datetime-local"
+                      name="reminderAt"
+                      value={form.reminderAt}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-slate-700">{t("actionStatus")}</span>
+                    <select
+                      name="actionStatus"
+                      value={form.actionStatus}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    >
+                      <option value="open">{t("open")}</option>
+                      <option value="in_progress">{t("inProgress")}</option>
+                      <option value="done">{t("done")}</option>
+                    </select>
+                  </label>
+                  <label className="block sm:col-span-2">
+                    <span className="text-sm font-medium text-slate-700">{t("priority")}</span>
+                    <select
+                      name="priority"
+                      value={form.priority}
+                      onChange={updateField}
+                      className="mt-2 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
+                    >
+                      <option value="">{t("noPriority")}</option>
+                      <option value="low">{t("priorityLow")}</option>
+                      <option value="medium">{t("priorityMedium")}</option>
+                      <option value="high">{t("priorityHigh")}</option>
+                    </select>
+                  </label>
+                </div>
+              ) : null}
+            </div>
           </div>
 
           <div className="mt-4 space-y-3">

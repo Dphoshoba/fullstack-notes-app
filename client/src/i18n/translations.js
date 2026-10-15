@@ -26,6 +26,9 @@ export const defaultLanguage = "en";
 export const translations = {
   en: {
     account: "Account",
+    actionNote: "Action note",
+    actionNoteDescription: "Add a due date, reminder, status, or priority when this note needs follow-up.",
+    actionStatus: "Action status",
     actionItems: "Action items",
     agenda: "Agenda",
     aiPlaceholderNotice: "Powered by OpenAI using your backend AI service.",
@@ -127,6 +130,8 @@ export const translations = {
     dismiss: "Dismiss",
     done: "Done",
     download: "Download",
+    dueDate: "Due date",
+    dueTime: "Due time",
     editNote: "Edit note",
     edit: "Edit",
     editedBy: "Edited by",
@@ -314,6 +319,7 @@ export const translations = {
     inviteTeam: "Invite team",
     inviteTeamToStartCollaborating: "Invite your team to start collaborating",
     invitedEmail: "Invited email",
+    inProgress: "In progress",
     loginToAcceptInvite: "Log in with the invited email address to accept this workspace invite.",
     manageBilling: "Manage billing",
     markAllAsRead: "Mark all as read",
@@ -352,6 +358,7 @@ export const translations = {
     noAttachmentsYet: "No attachments yet",
     noActionItemsYet: "No action items yet",
     noNotifications: "No notifications yet.",
+    noPriority: "No priority",
     noNoteHistory: "No note history yet. Edit this note to create the first saved version.",
     noteRequiredFields: "Title, body, and category are required.",
     noteHistory: "Note history",
@@ -393,6 +400,9 @@ export const translations = {
     mostPopular: "Most Popular",
     premiumAiLimit: "100,000 uses",
     priority: "Priority",
+    priorityHigh: "High priority",
+    priorityLow: "Low priority",
+    priorityMedium: "Medium priority",
     profileUpdated: "Profile saved successfully.",
     profileUpdateError: "Profile could not be saved. {{message}}",
     previous: "Previous",
@@ -403,6 +413,7 @@ export const translations = {
     registerClicks: "Register clicks",
     registerSubtitle: "Register, receive a token, and start managing notes.",
     replaceNoteBody: "Replace note body",
+    reminderAt: "Reminder",
     role: "Role",
     roleUpdated: "{{name}}'s role was updated successfully.",
     roleUpdatedTo: "{{name}}'s role was updated to {{role}}.",
@@ -482,6 +493,7 @@ export const translations = {
     mostUsedCategory: "Most used category",
     ofLoadedNotes: "{{percent}}% of loaded notes",
     open: "Open",
+    overdue: "Overdue",
     unknown: "Unknown",
     thisNote: "this note",
     thisWeek: "This week",
@@ -1560,4 +1572,79 @@ Object.assign(translations.kri, {
   noNotifications: "No notifications yet.",
   markAllAsRead: "Mark all as read",
   markAsRead: "Mark as read"
+});
+
+Object.assign(translations.fr, {
+  actionNote: "Note d'action",
+  actionNoteDescription: "Ajoutez une date, un rappel, un statut ou une priorite quand cette note demande un suivi.",
+  actionStatus: "Statut de l'action",
+  dueDate: "Date d'echeance",
+  dueTime: "Heure d'echeance",
+  inProgress: "En cours",
+  noPriority: "Aucune priorite",
+  overdue: "En retard",
+  priorityHigh: "Priorite haute",
+  priorityLow: "Priorite basse",
+  priorityMedium: "Priorite moyenne",
+  reminderAt: "Rappel"
+});
+
+Object.assign(translations.es, {
+  actionNote: "Nota de accion",
+  actionNoteDescription: "Agrega fecha, recordatorio, estado o prioridad cuando esta nota necesite seguimiento.",
+  actionStatus: "Estado de accion",
+  dueDate: "Fecha limite",
+  dueTime: "Hora limite",
+  inProgress: "En progreso",
+  noPriority: "Sin prioridad",
+  overdue: "Atrasada",
+  priorityHigh: "Prioridad alta",
+  priorityLow: "Prioridad baja",
+  priorityMedium: "Prioridad media",
+  reminderAt: "Recordatorio"
+});
+
+Object.assign(translations.pt, {
+  actionNote: "Nota de acao",
+  actionNoteDescription: "Adicione prazo, lembrete, status ou prioridade quando esta nota precisar de acompanhamento.",
+  actionStatus: "Status da acao",
+  dueDate: "Data limite",
+  dueTime: "Hora limite",
+  inProgress: "Em andamento",
+  noPriority: "Sem prioridade",
+  overdue: "Atrasada",
+  priorityHigh: "Alta prioridade",
+  priorityLow: "Baixa prioridade",
+  priorityMedium: "Prioridade media",
+  reminderAt: "Lembrete"
+});
+
+Object.assign(translations.ar, {
+  actionNote: "ملاحظة عمل",
+  actionNoteDescription: "أضف تاريخ استحقاق أو تذكير أو حالة أو أولوية عندما تحتاج هذه الملاحظة إلى متابعة.",
+  actionStatus: "حالة العمل",
+  dueDate: "تاريخ الاستحقاق",
+  dueTime: "وقت الاستحقاق",
+  inProgress: "قيد التنفيذ",
+  noPriority: "بدون أولوية",
+  overdue: "متأخرة",
+  priorityHigh: "أولوية عالية",
+  priorityLow: "أولوية منخفضة",
+  priorityMedium: "أولوية متوسطة",
+  reminderAt: "تذكير"
+});
+
+Object.assign(translations.kri, {
+  actionNote: "Action note",
+  actionNoteDescription: "Add due date, reminder, status, or priority wen dis note need follow-up.",
+  actionStatus: "Action status",
+  dueDate: "Due date",
+  dueTime: "Due time",
+  inProgress: "In progress",
+  noPriority: "No priority",
+  overdue: "Overdue",
+  priorityHigh: "High priority",
+  priorityLow: "Low priority",
+  priorityMedium: "Medium priority",
+  reminderAt: "Reminder"
 });

@@ -883,7 +883,7 @@ export default function DashboardPage() {
   );
 
   const goToSettingsSection = useCallback(() => {
-    navigate("/settings");
+    navigate("/settings?section=workspace");
   }, [navigate]);
 
   const recentNotesPreview = sortVisibleNotes(notes).slice(0, 5);
@@ -1133,7 +1133,7 @@ export default function DashboardPage() {
   const startInviteOnboarding = () => {
     localStorage.setItem("notes_api_onboarding_invite_started", "true");
     addToast("success", t("inviteSent"));
-    navigate("/settings");
+    navigate("/settings?section=workspace");
   };
 
   const openGuideFromOnboarding = () => {
@@ -2214,7 +2214,7 @@ export default function DashboardPage() {
                     {t("profile")}
                   </button>
                   <Link
-                    to="/settings"
+                    to="/settings?section=workspace"
                     onClick={() => setUserMenuOpen(false)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                     role="menuitem"
@@ -3480,7 +3480,7 @@ export default function DashboardPage() {
               emptyActionLabel={
                 notesEmptyState.variant === "notes" ? t("inviteTeamToStartCollaborating") : ""
               }
-              emptyActionTo="/settings"
+              emptyActionTo="/settings?section=workspace"
               emptyVariant={notesEmptyState.variant}
               hasWorkspace={hasWorkspace}
               onRunAiAction={runAiAction}

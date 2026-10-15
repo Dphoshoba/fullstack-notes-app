@@ -63,7 +63,7 @@ export function WorkspaceDashboardSection({
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <Link
-            to="/settings"
+            to="/settings?section=workspace"
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
           >
             <UserPlus className="h-4 w-4" />

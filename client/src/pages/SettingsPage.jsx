@@ -1,6 +1,6 @@
 import { CheckCircle2, Copy, Loader2, Mail, Mic, Plus, Save, Settings, Users } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { fetchUserSettings } from "../api/users.js";
 import {
@@ -17,6 +17,9 @@ export default function SettingsPage() {
   const { user, updateSettings } = useAuth();
   const { language, languages, setLanguage, t } = useI18n();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const userSettingsRef = useRef(null);
+  const workspaceRef = useRef(null);
   const [name, setName] = useState(user?.name || "");
   const [preferredLanguage, setPreferredLanguage] = useState(user?.preferredLanguage || language);
   const [defaultNoteScope, setDefaultNoteScope] = useState(user?.defaultNoteScope || "private");
@@ -41,6 +44,7 @@ export default function SettingsPage() {
 
   const canManageMembers = ["owner", "manager"].includes(workspaceInfo.role);
   const hasWorkspace = Boolean(workspaceInfo.workspace);
+  const activeSection = searchParams.get("section") === "workspace" ? "workspace" : "account";
 
   const handleRequestError = useCallback(
     (err) => {
@@ -87,6 +91,19 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    const target = activeSection === "workspace" ? workspaceRef.current : userSettingsRef.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeSection, loading]);
+
+  const selectSettingsSection = (section) => {
+    setSearchParams(section === "workspace" ? { section: "workspace" } : {});
+  };
 
   const saveSettings = async (event) => {
     event.preventDefault();
@@ -240,6 +257,33 @@ export default function SettingsPage() {
           </Link>
         </div>
 
+        <div className="mb-6 grid gap-2 rounded-md border border-slate-200 bg-white p-2 shadow-sm shadow-slate-950/5 sm:inline-grid sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => selectSettingsSection("account")}
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition ${
+              activeSection === "account"
+                ? "bg-emerald-700 text-white shadow-sm shadow-emerald-950/10"
+                : "text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <Settings className="h-4 w-4" />
+            {t("userSettings")}
+          </button>
+          <button
+            type="button"
+            onClick={() => selectSettingsSection("workspace")}
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition ${
+              activeSection === "workspace"
+                ? "bg-emerald-700 text-white shadow-sm shadow-emerald-950/10"
+                : "text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            {t("workspace")}
+          </button>
+        </div>
+
         {loading ? (
           <div className="premium-panel flex items-center justify-center gap-2 p-8 text-sm text-slate-600">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -247,7 +291,7 @@ export default function SettingsPage() {
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-            <section className="premium-panel p-5">
+            <section ref={userSettingsRef} id="account-settings" className="premium-panel scroll-mt-6 p-5">
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5 text-emerald-700" />
                 <h2 className="text-lg font-semibold text-slate-950">{t("userSettings")}</h2>
@@ -351,7 +395,7 @@ export default function SettingsPage() {
               </div>
             </section>
 
-            <section className="premium-panel p-5">
+            <section ref={workspaceRef} id="workspace-settings" className="premium-panel scroll-mt-6 p-5">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-emerald-700" />
                 <h2 className="text-lg font-semibold text-slate-950">{t("workspace")}</h2>

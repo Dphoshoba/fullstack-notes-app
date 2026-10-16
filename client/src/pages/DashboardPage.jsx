@@ -17,6 +17,7 @@ import {
   LogOut,
   Mail,
   MessageSquare,
+  NotebookText,
   Pin,
   Plus,
   RefreshCw,
@@ -2341,6 +2342,15 @@ export default function DashboardPage() {
                   >
                     <HelpCircle className="h-4 w-4 text-slate-500" />
                     {t("guide")}
+                  </Link>
+                  <Link
+                    to="/manual"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    role="menuitem"
+                  >
+                    <NotebookText className="h-4 w-4 text-slate-500" />
+                    User manual
                   </Link>
                   <Link
                     to="/settings"

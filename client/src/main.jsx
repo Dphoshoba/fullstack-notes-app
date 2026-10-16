@@ -11,6 +11,7 @@ import GuidePage from "./pages/GuidePage.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import LegalPage from "./pages/LegalPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import ManualPage from "./pages/ManualPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import { ProtectedRoute } from "./routes/ProtectedRoute.jsx";
@@ -46,6 +47,14 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute>
               <GuidePage />
+            </ProtectedRoute>
+          )
+        },
+        {
+          path: "manual",
+          element: (
+            <ProtectedRoute>
+              <ManualPage />
             </ProtectedRoute>
           )
         },

@@ -222,6 +222,12 @@ export default function GuidePage() {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link
+              to="/manual"
+              className="premium-button inline-flex h-10 items-center justify-center rounded-md border border-emerald-300 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 shadow-sm shadow-emerald-950/[0.03] transition hover:bg-emerald-100"
+            >
+              Open User Manual
+            </Link>
+            <Link
               to="/dashboard"
               className="premium-button inline-flex h-10 items-center justify-center rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm shadow-slate-950/[0.03] transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
             >

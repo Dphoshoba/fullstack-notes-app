@@ -23,6 +23,21 @@ const getCheckoutCustomerId = (session) =>
 const getEventCustomerId = (object) =>
   typeof object.customer === "string" ? object.customer : object.customer?.id;
 
+const getEventSubscriptionId = (object) => {
+  if (typeof object.subscription === "string") {
+    return object.subscription;
+  }
+
+  if (object.subscription?.id) {
+    return object.subscription.id;
+  }
+
+  return object.object === "subscription" ? object.id : "";
+};
+
+const getCheckoutSubscriptionId = (session) =>
+  typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+
 const findUserForBillingObject = async (object) => {
   const userId = object.metadata?.userId || object.client_reference_id;
 
@@ -30,9 +45,28 @@ const findUserForBillingObject = async (object) => {
     return User.findById(userId);
   }
 
+  const stripeSubscriptionId = getEventSubscriptionId(object);
+  if (stripeSubscriptionId) {
+    const user = await User.findOne({ stripeSubscriptionId });
+    if (user) {
+      return user;
+    }
+  }
+
   const stripeCustomerId = getEventCustomerId(object);
   return stripeCustomerId ? User.findOne({ stripeCustomerId }) : null;
 };
+
+const setUserPlan = async (userId, plan, extraUpdates = {}) =>
+  User.findByIdAndUpdate(
+    userId,
+    {
+      plan,
+      aiUsageLimit: AI_USAGE_LIMITS[plan] ?? AI_USAGE_LIMITS.free,
+      ...extraUpdates
+    },
+    { new: true }
+  );
 
 export const createCheckoutSession = async (req, res) => {
   if (!env.STRIPE_PRICE_ID) {
@@ -136,13 +170,13 @@ export const handleStripeWebhook = async (req, res) => {
     const session = event.data.object;
     const userId = session.metadata?.userId || session.client_reference_id;
     const stripeCustomerId = getCheckoutCustomerId(session);
+    const stripeSubscriptionId = getCheckoutSubscriptionId(session);
 
     if (userId) {
-      const user = await User.findByIdAndUpdate(userId, {
-        plan: "premium",
-        aiUsageLimit: AI_USAGE_LIMITS.premium,
-        ...(stripeCustomerId ? { stripeCustomerId } : {})
-      }, { new: true });
+      const user = await setUserPlan(userId, "premium", {
+        ...(stripeCustomerId ? { stripeCustomerId } : {}),
+        ...(stripeSubscriptionId ? { stripeSubscriptionId } : {})
+      });
       await createNotification({
         userId,
         type: "subscription_upgrade",
@@ -165,9 +199,28 @@ export const handleStripeWebhook = async (req, res) => {
     const user = await findUserForBillingObject(event.data.object);
 
     if (user?.email) {
+      await createNotification({
+        userId: user.id,
+        type: "billing_issue",
+        title: "Billing issue",
+        message: "There is a billing issue on your account. Please review your subscription.",
+        metadata: {
+          stripeCustomerId: user.stripeCustomerId || ""
+        }
+      });
       void sendBillingIssueEmail({
         to: user.email,
         userName: user.name
+      });
+    }
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const user = await findUserForBillingObject(event.data.object);
+
+    if (user) {
+      await setUserPlan(user.id, "free", {
+        stripeSubscriptionId: ""
       });
     }
   }

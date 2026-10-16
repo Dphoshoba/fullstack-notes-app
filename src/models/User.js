@@ -83,6 +83,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true
+    },
+    stripeSubscriptionId: {
+      type: String,
+      default: "",
+      trim: true
     }
   },
   {
@@ -94,6 +99,7 @@ const userSchema = new mongoose.Schema(
         delete ret.__v;
         delete ret.password;
         delete ret.stripeCustomerId;
+        delete ret.stripeSubscriptionId;
         return ret;
       }
     }

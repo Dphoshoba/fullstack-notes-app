@@ -151,6 +151,7 @@ export function NoteForm({
   onCreateError,
   onCreateSuccess,
   hasWorkspace = false,
+  isPremium = false,
   defaultVisibility = "private",
   prefillValues = null
 }) {
@@ -190,7 +191,7 @@ export function NoteForm({
       title: found.title || current.title,
       body: found.body || current.body,
       category: found.category || current.category,
-      noteType: found.noteType || current.noteType
+      noteType: isPremium ? found.noteType || current.noteType : "standard"
     }));
   };
 
@@ -226,11 +227,24 @@ export function NoteForm({
     setValues((current) => ({
       ...current,
       ...prefillValues,
-      visibility: hasWorkspace
+      noteType: isPremium ? prefillValues.noteType || current.noteType : "standard",
+      visibility: hasWorkspace && isPremium
         ? prefillValues.visibility || current.visibility || defaultVisibility
         : "private"
     }));
-  }, [defaultVisibility, hasWorkspace, prefillValues]);
+  }, [defaultVisibility, hasWorkspace, isPremium, prefillValues]);
+
+  useEffect(() => {
+    if (isPremium) {
+      return;
+    }
+
+    setValues((current) => ({
+      ...current,
+      noteType: "standard",
+      visibility: "private"
+    }));
+  }, [isPremium]);
 
   const updateField = (event) => {
     const { name, value, type, checked } = event.target;
@@ -315,9 +329,9 @@ export function NoteForm({
         title,
         body,
         category,
-        noteType: values.noteType,
+        noteType: isPremium ? values.noteType : "standard",
         meetingMeta:
-          values.noteType === "meeting"
+          isPremium && values.noteType === "meeting"
             ? {
                 meetingDate: values.meetingDate,
                 attendees: values.attendees
@@ -328,7 +342,7 @@ export function NoteForm({
                 sourceType: "manual"
               }
             : undefined,
-        visibility: hasWorkspace ? values.visibility : "private",
+        visibility: hasWorkspace && isPremium ? values.visibility : "private",
         starred: values.starred,
         pinned: values.pinned,
         dueDate: values.isActionNote ? values.dueDate : null,
@@ -341,7 +355,7 @@ export function NoteForm({
           .map((tag) => tag.trim())
           .filter(Boolean)
       });
-      setValues({ ...initialValues, visibility: hasWorkspace ? defaultVisibility : "private" });
+      setValues({ ...initialValues, visibility: hasWorkspace && isPremium ? defaultVisibility : "private" });
       setSuggestions(null);
       setSuggestionsError("");
       setSuggestionsCopied(false);
@@ -424,11 +438,15 @@ export function NoteForm({
           name="noteType"
           value={values.noteType}
           onChange={updateField}
-          className="premium-input mt-1.5 h-9 w-full px-3 text-sm"
+          disabled={!isPremium}
+          className="premium-input mt-1.5 h-9 w-full px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
         >
           <option value="standard">{t("standardNote")}</option>
-          <option value="meeting">{t("meetingNote")}</option>
+          {isPremium ? <option value="meeting">{t("meetingNote")}</option> : null}
         </select>
+        {!isPremium ? (
+          <p className="mt-2 text-xs font-medium text-emerald-700">Meeting notes are included with Premium.</p>
+        ) : null}
       </div>
 
       {values.noteType === "meeting" ? (
@@ -525,15 +543,17 @@ export function NoteForm({
         <select
           id="visibility"
           name="visibility"
-          value={hasWorkspace ? values.visibility : "private"}
+          value={hasWorkspace && isPremium ? values.visibility : "private"}
           onChange={updateField}
-          disabled={!hasWorkspace}
+          disabled={!hasWorkspace || !isPremium}
           className="premium-input mt-1.5 h-9 w-full px-3 text-sm disabled:bg-slate-100 disabled:text-slate-500"
         >
           <option value="private">{t("privateNote")}</option>
-          <option value="workspace">{t("workspaceNote")}</option>
+          {isPremium ? <option value="workspace">{t("workspaceNote")}</option> : null}
         </select>
-        {!hasWorkspace ? (
+        {!isPremium ? (
+          <p className="mt-2 text-xs font-medium text-emerald-700">Workspace notes are included with Premium.</p>
+        ) : !hasWorkspace ? (
           <p className="mt-2 text-xs font-medium text-slate-500">{t("workspaceRequired")}</p>
         ) : null}
       </div>

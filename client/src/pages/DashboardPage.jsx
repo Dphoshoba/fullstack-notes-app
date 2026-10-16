@@ -985,6 +985,7 @@ export default function DashboardPage() {
     ? Math.min(Math.round((usage.aiUsageCount / usage.aiUsageLimit) * 100), 100)
     : 0;
   const usagePlanLabel = usage.plan === "premium" ? t("premiumPlan") : t("freePlan");
+  const isPremium = usage.plan === "premium" || user?.plan === "premium";
   const recentMeetingNotes = [...notes]
     .filter(
       (note) =>
@@ -1157,6 +1158,12 @@ export default function DashboardPage() {
   };
 
   const startMeetingsOnboarding = () => {
+    if (!isPremium) {
+      addToast("error", "Meeting notes are included with Premium.");
+      startUpgrade();
+      return;
+    }
+
     localStorage.setItem(ONBOARDING_MEETINGS_STARTED_KEY, "true");
     setOnboardingStepFlags((current) => ({ ...current, meetings: true }));
     setActiveSection("meetings");
@@ -1551,6 +1558,12 @@ export default function DashboardPage() {
   };
 
   const exportNotes = (format) => {
+    if (!isPremium) {
+      addToast("error", "Export is a Premium feature.");
+      setExportOpen(false);
+      return;
+    }
+
     const visibleNotes = sortVisibleNotes(notes);
 
     if (!visibleNotes.length) {
@@ -1824,7 +1837,7 @@ export default function DashboardPage() {
   };
 
   const startUpgrade = async () => {
-    trackEvent("click_upgrade", { location: "dashboard_plan_usage" });
+    trackEvent("click_upgrade", { location: "dashboard" });
     setUpgradeLoading(true);
 
     try {
@@ -1835,6 +1848,26 @@ export default function DashboardPage() {
       setUpgradeLoading(false);
     }
   };
+
+  const requirePremiumAction = (message = "Upgrade to Premium to use this feature.") => {
+    addToast("error", message);
+  };
+
+  const changeDashboardSection = (section) => {
+    if (!isPremium && ["meetings", "team"].includes(section)) {
+      requirePremiumAction(section === "team" ? "Team workspaces are included with Premium." : "Meeting notes are included with Premium.");
+      setActiveSection("settings");
+      return;
+    }
+
+    setActiveSection(section);
+  };
+
+  useEffect(() => {
+    if (!isPremium && ["meetings", "team"].includes(activeSection)) {
+      setActiveSection("settings");
+    }
+  }, [activeSection, isPremium, setActiveSection]);
 
   const manageBilling = async () => {
     setPortalLoading(true);
@@ -2031,6 +2064,22 @@ export default function DashboardPage() {
             />
           </label>
           <div className="order-2 flex shrink-0 items-center gap-2 lg:order-3">
+            {!isPremium ? (
+              <button
+                type="button"
+                onClick={startUpgrade}
+                disabled={upgradeLoading}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white shadow-sm shadow-emerald-950/10 transition hover:bg-emerald-800 disabled:opacity-60"
+              >
+                {upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                <span className="hidden sm:inline">{t("upgradeToPremium")}</span>
+                <span className="sm:hidden">Premium</span>
+              </button>
+            ) : (
+              <span className="hidden h-10 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 sm:inline-flex">
+                {t("premiumBadge")}
+              </span>
+            )}
             <ThemeToggle />
             <button
               type="button"
@@ -2334,7 +2383,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <DashboardSectionNav activeSection={activeSection} onChange={setActiveSection} />
+      <DashboardSectionNav activeSection={activeSection} onChange={changeDashboardSection} />
 
       {isCalendarSection ? (
         <ActionCalendarSection
@@ -2447,7 +2496,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveSection("meetings")}
+                onClick={() => changeDashboardSection("meetings")}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-4 text-sm font-semibold text-indigo-800 transition hover:bg-indigo-100"
               >
                 <CalendarDays className="h-4 w-4" />
@@ -2455,7 +2504,7 @@ export default function DashboardPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveSection("team")}
+                onClick={() => changeDashboardSection("team")}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 <UserPlus className="h-4 w-4" />
@@ -2554,12 +2603,12 @@ export default function DashboardPage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={generateAiInsights}
-                  disabled={aiInsightsLoading || usageLimitReached}
+                  onClick={isPremium ? generateAiInsights : startUpgrade}
+                  disabled={aiInsightsLoading || usageLimitReached || upgradeLoading}
                   className="inline-flex min-h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:opacity-60"
                 >
-                  {aiInsightsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
-                  Refresh insights
+                  {aiInsightsLoading || upgradeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+                  {isPremium ? "Refresh insights" : t("upgradeToPremium")}
                 </button>
                 <button
                   type="button"
@@ -2593,9 +2642,9 @@ export default function DashboardPage() {
               <div className="mt-4">
                 <SectionEmptyState
                   title="No AI insights yet"
-                  description="Use AI to summarize and organize your work, then refresh insights here."
-                  actionLabel="Generate insights"
-                  onAction={generateAiInsights}
+                  description={isPremium ? "Use AI to summarize and organize your work, then refresh insights here." : "AI insights are included with Premium."}
+                  actionLabel={isPremium ? "Generate insights" : t("upgradeToPremium")}
+                  onAction={isPremium ? generateAiInsights : startUpgrade}
                 />
               </div>
             )}
@@ -2648,7 +2697,7 @@ export default function DashboardPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setActiveSection("team")}
+                onClick={() => changeDashboardSection("team")}
                 className="inline-flex min-h-10 items-center text-sm font-semibold text-emerald-700 hover:text-emerald-800"
               >
                 Manage team
@@ -2665,8 +2714,8 @@ export default function DashboardPage() {
               <SectionEmptyState
                 title="No team members yet"
                 description="Collaborate with your team — invite members to share notes and meeting follow-ups."
-                actionLabel="Invite your team"
-                onAction={() => setActiveSection("team")}
+                actionLabel={isPremium ? "Invite your team" : t("upgradeToPremium")}
+                onAction={isPremium ? () => changeDashboardSection("team") : startUpgrade}
               />
             )}
           </section>
@@ -2809,8 +2858,9 @@ export default function DashboardPage() {
               key={`${hasWorkspace}-${user?.defaultNoteScope || "private"}`}
               onCreate={handleCreate}
               hasWorkspace={hasWorkspace}
+              isPremium={isPremium}
               defaultVisibility={
-                hasWorkspace && user?.defaultNoteScope === "workspace" ? "workspace" : "private"
+                isPremium && hasWorkspace && user?.defaultNoteScope === "workspace" ? "workspace" : "private"
               }
               prefillValues={notePrefillValues}
               onCreateSuccess={(note) =>

@@ -15,6 +15,7 @@ import { asyncHandler } from "../middleware/asyncHandler.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { cacheGetResponse } from "../middleware/cache.js";
 import { uploadLimiter } from "../middleware/rateLimiters.js";
+import { requirePremium } from "../middleware/requirePremium.js";
 import { validate } from "../middleware/validate.js";
 import {
   createNoteSchema,
@@ -33,11 +34,12 @@ router.use(authenticate);
 
 router.get("/", validate(listNotesSchema), cacheGetResponse(60), asyncHandler(listNotes));
 router.post("/", validate(createNoteSchema), asyncHandler(createNote));
-router.get("/:noteId/comments", validate(noteCommentsSchema), asyncHandler(listComments));
-router.post("/:noteId/comments", validate(createCommentSchema), asyncHandler(createComment));
-router.get("/:noteId/attachments", validate(noteAttachmentsSchema), asyncHandler(listAttachments));
+router.get("/:noteId/comments", requirePremium("comments"), validate(noteCommentsSchema), asyncHandler(listComments));
+router.post("/:noteId/comments", requirePremium("comments"), validate(createCommentSchema), asyncHandler(createComment));
+router.get("/:noteId/attachments", requirePremium("attachments"), validate(noteAttachmentsSchema), asyncHandler(listAttachments));
 router.post(
   "/:noteId/attachments",
+  requirePremium("attachments"),
   validate(noteAttachmentsSchema),
   uploadLimiter,
   uploadAttachment.single("file"),

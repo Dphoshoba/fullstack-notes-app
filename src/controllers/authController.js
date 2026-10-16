@@ -63,7 +63,7 @@ export const register = async (req, res) => {
 
   user.organizationId = workspace.id;
   user.workspaceRole = "owner";
-  user.defaultNoteScope = "workspace";
+  user.defaultNoteScope = "private";
   await user.save();
 
   return sendAuthResponse(res, user, StatusCodes.CREATED, workspace);

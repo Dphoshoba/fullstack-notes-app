@@ -13,6 +13,22 @@ const canManageWorkspaceNote = (user) => ["owner", "manager"].includes(user.work
 
 const userWorkspaceId = (user) => user.organizationId?.toString();
 
+const isPremiumUser = (user) => (user.plan || "free") === "premium";
+
+const enforcePremiumNoteInput = (user, input, visibility) => {
+  if (isPremiumUser(user)) {
+    return;
+  }
+
+  if (visibility === "workspace") {
+    throw new ApiError(StatusCodes.PAYMENT_REQUIRED, "Upgrade to Premium to create workspace notes.");
+  }
+
+  if (input.noteType === "meeting" || input.meetingMeta) {
+    throw new ApiError(StatusCodes.PAYMENT_REQUIRED, "Upgrade to Premium to create meeting notes.");
+  }
+};
+
 const serializeNote = (note) => {
   const { _id, ...noteData } = note;
   delete noteData.__v;
@@ -132,17 +148,17 @@ const buildVisibilityFilter = (user, scope = "all") => {
     owner: user.id,
     $or: [{ visibility: "private" }, { visibility: { $exists: false } }]
   };
-  const workspaceId = userWorkspaceId(user);
+  const workspaceId = isPremiumUser(user) ? userWorkspaceId(user) : null;
   const workspaceFilter = workspaceId
     ? { visibility: "workspace", organizationId: user.organizationId }
     : null;
 
-  if (scope === "private" || !workspaceFilter) {
-    return privateFilter;
+  if (scope === "workspace") {
+    return workspaceFilter || { _id: null };
   }
 
-  if (scope === "workspace") {
-    return workspaceFilter;
+  if (scope === "private" || !workspaceFilter) {
+    return privateFilter;
   }
 
   return { $or: [privateFilter, workspaceFilter] };
@@ -285,6 +301,8 @@ export const listNotes = async (req, res) => {
 export const createNote = async (req, res) => {
   const visibility = req.body.visibility || "private";
 
+  enforcePremiumNoteInput(req.user, req.body, visibility);
+
   if (visibility === "workspace" && !req.user.organizationId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Create or join a workspace to share notes.");
   }
@@ -349,6 +367,8 @@ export const updateNote = async (req, res) => {
   }
 
   const nextVisibility = req.body.visibility || note.visibility || "private";
+
+  enforcePremiumNoteInput(req.user, req.body, nextVisibility);
 
   if (nextVisibility === "workspace" && !req.user.organizationId) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "Create or join a workspace to share notes.");

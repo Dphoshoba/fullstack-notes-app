@@ -10,8 +10,9 @@ This manual explains how to use the multilingual Notes workspace app. It is writ
 4. Add a category and tags so the note is easy to find later.
 5. Pin or star important notes.
 6. Use search, filters, and smart chips to narrow the list.
-7. Try AI Tools when you want a summary, tag suggestions, or meeting help.
-8. Use Settings to update your profile, language, and workspace options.
+7. Try the included Free AI actions when you want a summary or tag suggestions.
+8. Upgrade to Premium if you need team workspaces, meeting notes, comments, attachments, exports, or advanced AI tools.
+9. Use Settings to update your profile, language, billing, and workspace options.
 
 ## Register
 
@@ -23,6 +24,8 @@ Use the Register page to create a new account.
 4. Select Create account.
 
 After registration, you can log in and open your protected Dashboard.
+
+New accounts start on the Free plan. Free users can create private standard notes and use limited basic AI. Premium unlocks collaboration, meeting notes, exports, comments, attachments, and advanced AI tools.
 
 ## Login and Logout
 
@@ -43,6 +46,8 @@ The header includes:
 - Language selector
 - Refresh
 - Export
+- Upgrade to Premium, for free users
+- Premium badge, for premium users
 - Profile
 - Guide
 - Settings
@@ -53,7 +58,7 @@ The top of the Dashboard also shows stat cards for your loaded notes, pinned not
 
 ## Standard Notes
 
-Standard notes are regular personal or workspace notes.
+Standard notes are regular notes. On the Free plan, standard notes are private. Premium users can also create workspace notes for team collaboration.
 
 To create a standard note:
 
@@ -62,15 +67,15 @@ To create a standard note:
 3. Add the note body.
 4. Choose a category.
 5. Add tags if needed.
-6. Choose Private or Workspace if you belong to a workspace.
+6. Choose Private or Workspace if you are on Premium and belong to a workspace.
 7. Choose whether the note should be pinned or starred.
 8. Select Create note.
 
-Private notes are visible only to you. Workspace notes are visible to members of your workspace.
+Private notes are visible only to you. Workspace notes are visible to members of your workspace and require Premium.
 
 ## Meeting Notes
 
-Meeting notes are an extension of the normal notes system. They keep the same title, body, category, tags, visibility, pin, and star options, but also support meeting details.
+Meeting notes are a Premium feature and are an extension of the normal notes system. They keep the same title, body, category, tags, visibility, pin, and star options, but also support meeting details.
 
 To create a meeting note:
 
@@ -82,6 +87,8 @@ To create a meeting note:
 6. Finish the note like a standard note.
 
 Meeting note cards show a Meeting badge. Meeting notes can also show a Meeting summary with date, attendees, agenda, decisions, follow-up date, and action items when those details exist.
+
+If you are on the Free plan, the Meeting option is disabled and the app shows an Upgrade to Premium path.
 
 ## Create, Edit, and Delete Notes
 
@@ -134,9 +141,11 @@ Use smart chips for quick filtering:
 
 Search and filters work with pagination. Changing a filter resets the list to page 1.
 
+Some filters, such as workspace notes and meeting notes, only show results when you are on Premium and have matching notes.
+
 ## Comments
 
-Open Comments / Attachments on a note card to view or add comments.
+Comments are a Premium feature. Open Comments / Attachments on a note card to view or add comments.
 
 You can:
 
@@ -148,7 +157,7 @@ Workspace owners and managers can delete comments on workspace notes when modera
 
 ## Attachments
 
-Open Comments / Attachments on a note card to upload, download, or delete files.
+Attachments are a Premium feature. Open Comments / Attachments on a note card to upload, download, or delete files.
 
 Supported file types:
 
@@ -164,13 +173,15 @@ Private note attachments are visible only to the note owner. Workspace note atta
 
 ## Workspaces
 
-A workspace is a shared area for an office or team. It lets people create shared workspace notes while still keeping private notes separate.
+A workspace is a Premium shared area for an office or team. It lets people create shared workspace notes while still keeping private notes separate.
 
 Workspace roles:
 
 - Owner: creates and controls the workspace, manages members, and can manage shared workspace notes.
 - Manager: can view members, invite people, add members, and help manage shared workspace notes.
 - Staff: can create workspace notes and manage their own workspace notes.
+
+Free users may see their default workspace record, but inviting members, managing team members, and creating workspace notes require Premium.
 
 ## Office and Team Use
 
@@ -189,7 +200,7 @@ Use Private notes for personal drafts or sensitive notes. Use Workspace notes wh
 
 ## Invitations
 
-Workspace owners and managers can create invitation links from Settings.
+Premium workspace owners and managers can create invitation links from Settings.
 
 1. Open Settings.
 2. Go to the Workspace section.
@@ -248,20 +259,31 @@ The app supports English, French, Spanish, Portuguese, Arabic, and Krio/Sierra L
 
 ## AI Tools and Usage Limits
 
-AI Tools help you work faster with notes.
+AI Tools help you work faster with notes. Free users get limited basic AI usage. Premium users get more AI usage and access to advanced AI actions.
 
-Available AI actions include:
+Free AI actions include:
 
 - Summarize a note
 - Suggest tags
+
+Premium AI actions include:
+
+- Improve writing
+- Extract tasks
+- Executive summary
+- Follow-up email
+- Study notes
 - Generate smart insights
+- AI Insights Dashboard
+- Semantic search
 - Convert to meeting minutes
 - Extract action items
 - Extract attendees and decisions
+- Meeting intelligence
 
 Select a note before running note-specific AI actions.
 
-Free plans include limited AI usage. The Plan & Usage card shows how many AI uses remain. Premium gives more AI usage for summaries, tag suggestions, meeting actions, and insights.
+The Plan & Usage card shows how many AI uses remain. If a Free user reaches the limit or tries to use a Premium AI action, the app shows an upgrade message.
 
 ## Saving AI Results
 
@@ -276,11 +298,11 @@ You can:
 - Save to meeting details
 - Cancel
 
-The app does not silently overwrite note content. You choose how the AI result should be saved.
+The app does not silently overwrite note content. You choose how the AI result should be saved. Saving an AI result as a comment requires Premium because comments are a Premium feature.
 
 ## Meeting AI Actions
 
-Meeting AI actions help turn rough notes into structured meeting notes.
+Meeting AI actions are Premium features that help turn rough notes into structured meeting notes.
 
 Use:
 
@@ -292,7 +314,7 @@ Save to meeting details changes the note type to Meeting and stores the structur
 
 ## Export
 
-Use Export in the Dashboard header to download currently visible notes.
+Export is a Premium feature. Use Export in the Dashboard header to download currently visible notes.
 
 Export formats:
 
@@ -315,13 +337,40 @@ Use Upgrade to open Stripe Checkout. Use Manage billing to open the Stripe billi
 
 Plan changes should come from Stripe billing events, not from manual frontend changes.
 
+### Free Plan
+
+The Free plan is for personal note taking. It includes:
+
+- Private standard notes
+- Categories and tags
+- Pin and star
+- Search, filters, smart chips, and pagination
+- Limited basic AI summaries and tag suggestions
+- Profile, settings, language selector, notifications, and guide
+
+### Premium Plan
+
+Premium unlocks the full workspace product. It includes:
+
+- More AI usage
+- Advanced AI tools and AI Insights
+- Meeting notes and meeting AI actions
+- Workspace notes
+- Team invitations and member management
+- Comments
+- Attachments
+- Export to Markdown and JSON
+- Stripe billing portal access
+
+If a Premium subscription is cancelled, the app receives a Stripe billing event and returns the account to the Free plan.
+
 ## Admin and Superadmin
 
 App roles are separate from workspace roles.
 
 App roles:
 
-- user: can use notes, profile, settings, workspaces, comments, attachments, AI tools, billing, export, and language features.
+- user: can use the app features allowed by their Free or Premium plan.
 - admin: can open the Admin panel and view users.
 - superadmin: can view users and change user roles.
 
@@ -341,7 +390,7 @@ Use this checklist before deploying to production.
 - Use Stripe live keys only when you are ready for real payments.
 - Set the Stripe webhook endpoint to `/api/billing/webhook`.
 - Add the live Stripe webhook secret to Render.
-- Test register, login, logout, create note, edit note, delete note, comments, attachments, AI tools, upgrade, billing portal, admin, and workspace flows.
+- Test register, login, logout, create note, edit note, delete note, Free plan limits, Premium upgrade, comments, attachments, AI tools, billing portal, admin, and workspace flows.
 - Never commit real secrets to Git.
 
 ## Troubleshooting
@@ -360,19 +409,27 @@ Try a shorter keyword. Clear category, favorites, scope, note type, and smart ch
 
 ### I cannot see workspace notes
 
-Open Settings and confirm you belong to a workspace. Private notes and workspace notes have separate visibility rules.
+Confirm you are on Premium and belong to a workspace. Private notes and workspace notes have separate visibility rules.
 
 ### I cannot upload an attachment
 
-Check the file type and size. The file must be one of the supported types and must be 10MB or smaller.
+Confirm you are on Premium. Then check the file type and size. The file must be one of the supported types and must be 10MB or smaller.
 
 ### Comments or attachments do not load
 
-Open the Comments / Attachments section again. If the problem continues, refresh the Dashboard and check that you still have access to the note.
+Confirm you are on Premium. Then open the Comments / Attachments section again. If the problem continues, refresh the Dashboard and check that you still have access to the note.
 
 ### AI Tools are disabled
 
-You may have reached the Free plan AI usage limit. Check Plan & Usage or upgrade to Premium.
+You may have reached the Free plan AI usage limit, or you may be trying to use a Premium AI action. Check Plan & Usage or upgrade to Premium.
+
+### I cannot create meeting notes
+
+Meeting notes are a Premium feature. Upgrade to Premium from the dashboard header or Plan & Usage card.
+
+### I cannot export notes
+
+Export is a Premium feature. Upgrade to Premium to download notes as Markdown or JSON.
 
 ### Upgrade does not open Stripe
 

@@ -57,6 +57,7 @@ JWT_REFRESH_SECRET=replace-with-a-long-random-refresh-secret
 ACCESS_TOKEN_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN=7d
 CLIENT_ORIGIN=http://localhost:5173
+ADDITIONAL_CLIENT_ORIGINS=
 COOKIE_SECURE=false
 STRIPE_SECRET_KEY=sk_test_replace_me
 STRIPE_PRICE_ID=price_replace_me
@@ -65,6 +66,12 @@ RESEND_API_KEY=re_replace_me
 EMAIL_FROM="Notes Workspace <no-reply@example.com>"
 OPENAI_API_KEY=sk_replace_me
 OPENAI_MODEL=gpt-5.2
+```
+
+Before launch, you can run a safe environment review that checks for missing or risky settings without printing secret values:
+
+```bash
+npm run env:check
 ```
 
 ## Auth Flow

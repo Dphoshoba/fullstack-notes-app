@@ -111,6 +111,7 @@ https://your-api.onrender.com/api/billing/webhook
 - `.env` is not committed.
 - Render secrets are set in environment settings only.
 - Netlify has only public `VITE_` variables.
+- Run `npm run env:check` against production-like environment values before launch.
 - `COOKIE_SECURE=true` in production.
 - JWT secrets are unique and at least 32 characters.
 - MongoDB Atlas access is restricted as much as possible.
